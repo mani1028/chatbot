@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="admin-page">
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Admin Panel</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" onclick="switchTab('dashboard')">Dashboard</button>
+                <button class="nav-item" onclick="switchTab('faqs')">Manage FAQs</button>
+                <button class="nav-item" onclick="switchTab('chat-logs')">Chat Logs</button>
+                <button class="nav-item" onclick="switchTab('unanswered')">Unanswered Q's</button>
+                <hr>
+                <a href="{{ url_for('admin_logout') }}" class="nav-item logout">Logout</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content active">
+                <h2>Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Chats</div>
+                        <div class="stat-value" id="totalChats">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total FAQs</div>
+                        <div class="stat-value" id="totalFAQs">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Answer Rate</div>
+                        <div class="stat-value" id="answerRate">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Unanswered Q's</div>
+                        <div class="stat-value" id="unansweredCount">0</div>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <h3>System Info</h3>
+                    <p><strong>Confidence Threshold:</strong> <span id="confidenceThreshold">0.7</span></p>
+                    <p><strong>Database:</strong> SQLite</p>
+                    <p><strong>Status:</strong> ✅ Online</p>
+                </div>
+            </div>
+
+            <!-- FAQs Management Tab -->
+            <div id="faqs" class="tab-content">
+                <h2>Manage FAQs</h2>
+
+                <!-- Add FAQ Form -->
+                <div class="form-section">
+                    <h3>Add New FAQ</h3>
+                    <div class="form-group">
+                        <label for="newQuestion">Question</label>
+                        <input 
+                            type="text" 
+                            id="newQuestion" 
+                            placeholder="Enter the question"
+                            maxlength="500"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="newAnswer">Answer</label>
+                        <textarea 
+                            id="newAnswer" 
+                            placeholder="Enter the answer"
+                            rows="4"
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="newCategory">Category</label>
+                        <input 
+                            type="text" 
+                            id="newCategory" 
+                            placeholder="e.g., General, Support, Billing"
+                            value="General"
+                        >
+                    </div>
+                    <button class="btn btn-primary" onclick="addFAQ()">Add FAQ</button>
+                </div>
+
+                <!-- FAQs List -->
+                <div class="faq-list-section">
+                    <h3>Existing FAQs</h3>
+                    <div id="faqsList" class="faq-list">
+                        <p class="loading">Loading FAQs...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Logs Tab -->
+            <div id="chat-logs" class="tab-content">
+                <h2>Chat Logs</h2>
+                <div id="chatLogsList" class="chat-logs-list">
+                    <p class="loading">Loading chat logs...</p>
+                </div>
+            </div>
+
+            <!-- Unanswered Questions Tab -->
+            <div id="unanswered" class="tab-content">
+                <h2>Frequently Unanswered Questions</h2>
+                <p class="subtitle">These questions could not be answered by the chatbot. Consider adding them to FAQs.</p>
+                <div id="unansweredList" class="unanswered-list">
+                    <p class="loading">Loading unanswered questions...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit FAQ Modal -->
+    <div id="editModal" class="modal" onclick="closeEditModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Edit FAQ</h3>
+                <button class="close-btn" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editQuestion">Question</label>
+                    <input type="text" id="editQuestion" maxlength="500">
+                </div>
+                <div class="form-group">
+                    <label for="editAnswer">Answer</label>
+                    <textarea id="editAnswer" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="editCategory">Category</label>
+                    <input type="text" id="editCategory">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveFAQ()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div id="successMessage" class="success-message"></div>
+
+    <script>
+        let currentEditingFaqId = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Remove active from nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Load tab data
+            if (tabName === 'faqs') {
+                loadFAQs();
+            } else if (tabName === 'chat-logs') {
+                loadChatLogs();
+            } else if (tabName === 'unanswered') {
+                loadUnansweredQuestions();
+            } else if (tabName === 'dashboard') {
+                loadDashboardStats();
+            }
+        }
+
+        // Load dashboard stats
+        function loadDashboardStats() {
+            fetch('/admin/api/stats')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('totalChats').textContent = data.total_chats;
+                    document.getElementById('totalFAQs').textContent = data.total_faqs;
+                    document.getElementById('answerRate').textContent = data.answer_rate + '%';
+                    document.getElementById('unansweredCount').textContent = data.unanswered_questions;
+                    document.getElementById('confidenceThreshold').textContent = data.confidence_threshold;
+                })
+                .catch(error => console.error('Error loading stats:', error));
+        }
+
+        // Load FAQs
+        function loadFAQs() {
+            fetch('/admin/api/faqs')
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('faqsList');
+                    if (data.faqs.length === 0) {
+                        list.innerHTML = '<p>No FAQs yet. Add one above!</p>';
+                        return;
+                    }
+
+                    list.innerHTML = data.faqs.map(faq => `
+                        <div class="faq-item">
+                            <div class="faq-content">
+                                <div class="faq-question"><strong>Q:</strong> ${escapeHtml(faq.question)}</div>
+                                <div class="faq-answer"><strong>A:</strong> ${escapeHtml(faq.answer)}</div>
+                                <div class="faq-category"><span class="badge">${escapeHtml(faq.category)}</span></div>
+                            </div>
+                            <div class="faq-actions">
+                                <button class="btn btn-small btn-primary" onclick="openEditModal(${faq.id}, '${escapeJs(faq.question)}', '${escapeJs(faq.answer)}', '${escapeJs(faq.category)}')">Edit</button>
+                                <button class="btn btn-small btn-danger" onclick="deleteFAQ(${faq.id})">Delete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => console.error('Error loading FAQs:', error));
+        }
+
+        // Add new FAQ
+        function addFAQ() {
+            const question = document.getElementById('newQuestion').value.trim();
+            const answer = document.getElementById('newAnswer').value.trim();
+            const category = document.getElementById('newCategory').value.trim();
+
+            if (!question || !answer) {
+                showError('Question and answer are required');
+                return;
+            }
+
+            fetch('/admin/api/faq', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({question, answer, category})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('FAQ added successfully');
+                    document.getElementById('newQuestion').value = '';
+                    document.getElementById('newAnswer').value = '';
+                    document.getElementById('newCategory').value = 'General';
+                    loadFAQs();
+                } else {
+                    showError(data.message || 'Error adding FAQ');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Error adding FAQ');
+            });
+        }
+
+        // Open edit modal
+        function openEditModal(faqId, question, answer, category) {
+            currentEditingFaqId = faqId;
+            document.getElementById('editQuestion').value = question;
+            document.getElementById('editAnswer').value = answer;
+            document.getElementById('editCategory').value = category;
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // Close edit modal
+        function closeEditModal(event) {
+            if (event && event.target.id !== 'editModal') return;
+            document.getElementById('editModal').style.display = 'none';
+            currentEditingFaqId = null;
+        }
+
+        // Save FAQ changes
+        function saveFAQ() {
+            const question = document.getElementById('editQuestion').value.trim();
+            const answer = document.getElementById('editAnswer').value.trim();
+            const category = document.getElementById('editCategory').value.trim();
+
+            if (!question || !answer) {
+                showError('Question and answer are required');
+                return;
+            }
+
+            fetch(`/admin/api/faq/${currentEditingFaqId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({question, answer, category})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('FAQ updated successfully');
+                    closeEditModal();
+                    loadFAQs();
+                } else {
+                    showError(data.message || 'Error updating FAQ');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Error updating FAQ');
+            });
+        }
+
+        // Delete FAQ
+        function deleteFAQ(faqId) {
+            if (!confirm('Are you sure you want to delete this FAQ?')) return;
+
+            fetch(`/admin/api/faq/${faqId}`, {
+                method: 'DELETE'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess('FAQ deleted successfully');
+                    loadFAQs();
+                } else {
+                    showError(data.message || 'Error deleting FAQ');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Error deleting FAQ');
+            });
+        }
+
+        // Load chat logs
+        function loadChatLogs() {
+            fetch('/admin/api/chat-logs')
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('chatLogsList');
+                    if (data.logs.length === 0) {
+                        list.innerHTML = '<p>No chat logs yet.</p>';
+                        return;
+                    }
+
+                    list.innerHTML = data.logs.map(log => `
+                        <div class="chat-log-item ${log.is_answered ? 'answered' : 'unanswered'}">
+                            <div class="log-header">
+                                <span class="timestamp">${new Date(log.timestamp).toLocaleString()}</span>
+                                <span class="confidence" title="Confidence Score">
+                                    ${log.is_answered ? '✅' : '❌'} ${log.confidence_score.toFixed(2)}
+                                </span>
+                            </div>
+                            <div class="log-body">
+                                <div class="user-message"><strong>User:</strong> ${escapeHtml(log.user_message)}</div>
+                                <div class="bot-message"><strong>Bot:</strong> ${escapeHtml(log.bot_response)}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => console.error('Error loading chat logs:', error));
+        }
+
+        // Load unanswered questions
+        function loadUnansweredQuestions() {
+            fetch('/admin/api/unanswered-questions')
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('unansweredList');
+                    if (data.questions.length === 0) {
+                        list.innerHTML = '<p>No unanswered questions. Great job!</p>';
+                        return;
+                    }
+
+                    list.innerHTML = data.questions.map(q => `
+                        <div class="unanswered-item">
+                            <div class="question-text">${escapeHtml(q.question)}</div>
+                            <div class="question-meta">
+                                <span class="times-asked">Asked ${q.times_asked}x</span>
+                                <span class="last-asked">Last: ${new Date(q.last_asked).toLocaleDateString()}</span>
+                            </div>
+                            <button class="btn btn-small btn-primary" onclick="addFromUnanswered('${escapeJs(q.question)}')">Add as FAQ</button>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => console.error('Error loading unanswered questions:', error));
+        }
+
+        // Helper function to add unanswered question as FAQ
+        function addFromUnanswered(question) {
+            document.getElementById('newQuestion').value = question;
+            document.getElementById('newAnswer').value = '';
+            switchTab('faqs');
+            document.getElementById('newAnswer').focus();
+        }
+
+        // Helper functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeJs(text) {
+            return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        function showSuccess(message) {
+            const msg = document.getElementById('successMessage');
+            msg.textContent = message;
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+
+        function showError(message) {
+            alert('Error: ' + message);
+        }
+
+        // Load initial data
+        loadDashboardStats();
+    </script>
+</body>
+</html>
