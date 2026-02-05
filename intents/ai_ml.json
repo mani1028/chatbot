@@ -1,0 +1,52 @@
+{
+  "intents": [
+    {
+      "intent_name": "Machine Learning Models",
+      "category": "AI/ML",
+      "training_phrases": [
+        "machine learning models",
+        "ML models",
+        "how to use models",
+        "model deployment",
+        "pre-trained models",
+        "model training",
+        "TensorFlow",
+        "PyTorch"
+      ],
+      "short_response": "We offer pre-trained ML models for classification, NLP, and computer vision tasks.",
+      "detailed_response": "Our Machine Learning Platform Includes:\n\n1. Pre-trained Models:\n   - Text Classification\n   - Named Entity Recognition (NER)\n   - Sentiment Analysis\n   - Image Classification\n   - Object Detection\n\n2. Model Training:\n   - Custom dataset support\n   - Automated hyperparameter tuning\n   - Transfer learning capabilities\n   - GPU acceleration\n\n3. Deployment Options:\n   - Cloud deployment (AWS, GCP, Azure)\n   - On-premise deployment\n   - Edge deployment\n   - API endpoints\n\n4. Frameworks Supported:\n   - TensorFlow / Keras\n   - PyTorch\n   - Scikit-learn\n   - XGBoost\n\n5. Performance Metrics:\n   - Accuracy tracking\n   - Model versioning\n   - A/B testing support\n   - Real-time predictions\n\nGet started: https://docs.example.com/ml",
+      "requires_handoff": false
+    },
+    {
+      "intent_name": "Data Preparation",
+      "category": "AI/ML",
+      "training_phrases": [
+        "prepare data",
+        "data preprocessing",
+        "data cleaning",
+        "feature engineering",
+        "data validation",
+        "data format"
+      ],
+      "short_response": "Prepare your data using our data pipeline tools with automatic validation and feature engineering.",
+      "detailed_response": "Data Preparation Guide:\n\n1. Data Formats Supported:\n   - CSV, JSON, Parquet\n   - SQL databases\n   - Image files (JPG, PNG, TIFF)\n   - Audio files (WAV, MP3)\n\n2. Preprocessing Features:\n   - Missing value imputation\n   - Outlier detection\n   - Data normalization/scaling\n   - Categorical encoding\n   - Text tokenization\n\n3. Feature Engineering:\n   - Automatic feature selection\n   - Feature scaling\n   - Polynomial features\n   - Time series features\n\n4. Data Validation:\n   - Schema validation\n   - Distribution checks\n   - Data quality reports\n   - Anomaly detection\n\n5. Batch Processing:\n   - Large file handling\n   - Parallel processing\n   - Incremental updates\n   - ETL pipelines\n\nDocumentation: https://docs.example.com/data-prep",
+      "requires_handoff": false
+    },
+    {
+      "intent_name": "Model Performance",
+      "category": "AI/ML",
+      "training_phrases": [
+        "model accuracy",
+        "performance metrics",
+        "evaluation",
+        "F1 score",
+        "precision recall",
+        "confusion matrix",
+        "improve model"
+      ],
+      "short_response": "Monitor model performance with our dashboard and use insights to improve accuracy.",
+      "detailed_response": "Model Performance Monitoring:\n\n1. Key Metrics:\n   - Accuracy, Precision, Recall, F1-Score\n   - ROC-AUC Curves\n   - Confusion Matrices\n   - Cross-validation scores\n\n2. Performance Dashboard:\n   - Real-time metrics\n   - Historical trends\n   - Model comparisons\n   - Alert thresholds\n\n3. Improvement Strategies:\n   - Hyperparameter tuning\n   - Ensemble methods\n   - Feature engineering\n   - Data augmentation\n   - Class balancing\n\n4. Testing:\n   - Train/validation/test splits\n   - K-fold cross-validation\n   - Time series CV\n   - Stratified sampling\n\n5. Deployment Readiness:\n   - Production metrics\n   - Load testing\n   - Model versioning\n   - Rollback procedures\n\nMonitor your models: https://dashboard.example.com",
+      "requires_handoff": true
+    }
+  ]
+}

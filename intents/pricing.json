@@ -1,0 +1,52 @@
+{
+  "intents": [
+    {
+      "intent_name": "Pricing Plans",
+      "category": "Pricing",
+      "training_phrases": [
+        "pricing plans",
+        "how much does it cost",
+        "subscription",
+        "pricing tiers",
+        "plans",
+        "cost",
+        "free tier"
+      ],
+      "short_response": "We offer Free, Pro, and Enterprise plans. Free tier includes 1000 API calls/month.",
+      "detailed_response": "Our Pricing Plans:\n\n📋 FREE PLAN\n  - 1,000 API calls/month\n  - Community support\n  - Pre-trained models only\n  - 1 user account\n  - 1 GB storage\n  - Price: $0/month\n\n💼 PRO PLAN\n  - 100,000 API calls/month\n  - Email support (24h response)\n  - Custom model training\n  - 5 user accounts\n  - 100 GB storage\n  - Price: $99/month (billed annually: $990)\n\n🏢 ENTERPRISE PLAN\n  - Unlimited API calls\n  - Priority 24/7 phone support\n  - Dedicated account manager\n  - Unlimited users\n  - Unlimited storage\n  - Custom SLA\n  - Price: Custom (contact sales)\n\n✨ ADD-ONS\n  - Advanced Analytics: +$50/month\n  - Priority Support: +$100/month\n  - GPU Acceleration: +$200/month\n  - Data Backup: +$25/month\n\n❓ FAQ:\n  - Cancel anytime (month-to-month)\n  - No setup fees\n  - 14-day free trial for Pro\n  - Volume discounts available\n\nView detailed comparison: https://example.com/pricing",
+      "requires_handoff": true
+    },
+    {
+      "intent_name": "Billing & Invoices",
+      "category": "Pricing",
+      "training_phrases": [
+        "billing",
+        "invoice",
+        "payment method",
+        "receipt",
+        "transaction",
+        "charge",
+        "refund"
+      ],
+      "short_response": "You can manage billing and view invoices in your account dashboard.",
+      "detailed_response": "Billing Information:\n\n1. Payment Methods:\n   - Credit card (Visa, Mastercard, AmEx)\n   - PayPal\n   - Bank transfer (for Enterprise)\n\n2. Invoices:\n   - Available in your account dashboard\n   - Automatic email delivery\n   - Download as PDF\n   - Detailed line items\n\n3. Billing Cycle:\n   - Monthly billing (default)\n   - Annual billing (save 15%)\n   - Pro-rata charges for plan changes\n\n4. Account Management:\n   - Update payment method anytime\n   - Download invoices\n   - View usage metrics\n   - Adjust plan anytime\n\n5. Billing FAQ:\n   - When am I charged? → 1st of each month\n   - How do refunds work? → Pro-rata refunds within 30 days\n   - Can I change my plan? → Yes, changes effective next billing cycle\n   - Invoice format? → PDF emailed automatically\n\nManage billing: https://dashboard.example.com/billing",
+      "requires_handoff": true
+    },
+    {
+      "intent_name": "Enterprise Pricing",
+      "category": "Pricing",
+      "training_phrases": [
+        "enterprise",
+        "large volume",
+        "custom pricing",
+        "bulk pricing",
+        "negotiation",
+        "sales",
+        "contact sales"
+      ],
+      "short_response": "For enterprise needs, we offer custom pricing and dedicated support.",
+      "detailed_response": "Enterprise Solutions:\n\n📊 Custom Pricing Includes:\n   - Volume-based discounts\n   - Custom API call limits\n   - Dedicated infrastructure\n   - Priority feature access\n   - Custom SLA agreements\n\n🎯 Enterprise Features:\n   - Single Sign-On (SSO)\n   - Advanced security (HIPAA, SOC 2)\n   - Audit logging\n   - Custom integrations\n   - Dedicated infrastructure options\n\n👥 Support & Service:\n   - Dedicated account manager\n   - 24/7 phone/email support\n   - Technical consultations\n   - Custom onboarding\n   - Training for your team\n\n🚀 Implementation:\n   - On-premise deployment option\n   - Private cloud setup\n   - Migration assistance\n   - Performance optimization\n   - Custom development\n\n💰 ROI Benefits:\n   - Unlimited scaling\n   - Predictable costs\n   - No surprise charges\n   - Volume discounts\n   - Payment terms available\n\n📞 Get a Quote:\n   Contact our sales team for a custom enterprise proposal.",
+      "requires_handoff": true
+    }
+  ]
+}
