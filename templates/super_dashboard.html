@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Admin | SaaS Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .super-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        h1 { margin-bottom: 30px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        h2 { margin-top: 0; color: #667eea; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn-primary { width: 100%; background: #667eea; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .btn-primary:hover { background: #5a6fd6; }
+        .site-list { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        .site-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #f5f5f5; }
+        .badge { background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+    </style>
+</head>
+<body style="background: #f8f9fa;">
+
+<div class="super-container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>⚡ Super Admin Dashboard</h1>
+        <a href="/admin/logout" style="color: #e74c3c; text-decoration: none; font-weight: 600;">Logout</a>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>🏭 Create New Tenant</h2>
+            <form id="createSiteForm">
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="e.g. Apollo Hospital" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>Client Admin Username</label>
+                        <input type="text" name="admin_username" class="form-control" placeholder="e.g. apollo_admin" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Client Admin Password</label>
+                        <input type="password" name="admin_password" class="form-control" placeholder="e.g. secret123" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Domain (Optional)</label>
+                    <input type="text" name="domain" class="form-control" placeholder="e.g. apollo.com">
+                </div>
+                <div class="form-group">
+                    <label>Bot Name</label>
+                    <input type="text" name="bot_name" class="form-control" value="Support Bot">
+                </div>
+                <button type="submit" class="btn-primary">Create Site & User</button>
+            </form>
+            
+            <div class="site-list" id="siteList">
+                <h3>Existing Tenants</h3>
+                <p>Loading...</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📦 Import Sector Template</h2>
+            <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
+                Upload a JSON template to configure intents and workflows for a specific tenant.
+            </p>
+            <form id="importForm">
+                <div class="form-group">
+                    <label>Select Tenant</label>
+                    <select id="siteSelect" name="site_id" class="form-control" required>
+                        <option value="">-- Choose Site --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Template File (JSON)</label>
+                    <input type="file" name="file" class="form-control" accept=".json" required>
+                </div>
+                <button type="submit" class="btn-primary" style="background: #4caf50;">Upload & Apply Template</button>
+            </form>
+            <div id="importResult" style="margin-top: 15px; display: none; padding: 10px; border-radius: 4px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load Sites
+    async function loadSites() {
+        const res = await fetch('/admin/api/super/sites');
+        const data = await res.json();
+        const list = document.getElementById('siteList');
+        const select = document.getElementById('siteSelect');
+        
+        list.innerHTML = '<h3>Existing Tenants</h3>';
+        select.innerHTML = '<option value="">-- Choose Site --</option>';
+
+        if(data.sites) {
+            data.sites.forEach(site => {
+                // Add to list
+                const div = document.createElement('div');
+                div.className = 'site-item';
+                div.innerHTML = `<span><strong>${site.name}</strong> (ID: ${site.id})</span> <span class="badge">${site.domain || 'No Domain'}</span>`;
+                list.appendChild(div);
+
+                // Add to dropdown
+                const opt = document.createElement('option');
+                opt.value = site.id;
+                opt.textContent = `${site.name} (ID: ${site.id})`;
+                select.appendChild(opt);
+            });
+        }
+    }
+
+    // Handle Create Site
+    document.getElementById('createSiteForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        
+        const res = await fetch('/admin/api/super/sites', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        if(res.ok) {
+            alert('Site Created!');
+            e.target.reset();
+            loadSites();
+        } else {
+            alert('Error creating site');
+        }
+    });
+
+    // Handle Import
+    document.getElementById('importForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const resultDiv = document.getElementById('importResult');
+        
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = '#e2e8f0';
+        resultDiv.textContent = 'Uploading...';
+
+        const res = await fetch('/admin/api/super/import_template', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await res.json();
+        if(res.ok) {
+            resultDiv.style.background = '#d4edda';
+            resultDiv.style.color = '#155724';
+            resultDiv.textContent = '✅ ' + data.message;
+        } else {
+            resultDiv.style.background = '#f8d7da';
+            resultDiv.style.color = '#721c24';
+            resultDiv.textContent = '❌ ' + (data.error || 'Upload failed');
+        }
+    });
+
+    loadSites();
+</script>
+</body>
+</html>

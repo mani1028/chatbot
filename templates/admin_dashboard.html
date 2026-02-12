@@ -3,75 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - AI Chatbot</title>
+    <title>Client Portal</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body { background: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .navbar { background: #fff; padding: 15px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-weight: 700; font-size: 1.2rem; color: #2c3e50; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; display: grid; grid-template-columns: 280px 1fr; gap: 30px; }
+        /* Sidebar Navigation */
+        .sidebar { background: white; border-radius: 12px; padding: 20px; height: fit-content; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .nav-item { display: block; padding: 12px 15px; margin-bottom: 5px; color: #555; text-decoration: none; border-radius: 8px; transition: 0.2s; cursor: pointer; font-weight: 500; }
+        .nav-item:hover { background: #f0f2f5; color: #2c3e50; }
+        .nav-item.active { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+        /* Main Content Area */
+        .content-area { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); min-height: 500px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        h2 { margin-top: 0; margin-bottom: 20px; color: #2c3e50; font-size: 1.5rem; }
+        /* Forms */
+        .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #444; font-size: 0.9rem; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; transition: border 0.2s; }
+        .form-control:focus { border-color: #1a73e8; outline: none; }
+        .btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
+        .btn-primary { background: #1a73e8; color: white; }
+        .btn-primary:hover { background: #1557b0; }
+        /* Embed Code Box */
+        .code-box { background: #282c34; color: #abb2bf; padding: 20px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 13px; overflow-x: auto; position: relative; }
+        .copy-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .copy-btn:hover { background: rgba(255,255,255,0.2); }
+        /* Intents Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 12px; background: #f8f9fa; border-bottom: 2px solid #eee; font-size: 0.85rem; color: #666; text-transform: uppercase; }
+        td { padding: 15px 12px; border-bottom: 1px solid #eee; font-size: 0.95rem; color: #333; }
+        .pill { background: #e2e8f0; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; color: #4a5568; margin-right: 5px; }
+    </style>
 </head>
-<body class="admin-page">
-    <div class="dashboard-container">
-        <!-- Sidebar Navigation -->
+<body>
+    <nav class="navbar">
+        <div class="logo">🤖 Client Portal <span style="font-weight:400; color:#7f8c8d; font-size:0.9em; margin-left:10px;">ID: {{ site_id }}</span></div>
+        <a href="/admin/logout" style="color: #e74c3c; text-decoration: none; font-weight: 500;">Logout</a>
+    </nav>
+    <div class="container">
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h1>Admin Panel</h1>
-            </div>
-            <nav class="sidebar-nav">
-                <button class="nav-item active" onclick="switchTab('dashboard')">Dashboard</button>
-                <button class="nav-item" onclick="switchTab('faqs')">Manage FAQs</button>
-                <button class="nav-item" onclick="switchTab('chat-logs')">Chat Logs</button>
-                <button class="nav-item" onclick="switchTab('unanswered')">Unanswered Q's</button>
-                <hr>
-                <a href="{{ url_for('admin_logout') }}" class="nav-item logout">Logout</a>
-            </nav>
+            <a class="nav-item active" onclick="showTab('settings')">⚙️ Bot Configuration</a>
+            <a class="nav-item" onclick="showTab('embed')">🔌 Integration</a>
+            <a class="nav-item" onclick="showTab('intents')">🧠 Knowledge Base</a>
+            <a class="nav-item" onclick="showTab('test')">🧪 Live Simulator</a>
         </aside>
-
-        <!-- Main Content -->
-        <main class="dashboard-content">
-            <!-- Dashboard Tab -->
-            <div id="dashboard" class="tab-content active">
-                <h2>Dashboard</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Total Chats</div>
-                        <div class="stat-value" id="totalChats">0</div>
+        <main class="content-area">
+            <div id="settings" class="tab-content active">
+                <h2>Manage Bot Settings</h2>
+                <p style="color: #666; margin-bottom: 25px;">Update your prices, timings, and operational details instantly.</p>
+                <form id="configForm">
+                    <div id="configFields" class="config-grid">
+                        <p>Loading settings...</p>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Total FAQs</div>
-                        <div class="stat-value" id="totalFAQs">0</div>
+                    <div style="margin-top: 30px; text-align: right;">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Answer Rate</div>
-                        <div class="stat-value" id="answerRate">0%</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Unanswered Q's</div>
-                        <div class="stat-value" id="unansweredCount">0</div>
-                    </div>
+                </form>
+            </div>
+            <div id="embed" class="tab-content">
+                <h2>Integration Code</h2>
+                <p style="color: #666; margin-bottom: 20px;">Copy the code below and paste it before the closing <code>&lt;/body&gt;</code> tag on your website.</p>
+                <div class="code-box">
+                    <button class="copy-btn" onclick="copyCode()">Copy</button>
+                    <pre id="embedCode">&lt;script 
+  src="{{ request.host_url }}widget.js"
+  data-site-id="{{ site_id }}"
+  data-position="bottom-right"
+  async&gt;
+&lt;/script&gt;</pre>
                 </div>
-
-                <div class="info-box">
-                    <h3>System Info</h3>
-                    <p><strong>Confidence Threshold:</strong> <span id="confidenceThreshold">0.7</span></p>
-                    <p><strong>Database:</strong> SQLite</p>
-                    <p><strong>Status:</strong> ✅ Online</p>
+                <div style="margin-top: 30px; background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3;">
+                    <h4 style="margin: 0 0 10px 0; color: #0d47a1;">Deployment Guide</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #1565c0; font-size: 0.9em;">
+                        <li>Ensure your domain is whitelisted by the Super Admin.</li>
+                        <li>The widget will automatically adapt to your site's branding.</li>
+                        <li>Changes made in the "Configuration" tab apply instantly.</li>
+                    </ul>
                 </div>
             </div>
-
-            <!-- FAQs Management Tab -->
-            <div id="faqs" class="tab-content">
-                <h2>Manage FAQs</h2>
-
-                <!-- Add FAQ Form -->
-                <div class="form-section">
-                    <h3>Add New FAQ</h3>
-                    <div class="form-group">
-                        <label for="newQuestion">Question</label>
-                        <input 
-                            type="text" 
-                            id="newQuestion" 
-                            placeholder="Enter the question"
-                            maxlength="500"
-                        >
-                    </div>
-                    <div class="form-group">
+            <div id="intents" class="tab-content">
+                <h2>Bot Knowledge Base</h2>
+                <div id="intentsTable">Loading...</div>
+            </div>
+            <div id="test" class="tab-content">
+                <h2>Live Simulator</h2>
+                <p style="color: #666;">Test your configuration changes in real-time.</p>
+                <div style="height: 500px; position: relative; border: 1px solid #eee; border-radius: 8px; background: #fafafa;">
+                    <script 
+                        src="{{ request.host_url }}widget.js"
+                        data-site-id="{{ site_id }}"
+                        data-position="bottom-right"
+                        async>
+                    </script>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        // Tab Switching Logic
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+        // Load Configuration
+        async function loadConfig() {
+            const res = await fetch('/admin/api/client/config');
+            const data = await res.json();
+            const container = document.getElementById('configFields');
+            container.innerHTML = '';
+            if (Object.keys(data.config).length === 0) {
+                container.innerHTML = '<p>No configuration fields found. Ask admin to import a template.</p>';
+                return;
+            }
+            for (const [key, value] of Object.entries(data.config)) {
+                // Format key for display (consultation_price -> Consultation Price)
+                const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const div = document.createElement('div');
+                div.className = 'form-group';
+                div.innerHTML = `
+                    <label>${label}</label>
+                    <input type="text" name="${key}" class="form-control" value="${value || ''}" placeholder="Enter value">
+                `;
+                container.appendChild(div);
+            }
+        }
+        // Save Configuration
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            const res = await fetch('/admin/api/client/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                alert('Settings saved successfully!');
+            } else {
+                alert('Error saving settings');
+            }
+        });
+        // Load Intents (Read Only)
+        async function loadIntents() {
+            const res = await fetch('/admin/api/client/intents');
+            const data = await res.json();
+            const container = document.getElementById('intentsTable');
+            let html = '<table><thead><tr><th>Topic</th><th>Training Phrases</th><th>Response Type</th></tr></thead><tbody>';
+            data.intents.forEach(i => {
+                const phrases = i.phrases.slice(0, 3).map(p => `<span class="pill">${p}</span>`).join('');
+                html += `<tr>
+                    <td><strong>${i.intent_name}</strong></td>
+                    <td>${phrases}</td>
+                    <td>${i.intent_type.toUpperCase()}</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+        // Copy Embed Code
+        function copyCode() {
+            const code = document.getElementById('embedCode').innerText;
+            navigator.clipboard.writeText(code);
+            alert('Code copied to clipboard!');
+        }
+        // Init
+        loadConfig();
+        loadIntents();
+    </script>
+</body>
+</html>
                         <label for="newAnswer">Answer</label>
                         <textarea 
                             id="newAnswer" 
@@ -114,6 +221,227 @@
                 <p class="subtitle">These questions could not be answered by the chatbot. Consider adding them to FAQs.</p>
                 <div id="unansweredList" class="unanswered-list">
                     <p class="loading">Loading unanswered questions...</p>
+                </div>
+            </div>
+
+            <!-- Branding Tab -->
+            <div id="branding" class="tab-content">
+                <h2>Customize Bot Appearance</h2>
+                <p class="subtitle">Customize the appearance of your chat widget without code changes</p>
+
+                <form id="branding-form" style="max-width: 800px;">
+                    <!-- Bot Name -->
+                    <div class="form-group">
+                        <label for="bot_name">Bot Name</label>
+                        <input type="text" id="bot_name" name="bot_name" placeholder="e.g., ChatBot" maxlength="100">
+                        <small>The name displayed in the chat header</small>
+                    </div>
+
+                    <!-- Bot Description -->
+                    <div class="form-group">
+                        <label for="bot_description">Bot Description</label>
+                        <input type="text" id="bot_description" name="bot_description" placeholder="e.g., We're here to help" maxlength="200">
+                        <small>Subtitle shown in the chat header</small>
+                    </div>
+
+                    <!-- Initial Message -->
+                    <div class="form-group">
+                        <label for="initial_message">Initial Message</label>
+                        <textarea id="initial_message" name="initial_message" placeholder="e.g., Hi! How can I help you?" rows="3"></textarea>
+                        <small>The first message bot shows to users</small>
+                    </div>
+
+                    <!-- Color Settings -->
+                    <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Colors</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <!-- Primary Color -->
+                            <div class="form-group">
+                                <label for="primary_color">Primary Color</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="color" id="primary_color" name="primary_color" style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                                    <input type="text" id="primary_color_text" placeholder="#667eea" style="flex: 1;">
+                                </div>
+                            </div>
+
+                            <!-- Secondary Color -->
+                            <div class="form-group">
+                                <label for="secondary_color">Secondary Color</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="color" id="secondary_color" name="secondary_color" style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                                    <input type="text" id="secondary_color_text" placeholder="#764ba2" style="flex: 1;">
+                                </div>
+                            </div>
+
+                            <!-- Accent Color -->
+                            <div class="form-group">
+                                <label for="accent_color">Accent Color</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="color" id="accent_color" name="accent_color" style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                                    <input type="text" id="accent_color_text" placeholder="#4CAF50" style="flex: 1;">
+                                </div>
+                            </div>
+
+                            <!-- Theme Mode -->
+                            <div class="form-group">
+                                <label for="theme_mode">Theme</label>
+                                <select id="theme_mode" name="theme_mode">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Logo & Favicon -->
+                    <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Assets</h3>
+                        <div class="form-group">
+                            <label for="logo_url">Logo URL</label>
+                            <input type="url" id="logo_url" name="logo_url" placeholder="https://example.com/logo.png">
+                            <small>Square image (recommended: 256x256px)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="favicon_url">Favicon URL</label>
+                            <input type="url" id="favicon_url" name="favicon_url" placeholder="https://example.com/favicon.ico">
+                            <small>Icon for browser tab (recommended: 32x32px)</small>
+                        </div>
+                    </div>
+
+                    <!-- Widget Position -->
+                    <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px; margin: 20px 0;">
+                        <h3 style="margin-top: 0;">Widget Position</h3>
+                        <div class="form-group">
+                            <label for="position">Position</label>
+                            <select id="position" name="position">
+                                <option value="bottom-right">Bottom Right</option>
+                                <option value="bottom-left">Bottom Left</option>
+                                <option value="top-right">Top Right</option>
+                                <option value="top-left">Top Left</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Custom CSS -->
+                    <div class="form-group">
+                        <label for="custom_css">Custom CSS (Advanced)</label>
+                        <textarea id="custom_css" name="custom_css" placeholder=".chat-container { /* Your CSS */ }" rows="4"></textarea>
+                        <small>Optional: Add custom CSS for advanced styling</small>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" class="btn btn-primary">Save Branding Settings</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetBrandingForm()">Reset to Defaults</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Embed Widget Tab -->
+            <div id="embed" class="tab-content">
+                <h2>📌 Embed Chatbot Widget on Your Website</h2>
+                <p class="subtitle">Get the embed code to add the chatbot bubble to your website</p>
+
+                <!-- Step-by-step instructions -->
+                <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">How to Add the Chatbot to Your Website</h3>
+                    
+                    <div style="margin-bottom: 30px;">
+                        <h4>Step 1: Copy the Embed Code</h4>
+                        <p>Copy the code below and paste it at the <strong>end of your website's HTML</strong> (before the <code>&lt;/body&gt;</code> tag):</p>
+                        
+                        <div style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 15px; margin: 10px 0; position: relative;">
+                            <button class="btn btn-small" onclick="copyEmbedCode()" style="position: absolute; top: 10px; right: 10px;">📋 Copy Code</button>
+                                                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+                                                                <div style="flex:1; min-width:220px;">
+                                                                        <label for="siteUrlInput" style="display:block; font-weight:600; margin-bottom:6px;">Website URL</label>
+                                                                        <input id="siteUrlInput" type="url" placeholder="https://your-site.com" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                                                                </div>
+                                                                <div style="display:flex; gap:8px; align-items:flex-end;">
+                                                                        <button id="generateEmbedBtn" class="btn btn-primary">Generate Embed Code</button>
+                                                                </div>
+                                                        </div>
+                                                        <pre id="embedCode" style="margin: 0; padding: 10px; background: #f9f9f9; border-radius: 4px; overflow-x: auto; color: #333; font-size: 12px;"><code>&lt;script src="http://localhost:5000/widget.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+    ChatbotWidget.init({
+        apiUrl: 'http://localhost:5000',
+        position: 'bottom-right',
+        width: 420,
+        height: 600
+    });
+&lt;/script&gt;</code></pre>
+                        </div>
+                        <small style="color: #666;">Replace <code>http://localhost:5000</code> with your actual domain/IP address</small>
+                    </div>
+
+                    <hr style="margin: 20px 0;">
+
+                    <div style="margin-bottom: 30px;">
+                        <h4>Step 2: Customize the Widget Position</h4>
+                        <p>The position option controls where the chatbot bubble appears:</p>
+                        <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                            <tr style="background: #f9f9f9;">
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Position</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Description</th>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 10px;"><code>bottom-right</code></td>
+                                <td style="border: 1px solid #ddd; padding: 10px;">Bottom right corner (default)</td>
+                            </tr>
+                            <tr style="background: #f9f9f9;">
+                                <td style="border: 1px solid #ddd; padding: 10px;"><code>bottom-left</code></td>
+                                <td style="border: 1px solid #ddd; padding: 10px;">Bottom left corner</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 10px;"><code>top-right</code></td>
+                                <td style="border: 1px solid #ddd; padding: 10px;">Top right corner</td>
+                            </tr>
+                            <tr style="background: #f9f9f9;">
+                                <td style="border: 1px solid #ddd; padding: 10px;"><code>top-left</code></td>
+                                <td style="border: 1px solid #ddd; padding: 10px;">Top left corner</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <hr style="margin: 20px 0;">
+
+                    <div style="margin-bottom: 30px;">
+                        <h4>Step 3: Customize Size (Optional)</h4>
+                        <p>You can customize the width and height of the widget:</p>
+                        <pre style="background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 10px; overflow-x: auto;"><code>ChatbotWidget.init({
+  apiUrl: 'http://localhost:5000',
+  position: 'bottom-right',
+  width: 420,      // Widget width in pixels
+  height: 600      // Widget height in pixels
+});</code></pre>
+                    </div>
+
+                    <hr style="margin: 20px 0;">
+
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 4px; border-left: 4px solid #4caf50;">
+                        <h4 style="margin-top: 0; color: #2e7d32;">✅ That's it!</h4>
+                        <p style="margin: 0;">The chatbot bubble will now appear on your website. All the colors and branding you set in the <strong>"Customize Bot"</strong> tab will automatically show in the widget.</p>
+                    </div>
+                </div>
+
+                <!-- Widget Preview Info -->
+                <div style="background: #fff3e0; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #ff9800;">
+                    <h3 style="margin-top: 0;">🔧 How It Works</h3>
+                    <ul style="margin: 10px 0;">
+                        <li><strong>Floating Bubble:</strong> The chatbot appears as a small bubble at the bottom right of your website</li>
+                        <li><strong>Click to Open:</strong> When users click the bubble, the chat window opens</li>
+                        <li><strong>Persistent Settings:</strong> Your branding (colors, name, initial message) apply automatically</li>
+                        <li><strong>Mobile Friendly:</strong> The widget works on all devices</li>
+                    </ul>
+                </div>
+
+                <!-- Settings Reference -->
+                <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #2196f3;">
+                    <h3 style="margin-top: 0;">📖 Current Widget Settings</h3>
+                    <div id="widgetSettings" style="margin: 15px 0;">
+                        <p style="color: #666;">Loading settings...</p>
+                    </div>
                 </div>
             </div>
         </main>
@@ -175,6 +503,10 @@
                 loadChatLogs();
             } else if (tabName === 'unanswered') {
                 loadUnansweredQuestions();
+            } else if (tabName === 'branding') {
+                loadBrandingSettings();
+            } else if (tabName === 'embed') {
+                loadEmbedSettings();
             } else if (tabName === 'dashboard') {
                 loadDashboardStats();
             }
@@ -370,18 +702,64 @@
                         return;
                     }
 
-                    list.innerHTML = data.questions.map(q => `
-                        <div class="unanswered-item">
+                    list.innerHTML = data.questions.map(q => {
+                        const statusColor = {
+                            'pending': '#ff9800',
+                            'contacted': '#2196f3',
+                            'resolved': '#4caf50'
+                        }[q.status] || '#999';
+                        
+                        return `
+                        <div class="unanswered-item" style="border-left: 4px solid ${statusColor}; padding-left: 16px;">
                             <div class="question-text">${escapeHtml(q.question)}</div>
-                            <div class="question-meta">
+                            <div class="question-meta" style="display: flex; gap: 15px; margin: 10px 0; flex-wrap: wrap;">
                                 <span class="times-asked">Asked ${q.times_asked}x</span>
                                 <span class="last-asked">Last: ${new Date(q.last_asked).toLocaleDateString()}</span>
+                                ${q.user_name ? `<span class="user-info">👤 ${escapeHtml(q.user_name)}</span>` : ''}
+                                ${q.user_email ? `<span class="user-email">✉️ ${escapeHtml(q.user_email)}</span>` : ''}
+                                <span class="status-badge" style="background: ${statusColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;">
+                                    ${q.status.toUpperCase()}
+                                </span>
                             </div>
-                            <button class="btn btn-small btn-primary" onclick="addFromUnanswered('${escapeJs(q.question)}')">Add as FAQ</button>
+                            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                <button class="btn btn-small btn-primary" onclick="addFromUnanswered('${escapeJs(q.question)}')">Add as FAQ</button>
+                                <select class="btn btn-small" onchange="updateQuestionStatus(${q.id}, this.value)" style="padding: 6px; cursor: pointer;">
+                                    <option value="">Update Status</option>
+                                    <option value="pending" ${q.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="contacted" ${q.status === 'contacted' ? 'selected' : ''}>Contacted</option>
+                                    <option value="resolved" ${q.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                                </select>
+                            </div>
                         </div>
-                    `).join('');
+                    `}).join('');
                 })
                 .catch(error => console.error('Error loading unanswered questions:', error));
+        }
+
+        // Update unanswered question status
+        function updateQuestionStatus(questionId, newStatus) {
+            if (!newStatus) return;
+            
+            fetch(`/admin/api/unanswered-questions/${questionId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showSuccess(`Question marked as ${newStatus}`);
+                    loadUnansweredQuestions();
+                } else {
+                    showError(data.message || 'Error updating status');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Error updating status');
+            });
         }
 
         // Helper function to add unanswered question as FAQ
@@ -416,8 +794,220 @@
             alert('Error: ' + message);
         }
 
-        // Load initial data
+        // Load branding settings
+        function loadBrandingSettings() {
+            fetch('/admin/api/branding')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.branding) {
+                        const b = data.branding;
+                        document.getElementById('bot_name').value = b.bot_name || '';
+                        document.getElementById('bot_description').value = b.bot_description || '';
+                        document.getElementById('initial_message').value = b.initial_message || '';
+                        document.getElementById('primary_color').value = b.primary_color || '#667eea';
+                        document.getElementById('primary_color_text').value = b.primary_color || '#667eea';
+                        document.getElementById('secondary_color').value = b.secondary_color || '#764ba2';
+                        document.getElementById('secondary_color_text').value = b.secondary_color || '#764ba2';
+                        document.getElementById('accent_color').value = b.accent_color || '#4CAF50';
+                        document.getElementById('accent_color_text').value = b.accent_color || '#4CAF50';
+                        document.getElementById('logo_url').value = b.logo_url || '';
+                        document.getElementById('favicon_url').value = b.favicon_url || '';
+                        document.getElementById('position').value = b.position || 'bottom-right';
+                        document.getElementById('theme_mode').value = b.theme_mode || 'light';
+                        document.getElementById('custom_css').value = b.custom_css || '';
+                    }
+                })
+                .catch(error => console.error('Error loading branding settings:', error));
+        }
+
+        // Sync color inputs when color picker changes
+        function setupColorInputListeners() {
+            document.getElementById('primary_color')?.addEventListener('input', function() {
+                document.getElementById('primary_color_text').value = this.value;
+            });
+
+            document.getElementById('primary_color_text')?.addEventListener('input', function() {
+                if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+                    document.getElementById('primary_color').value = this.value;
+                }
+            });
+
+            document.getElementById('secondary_color')?.addEventListener('input', function() {
+                document.getElementById('secondary_color_text').value = this.value;
+            });
+
+            document.getElementById('secondary_color_text')?.addEventListener('input', function() {
+                if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+                    document.getElementById('secondary_color').value = this.value;
+                }
+            });
+
+            document.getElementById('accent_color')?.addEventListener('input', function() {
+                document.getElementById('accent_color_text').value = this.value;
+            });
+
+            document.getElementById('accent_color_text')?.addEventListener('input', function() {
+                if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+                    document.getElementById('accent_color').value = this.value;
+                }
+            });
+        }
+
+        // Handle branding form submission
+        function setupBrandingFormListener() {
+            const form = document.getElementById('branding-form');
+            if (form) {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+
+                    const formData = {
+                        bot_name: document.getElementById('bot_name').value,
+                        bot_description: document.getElementById('bot_description').value,
+                        initial_message: document.getElementById('initial_message').value,
+                        primary_color: document.getElementById('primary_color').value,
+                        secondary_color: document.getElementById('secondary_color').value,
+                        accent_color: document.getElementById('accent_color').value,
+                        logo_url: document.getElementById('logo_url').value,
+                        favicon_url: document.getElementById('favicon_url').value,
+                        custom_css: document.getElementById('custom_css').value,
+                        position: document.getElementById('position').value,
+                        theme_mode: document.getElementById('theme_mode').value
+                    };
+
+                    try {
+                        const response = await fetch('/admin/api/branding', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(formData)
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            showSuccess('Branding settings saved successfully!');
+                            console.log('Saved:', data.branding);
+                        } else {
+                            showError('Failed to save branding settings');
+                        }
+                    } catch (error) {
+                        console.error('Error saving branding:', error);
+                        showError('Error saving branding settings');
+                    }
+                });
+            }
+        }
+
+        // Reset branding form
+        function resetBrandingForm() {
+            if (confirm('Reset bot appearance to defaults?')) {
+                loadBrandingSettings();
+            }
+        }
+
+        // Load embed widget settings
+        function loadEmbedSettings() {
+            fetch('/admin/api/branding')
+                .then(res => res.json())
+                .then(data => {
+                    const settings = data.branding || {};
+                    const isDevelopment = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+                    let baseUrl = isDevelopment ? 'http://localhost:5000' : window.location.origin;
+                    
+                    // Update embed code with actual domain
+                    const embedCode = document.getElementById('embedCode');
+                    const siteUrlInput = document.getElementById('siteUrlInput');
+                    const generateBtn = document.getElementById('generateEmbedBtn');
+
+                    // Prefill the site input with detected base URL
+                    if (siteUrlInput) {
+                        siteUrlInput.value = baseUrl;
+                    }
+
+                    // Helper to generate embed code for a given site URL
+                    function generateEmbedCode(forUrl) {
+                        if (!forUrl) return;
+                        // normalize
+                        let url = forUrl.trim();
+                        if (!/^https?:\/\//i.test(url)) {
+                            url = 'https://' + url;
+                        }
+                        // remove trailing slash
+                        url = url.replace(/\/$/, '');
+
+                        if (embedCode) {
+                            embedCode.textContent = `<script src="${url}/widget.js"><\/script>\n<script>\n  ChatbotWidget.init({\n    apiUrl: '${url}',\n    position: '${settings.position || 'bottom-right'}',\n    width: 420,\n    height: 600\n  });\n<\/script>`;
+                        }
+
+                        // Update widget settings preview if present
+                        const settingsDisplay = document.getElementById('widgetSettings');
+                        if (settingsDisplay) {
+                            settingsDisplay.innerHTML = `
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr style="background: #f9f9f9; border: 1px solid #ddd;">
+                                    <td style="border: 1px solid #ddd; padding: 10px;"><strong>Bot Name:</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 10px;">${escapeHtml(settings.bot_name || 'ChatBot')}</td>
+                                </tr>
+                                <tr style="border: 1px solid #ddd;">
+                                    <td style="border: 1px solid #ddd; padding: 10px;"><strong>Position:</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 10px;">${settings.position || 'bottom-right'}</td>
+                                </tr>
+                                <tr style="background: #f9f9f9; border: 1px solid #ddd;">
+                                    <td style="border: 1px solid #ddd; padding: 10px;"><strong>Primary Color:</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 10px;">
+                                        <span style="display: inline-block; width: 20px; height: 20px; background: ${settings.primary_color || '#667eea'}; border-radius: 3px; vertical-align: middle;"></span>
+                                        ${settings.primary_color || '#667eea'}
+                                    </td>
+                                </tr>
+                                <tr style="border: 1px solid #ddd;">
+                                    <td style="border: 1px solid #ddd; padding: 10px;"><strong>Widget URL:</strong></td>
+                                    <td style="border: 1px solid #ddd; padding: 10px;"><code>${url}/widget.js</code></td>
+                                </tr>
+                            </table>
+                        `;
+                        }
+                    }
+
+                    // Generate initial embed code using detected baseUrl
+                    generateEmbedCode(baseUrl);
+
+                    // Wire up the Generate button
+                    if (generateBtn && siteUrlInput) {
+                        generateBtn.addEventListener('click', () => {
+                            const v = siteUrlInput.value || baseUrl;
+                            generateEmbedCode(v);
+                            showSuccess('Embed code generated for ' + v);
+                        });
+                    }
+
+                    // Display current settings
+                    // (widgetSettings updated inside generateEmbedCode)
+                })
+                .catch(error => {
+                    console.error('Error loading embed settings:', error);
+                    document.getElementById('widgetSettings').innerHTML = '<p style="color: #f44336;">Error loading settings</p>';
+                });
+        }
+
+        // Copy embed code to clipboard
+        function copyEmbedCode() {
+            const embedCode = document.getElementById('embedCode');
+            if (!embedCode) return;
+            
+            const code = embedCode.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                showSuccess('Embed code copied to clipboard! 📋');
+            }).catch(err => {
+                console.error('Error copying to clipboard:', err);
+                alert('Failed to copy. Please copy manually.');
+            });
+        }
+
+        // Initialize on page load
         loadDashboardStats();
+        setupColorInputListeners();
+        setupBrandingFormListener();
     </script>
+    <script src="http://localhost:5000/widget.js"></script>
 </body>
 </html>

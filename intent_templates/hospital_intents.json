@@ -1,0 +1,43 @@
+{
+  "sector": "hospital",
+  "intents": [
+    {
+      "name": "CHECK_PRICE",
+      "type": "action",
+      "response": "Consultation fee is ₹{consultation_price}",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "what is consultation fee",
+        "doctor charges",
+        "how much appointment cost",
+        "price",
+        "fees",
+        "cost",
+        "charges",
+        "rates"
+      ],
+      "workflow": "get_price",
+      "config_required": [
+        "consultation_price"
+      ]
+    },
+    {
+      "name": "VISITING_HOURS",
+      "type": "info",
+      "response": "We are open from {open_time} to {close_time}",
+      "phrases": [
+        "hospital timings",
+        "when are you open",
+        "timings",
+        "hours",
+        "schedule",
+        "open time",
+        "closing time"
+      ],
+      "config_required": [
+        "open_time",
+        "close_time"
+      ]
+    }
+  ]
+}
