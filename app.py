@@ -85,11 +85,11 @@ def index():
     Main Landing Page for the SaaS Platform
     """
     return render_template('landing.html')
-
 @app.route('/widget.js')
 def widget_embed():
     from flask import send_file
-    return send_file('static/widget/widget.js', mimetype='application/javascript')
+    # UPDATED: Pointing to the file you chose (chatbot/static/widget.js)
+    return send_file('static/widget.js', mimetype='application/javascript')
 
 @app.route('/api/widget-settings')
 def get_widget_settings():
