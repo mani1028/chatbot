@@ -1,6 +1,26 @@
 /* ============================================
-   GLOBAL STYLES
+   GLOBAL STYLES & CSS VARIABLES
    ============================================ */
+
+:root {
+    /* Primary branding colors */
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --accent-color: #4CAF50;
+    
+    /* Neutral colors */
+    --bg-light: #f5f5f5;
+    --bg-white: #ffffff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --border-color: #e0e0e0;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 5px 40px rgba(0, 0, 0, 0.16);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -9,8 +29,8 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background-color: #f5f5f5;
-    color: #333;
+    background-color: var(--bg-light);
+    color: var(--text-primary);
 }
 
 /* ============================================
@@ -43,7 +63,7 @@ body {
 }
 
 .chat-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     color: white;
     padding: 20px;
     border-radius: 12px 12px 0 0;
@@ -229,7 +249,6 @@ body {
 .login-box {
     background: white;
     padding: 40px;
-    border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     width: 100%;
     max-width: 400px;
@@ -762,5 +781,122 @@ h3 {
 
     .modal-content {
         width: 95%;
+    }
+}
+
+/* ============================================
+   PRE-CHAT FORM STYLES
+   ============================================ */
+
+.pre-chat-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+    border-radius: 8px;
+}
+
+.pre-chat-form-wrapper {
+    background: var(--bg-white);
+    border-radius: 8px;
+    padding: 40px;
+    box-shadow: var(--shadow-lg);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+}
+
+.pre-chat-form-wrapper h2 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.pre-chat-form-wrapper p {
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.pre-chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.form-group label {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.form-group input {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group input::placeholder {
+    color: #999;
+}
+
+.pre-chat-form button {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+.pre-chat-form button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.pre-chat-form button:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+    .pre-chat-form-wrapper {
+        padding: 25px 20px;
+    }
+    
+    .pre-chat-form-wrapper h2 {
+        font-size: 20px;
+    }
+    
+    .pre-chat-form-wrapper p {
+        font-size: 13px;
     }
 }

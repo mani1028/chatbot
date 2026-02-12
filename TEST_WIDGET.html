@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City Hospital - Home</title>
+    <style>
+        /* This simulates a client's actual website */
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; }
+        
+        /* Fake Navbar */
+        .navbar { background-color: #0056b3; color: white; padding: 15px 50px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5em; font-weight: bold; }
+        .nav-links a { color: white; text-decoration: none; margin-left: 20px; }
+        
+        /* Fake Hero Section */
+        .hero { background-color: white; padding: 80px 50px; text-align: center; border-bottom: 5px solid #004494; }
+        .hero h1 { color: #333; font-size: 3em; margin-bottom: 10px; }
+        .hero p { color: #666; font-size: 1.2em; }
+        .btn { background: #e74c3c; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; }
+
+        /* Fake Content */
+        .content { padding: 50px; max-width: 800px; margin: 0 auto; color: #555; line-height: 1.6; }
+        
+        .deployment-note {
+            background: #fff3cd; border: 1px solid #ffeeba; color: #856404;
+            padding: 15px; margin-top: 30px; border-radius: 5px; font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="logo">🏥 City Hospital</div>
+        <div class="nav-links">
+            <a href="#">Doctors</a>
+            <a href="#">Departments</a>
+            <a href="#">Appointments</a>
+            <a href="#">Contact</a>
+        </div>
+    </div>
+
+    <div class="hero">
+        <h1>World-Class Healthcare</h1>
+        <p>Caring for you and your family since 1995.</p>
+        <br>
+        <a href="#" class="btn">Book Appointment</a>
+    </div>
+
+    <div class="content">
+        <h2>About Us</h2>
+        <p>Welcome to City Hospital. We provide top-tier medical services including Cardiology, Neurology, and General Surgery. Our expert team is here to assist you 24/7.</p>
+        
+        <div class="deployment-note">
+            <strong>👨‍💻 Developer Note:</strong><br>
+            The widget below is configured for <strong>Site ID: 2</strong>.<br>
+            If the bot doesn't reply, ensure you have created Site ID 2 in the Super Admin Dashboard!
+        </div>
+    </div>
+
+    <!-- Chatbot Widget Script --><script 
+  src="http://localhost:5000/widget.js"
+  data-site-id="2"
+  data-position="bottom-right"
+  async>
+</script>
+    
+</body>
+</html> 

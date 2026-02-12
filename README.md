@@ -1,383 +1,309 @@
-# Enterprise Intent-Based Chatbot System
+# AI-Powered Chatbot for College / Company Websites (Phase-1)
 
-A professional-grade Flask-based chatbot with intelligent intent matching, multi-tier confidence scoring, and automatic lead capture.
+A simple, production-ready Flask chatbot that answers FAQs with AI-powered semantic matching.
 
-## ✨ Key Features
+## Features
 
-### Core Capabilities
-- **Intent-Based Matching** - Training phrases for each intent
-- **Multi-Tier Confidence Engine** - High/Medium/Low responses
-- **Automatic Lead Capture** - Captures contact info when bot is unsure
-- **Admin Dashboard** - Full control over intents, leads, and analytics
-- **Backward Compatible** - Legacy FAQ system still works as fallback
+### User Features
+- ✅ **Simple Chat UI** - Clean, responsive popup chat interface
+- ✅ **Real-time Responses** - Instant bot replies to user messages
+- ✅ **Semantic Matching** - AI finds best-matching FAQ answers
+- ✅ **Confidence Scoring** - Shows whether answer is reliable
 
-### Confidence Tiers
-```
-Score ≥ 0.8  → HIGH    (Detailed response + ✓ badge)
-Score 0.5-0.8 → MEDIUM (Short response + feedback request)
-Score < 0.5  → HANDOFF (Offer human assistance with lead form)
-```
+# SaaS Conversation Automation Platform
 
-## 🚀 Quick Start (5 Minutes)
+## Overview
 
-### 1. Setup
-```bash
-python quickstart.py
-```
-
-### 2. Start Server
-```bash
-python app.py
-```
-
-### 3. Access
-- **Chat**: http://localhost:5000
-- **Admin**: http://localhost:5000/admin/login (admin/admin123)
-
-## 📋 Project Structure
-
-```
-chatbot/
-├── Core Files
-│   ├── app.py              # Flask routes & API endpoints
-│   ├── models.py           # Database models (Intent, Lead, etc)
-│   ├── ai_service.py       # Confidence engine & intent matching
-│   ├── config.py           # Configuration settings
-│   ├── database.py         # Database initialization
-│   └── requirements.txt    # Python dependencies
-│
-├── Static Files
-│   ├── static/
-│   │   ├── chat.js         # Chat UI with lead capture form
-│   │   └── style.css       # Styling
-│   └── templates/
-│       ├── chat.html       # Chat interface
-│       ├── admin_login.html
-│       └── admin_dashboard.html
-│
-├── Intent Definitions
-│   └── intents/
-│       ├── software_dev.json   # API, SDK, Troubleshooting
-│       ├── ai_ml.json          # ML Models, Data, Performance
-│       ├── pricing.json        # Plans, Billing, Enterprise
-│       └── support.json        # Account, Limits, Help
-│
-├── Utilities
-│   ├── seed_intents.py    # Load intents from JSON
-│   └── cleanup.py         # Remove legacy files
-│
-└── Documentation
-    ├── README.md          # This file
-    └── UPGRADE_GUIDE.md   # Complete feature guide
-```
-
-## 🎯 Pre-Made Intents (12 Total)
-
-### Software Development (3)
-- API Documentation - How to use REST APIs
-- SDK Installation - Installing client libraries
-- Troubleshooting Code - Debugging errors
-
-### AI/ML (3)
-- Machine Learning Models - ML capabilities
-- Data Preparation - Dataset preparation
-- Model Performance - Metrics monitoring
-
-### Pricing (3)
-- Pricing Plans - Plan comparison
-- Billing & Invoices - Invoice management
-- Enterprise Pricing - Custom quotes
-
-### Support (3)
-- Account Management - User settings
-- API Rate Limits - Usage limits
-- Technical Support - Getting help
-
-## 🔧 Configuration
-
-Edit `config.py` to customize:
-
-```python
-# Confidence Thresholds
-HIGH_CONFIDENCE_THRESHOLD = 0.8
-MEDIUM_CONFIDENCE_THRESHOLD = 0.5
-
-# Handoff Settings
-HANDOFF_REQUIRED_CATEGORIES = ['Pricing', 'Support']
-
-# Response Messages
-CONFIDENCE_RESPONSES = {
-    'high': "Based on our knowledge base, here's the detailed answer:",
-    'medium': "Here's what I found that might help:",
-    'low': "I'm not entirely sure about this. Would you like to speak with a specialist?"
-}
-
-# Admin Credentials
-ADMIN_USERNAME = 'admin'
-ADMIN_PASSWORD = 'admin123'
-```
-
-## 📚 API Endpoints
-
-### User Chat
-```
-POST /api/chat
-  Request: { "message": "user question" }
-  Response: {
-    "success": true,
-    "message": "bot response",
-    "confidence": 0.85,
-    "message_type": "auto_response|lead_capture",
-    "requires_handoff": false
-  }
-
-POST /api/lead
-  Request: { "name": "...", "email": "...", "phone": "...", "message": "..." }
-  Response: { "success": true, "lead_id": 42 }
-```
-
-### Admin Intent Management
-```
-GET  /admin/api/intents
-POST /admin/api/intent
-PUT  /admin/api/intent/<id>
-DELETE /admin/api/intent/<id>
-```
-
-### Admin Lead Management
-```
-GET /admin/api/leads
-PUT /admin/api/lead/<id>
-```
-
-### Analytics
-```
-GET /admin/api/stats
-GET /admin/api/chat-logs
-GET /admin/api/unanswered-questions
-```
-
-## 🛠 Development
-
-### Create New Intent
-
-**Option 1: Via JSON (Recommended)**
-```json
-// intents/my_category.json
-{
-  "intents": [
-    {
-      "intent_name": "My Intent",
-      "category": "General",
-      "training_phrases": [
-        "how do I ...",
-        "tell me about ...",
-        "what is ..."
-      ],
-      "short_response": "Brief answer",
-      "detailed_response": "Full explanation",
-      "requires_handoff": false
-    }
-  ]
-}
-```
-
-Then run: `python seed_intents.py`
-
-**Option 2: Via Admin Dashboard**
-- Login to admin dashboard
-- Click "Create Intent"
-- Fill in all fields
-- Save
-
-### Customize Responses
-
-Edit intent's `short_response` and `detailed_response` fields directly in admin dashboard or JSON files.
-
-## 📊 Database Models
-
-### Intent
-```
-- intent_name (unique)
-- category (Software Dev, AI/ML, Pricing, Support, General)
-- training_phrases (JSON array)
-- short_response (brief answer)
-- detailed_response (full answer)
-- requires_handoff (force handoff flag)
-```
-
-### Lead
-```
-- name (optional)
-- email (required)
-- phone (optional)
-- message (user question)
-- intent_id (related intent)
-- session_id (chat session)
-- status (new / assigned / resolved)
-- assigned_to (admin name)
-- notes (internal notes)
-```
-
-### ChatLog
-```
-- user_message
-- bot_response
-- confidence_score
-- matched_intent_id
-- message_type (auto_response / lead_capture)
-- session_id
-```
-
-## 🔒 Security
-
-Before production:
-- [ ] Change `SECRET_KEY` in config.py
-- [ ] Change default admin password
-- [ ] Set `DEBUG = False`
-- [ ] Enable HTTPS/SSL
-- [ ] Set up database backups
-- [ ] Implement rate limiting
-- [ ] Use environment variables for secrets
-
-## 📈 Monitoring
-
-Key metrics to track:
-- **Answer Rate**: answered_chats / total_chats (target: >85%)
-- **Confidence Distribution**: % high/medium/low responses
-- **Lead Conversion**: leads / low-confidence responses
-- **Response Time**: average API response time (<200ms)
-
-View all metrics in admin dashboard at `/admin/api/stats`
-
-## 🧪 Testing
-
-### Test High Confidence
-```
-User: "How do I use your API?"
-Bot: Shows detailed response with ✓ High Confidence badge
-```
-
-### Test Medium Confidence
-```
-User: "Tell me about integrations"
-Bot: Shows short response + "Was this helpful?"
-```
-
-### Test Low Confidence (Handoff)
-```
-User: "Completely random question"
-Bot: Shows handoff message + lead capture form
-```
-
-## 🚀 Deployment
-
-### Quick Deploy
-```bash
-# 1. Initialize
-python quickstart.py
-
-# 2. Test locally
-python app.py
-
-# 3. Deploy to production
-gunicorn app:app --workers 4 --bind 0.0.0.0:5000
-```
-
-### Docker Deploy
-```dockerfile
-FROM python:3.9
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000"]
-```
-
-## 📖 Documentation
-
-- **UPGRADE_GUIDE.md** - Complete feature documentation and configuration guide
-
-## ⚡ Performance
-
-- Intent matching: <100ms (for <1000 intents)
-- Chat API response: <200ms typical
-- Supports: 100+ requests/second
-- Database: SQLite suitable for <100k chats/month
-- Scale to PostgreSQL for production use
-
-## 🆘 Troubleshooting
-
-### Database Issues
-```bash
-rm chatbot.db
-python app.py
-python seed_intents.py
-```
-
-### Intents Not Loading
-```bash
-python seed_intents.py  # Reseed all intents
-```
-
-### Low Match Accuracy
-- Add more training phrases to intents
-- Review chat logs for user language patterns
-- Adjust confidence thresholds in config.py
-
-### Lead Form Not Appearing
-- Check browser console for errors
-- Verify `requires_handoff` is true in response
-- Clear browser cache
-
-## 🔄 Migration from Old FAQ System
-
-Both systems work together:
-1. **Intents** are tried first (new system)
-2. **FAQs** are fallback if intent match is weak
-3. Gradually migrate FAQs → Intents over time
-4. Can delete FAQ table when migration complete
-
-## 📦 Utilities
-
-### seed_intents.py
-Load intents from JSON files into database
-```bash
-python seed_intents.py
-```
-
-### cleanup.py
-Remove legacy files
-```bash
-python cleanup.py
-```
-
-### quickstart.py
-Automated 3-step setup
-```bash
-python quickstart.py
-```
-
-## 📋 Stack
-
-- **Backend**: Python 3.8+, Flask 2.x
-- **Database**: SQLite 3.x with SQLAlchemy ORM
-- **Frontend**: Vanilla JavaScript (ES6+), HTML5, CSS3
-- **Matching**: Advanced tokenization with confidence scoring
-
-## 📞 Support
-
-- Check UPGRADE_GUIDE.md for detailed documentation
-- Review inline code comments
-- Check admin dashboard for real-time analytics
-- Review chat logs to identify improvement areas
-
-## 📄 License
-
-Your project license here.
+This project is a modular, multi-tenant SaaS chatbot platform for rapid deployment of sector-specific conversational bots (e.g., Hospital, Travel, etc.). It features intent detection, workflow automation, dynamic response building, and multi-tenancy support.
 
 ---
 
-**Version:** 2.0 (Enterprise Intent-Based)  
-**Last Updated:** February 1, 2026  
-**Status:** ✅ Production Ready
+## 🏗️ Architecture
+
+| Component             | Location                        | Description                                                      |
+|-----------------------|----------------------------------|------------------------------------------------------------------|
+| **Intent Engine**     | core/intent_engine.py            | Fuzzy matching, confidence scoring for user messages.             |
+| **Decision Layer**    | services/intent_service.py       | Routes between Info, Action (Workflows), and Handoff.             |
+| **Workflow System**   | workflows/handler.py             | Dynamic logic (e.g., get_price) called by intents.                |
+| **Response Builder**  | services/response_builder.py     | Replaces {placeholders} using ClientConfig.                       |
+| **Config/Data**       | models/intent.py, models/site.py | DB supports sector, site_id, client_config.                       |
+| **JSON Importer**     | scripts/import_intents.py        | Loads sector packs (e.g., Hospital) into the DB.                  |
+| **Multi-Tenant API**  | routes/chat_routes.py            | Endpoints require site_id, enforce domain whitelisting.           |
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Clone & Install
+
+```bash
+git clone <repo-url>
+cd chatbot
+pip install -r requirements.txt
+```
+
+### 2. Reset & Initialize Database
+
+**Delete old DB (if exists):**
+
+- On Windows:
+    ```
+    del instance\chatbot.db
+    ```
+- On Linux/Mac:
+    ```
+    rm instance/chatbot.db
+    ```
+
+**Create tables:**
+
+```bash
+python app.py
+# Wait for 'AI Chatbot Server Starting...' then stop (CTRL+C)
+```
+
+### 3. Create a Tenant (Site)
+
+```bash
+python init_site.py
+# Should print: Successfully created Site ID 1
+```
+
+### 4. Import Sector Template (e.g., Hospital)
+
+```bash
+python scripts/import_intents.py intent_templates/hospital_intents.json --client 1
+```
+
+**Expected Output:**
+```
+Created intent: VISITING_HOURS (site 1)
+    + phrase: hospital timings
+Created intent: CHECK_PRICE (site 1)
+    + phrase: what is consultation fee
+    + workflow: get_price
+    + client_config key: consultation_price (empty)
+Import complete
+```
+
+### 5. Configure Client Data
+
+Set config values (e.g., consultation price):
+
+```bash
+python
+```
+
+```python
+from app import app
+from database import db
+from models import ClientConfig
+
+with app.app_context():
+        conf = ClientConfig.query.filter_by(client_id=1, key='consultation_price').first()
+        if conf:
+                conf.value = "500"
+                db.session.commit()
+                print("Price updated!")
+exit()
+```
+
+### 6. Run the Server
+
+```bash
+python app.py
+```
+
+### 7. Test the API
+
+```bash
+curl -X POST http://localhost:5000/api/chat \
+    -H "Content-Type: application/json" \
+    -H "Referer: http://localhost/" \
+    -d '{
+        "site_id": 1,
+        "message": "What is the consultation fee?"
+    }'
+```
+
+**Expected Response:**
+```json
+{
+    "reply": "Consultation fee is ₹500",
+    "intent": "CHECK_PRICE",
+    "intent_type": "action"
+}
+```
+
+---
+
+## 🧩 Extending the Platform
+
+- **Add a New Sector:**
+    - Create a new JSON template (e.g., travel_intents.json).
+    - Import with `python scripts/import_intents.py intent_templates/travel_intents.json --client 2`.
+- **Add/Change Workflows:**
+    - Edit workflows/handler.py to add new logic.
+- **Multi-Tenancy:**
+    - Each site (tenant) is isolated by site_id.
+    - API endpoints require site_id and validate domain.
+
+---
+
+## 🔮 Roadmap
+
+- **Phase 4:** Super Admin UI to upload JSONs and create Sites (no CLI needed).
+- **Phase 5:** Client Admin UI for clients to update their config (e.g., prices, timings) without seeing intent logic.
+
+---
+
+## 📁 Project Structure
+
+```
+chatbot/
+├── app.py
+├── config.py
+├── database.py
+├── core/
+│   ├── intent_engine.py
+│   ├── synonyms.py
+│   └── tokenizer.py
+├── models/
+│   ├── __init__.py
+│   ├── chat_log.py
+│   ├── intent.py
+│   └── site.py
+├── routes/
+│   └── chat_routes.py
+├── scripts/
+│   ├── apply_migration.py
+│   ├── import_intents.py
+│   └── migrations/
+├── services/
+│   ├── chat_service.py
+│   ├── intent_service.py
+│   └── response_builder.py
+├── workflows/
+│   └── handler.py
+├── static/
+├── templates/
+├── instance/
+│   └── chatbot.db
+└── intent_templates/
+        └── hospital_intents.json
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+- **DB Errors:** Delete instance/chatbot.db and re-run steps 2-4.
+- **Import Errors:** Ensure your JSON matches the schema in intent_templates/hospital_intents.json.
+- **API 400/403:** Check site_id and Referer header.
+
+---
+
+## 📝 License
+
+This project is for demonstration and prototyping. For production, review security, scalability, and compliance requirements.
+- id, question, times_asked, first_asked, last_asked
+
+## Security Notes
+
+⚠️ **Important for Production**:
+1. Change `SECRET_KEY` in config.py
+2. Change default admin password
+3. Use HTTPS (reverse proxy like Nginx)
+4. Add rate limiting
+5. Add CSRF protection
+6. Use environment variables for secrets
+7. Enable database backups
+
+## Performance Tips
+
+1. **FAQ Size**: Works efficiently with 100-1000 FAQs
+2. **Similarity Algorithm**: O(n) complexity, scales well
+3. **Database**: SQLite works for small-medium deployments
+4. **Caching**: Can be added for frequently matched FAQs
+5. **Concurrent Users**: Flask development server handles ~10 concurrent; use Gunicorn for production
+
+## Troubleshooting
+
+### Chatbot not responding?
+- Check if Flask server is running
+- Check browser console for errors (F12)
+- Verify `/api/chat` endpoint is accessible
+
+### Admin login fails?
+- Default credentials: `admin` / `admin123`
+- Check if database file exists (chatbot.db)
+
+### Database issues?
+- Delete `chatbot.db` to reset
+- App will recreate it automatically
+- Sample FAQs will be added
+
+### Port already in use?
+```bash
+# Use different port
+python -c "import app; app.app.run(port=5001)"
+```
+
+## Customization
+
+### Change Confidence Threshold
+```python
+# In config.py
+CONFIDENCE_THRESHOLD = 0.6  # More lenient (0.0-1.0)
+```
+
+### Add Fallback Messages
+```python
+# In config.py
+FALLBACK_MESSAGES = [
+    "Your custom message 1",
+    "Your custom message 2",
+]
+```
+
+### Improve Matching Algorithm
+Edit `AIService.calculate_similarity()` in `ai_service.py` for:
+- Different tokenization
+- Advanced NLP (spaCy, NLTK)
+- Word embeddings (gensim)
+- Phrase matching
+
+## Deployment
+
+### Local/Development
+```bash
+python app.py
+```
+
+### Production (Gunicorn)
+```bash
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:5000 app:app
+```
+
+### Docker (Optional)
+```bash
+docker build -t ai-chatbot .
+docker run -p 5000:5000 ai-chatbot
+```
+
+## License
+
+Open source - Feel free to use and modify
+
+## Support
+
+For issues or questions:
+1. Check README troubleshooting section
+2. Review admin dashboard statistics
+3. Check browser console for errors
+4. Review Flask server logs
+
+---
+
+**Ready to chat!** 🚀 Open http://localhost:5000 and start testing.

@@ -1,0 +1,282 @@
+<!-- Branding Settings Panel for Admin Dashboard -->
+<div id="branding-panel" style="display: none; padding: 20px; background: white; border-radius: 8px; margin-bottom: 20px;">
+    <h2>Widget Branding Settings</h2>
+    <p style="color: #666; margin-bottom: 20px;">Customize the appearance of your chat widget</p>
+
+    <form id="branding-form">
+        <!-- Bot Name -->
+        <div style="margin-bottom: 20px;">
+            <label for="bot_name" style="display: block; margin-bottom: 5px; font-weight: 500;">Bot Name</label>
+            <input type="text" id="bot_name" name="bot_name" placeholder="e.g., ChatBot" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+            <small style="color: #999;">The name displayed in the chat header</small>
+        </div>
+
+        <!-- Bot Description -->
+        <div style="margin-bottom: 20px;">
+            <label for="bot_description" style="display: block; margin-bottom: 5px; font-weight: 500;">Bot Description</label>
+            <input type="text" id="bot_description" name="bot_description" placeholder="e.g., We're here to help" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+            <small style="color: #999;">Subtitle shown in the chat header</small>
+        </div>
+
+        <!-- Initial Message -->
+        <div style="margin-bottom: 20px;">
+            <label for="initial_message" style="display: block; margin-bottom: 5px; font-weight: 500;">Initial Message</label>
+            <textarea id="initial_message" name="initial_message" placeholder="e.g., Hi! How can I help you?" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-height: 80px; font-family: inherit;"></textarea>
+            <small style="color: #999;">The first message bot shows to users</small>
+        </div>
+
+        <!-- Color Settings -->
+        <fieldset style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 20px;">
+            <legend style="font-weight: 600; padding: 0 8px;">Colors</legend>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <!-- Primary Color -->
+                <div>
+                    <label for="primary_color" style="display: block; margin-bottom: 5px; font-weight: 500;">Primary Color</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="color" id="primary_color" name="primary_color" style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        <input type="text" id="primary_color_text" placeholder="#667eea" style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace;">
+                    </div>
+                </div>
+
+                <!-- Secondary Color -->
+                <div>
+                    <label for="secondary_color" style="display: block; margin-bottom: 5px; font-weight: 500;">Secondary Color</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="color" id="secondary_color" name="secondary_color" style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        <input type="text" id="secondary_color_text" placeholder="#764ba2" style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace;">
+                    </div>
+                </div>
+
+                <!-- Accent Color -->
+                <div>
+                    <label for="accent_color" style="display: block; margin-bottom: 5px; font-weight: 500;">Accent Color</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="color" id="accent_color" name="accent_color" style="width: 60px; height: 40px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        <input type="text" id="accent_color_text" placeholder="#4CAF50" style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace;">
+                    </div>
+                </div>
+
+                <!-- Theme Mode -->
+                <div>
+                    <label for="theme_mode" style="display: block; margin-bottom: 5px; font-weight: 500;">Theme</label>
+                    <select id="theme_mode" name="theme_mode" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- Logo & Favicon -->
+        <fieldset style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 20px;">
+            <legend style="font-weight: 600; padding: 0 8px;">Assets</legend>
+
+            <div style="margin-top: 15px;">
+                <!-- Logo URL -->
+                <div style="margin-bottom: 15px;">
+                    <label for="logo_url" style="display: block; margin-bottom: 5px; font-weight: 500;">Logo URL</label>
+                    <input type="url" id="logo_url" name="logo_url" placeholder="https://example.com/logo.png" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #999;">Square image (recommended: 256x256px)</small>
+                </div>
+
+                <!-- Favicon URL -->
+                <div>
+                    <label for="favicon_url" style="display: block; margin-bottom: 5px; font-weight: 500;">Favicon URL</label>
+                    <input type="url" id="favicon_url" name="favicon_url" placeholder="https://example.com/favicon.ico" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #999;">Icon for browser tab (recommended: 32x32px)</small>
+                </div>
+            </div>
+        </fieldset>
+
+        <!-- Position & Sizing -->
+        <fieldset style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 20px;">
+            <legend style="font-weight: 600; padding: 0 8px;">Widget Position</legend>
+
+            <div style="margin-top: 15px;">
+                <label for="position" style="display: block; margin-bottom: 5px; font-weight: 500;">Position</label>
+                <select id="position" name="position" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="bottom-right">Bottom Right</option>
+                    <option value="bottom-left">Bottom Left</option>
+                    <option value="top-right">Top Right</option>
+                    <option value="top-left">Top Left</option>
+                </select>
+            </div>
+        </fieldset>
+
+        <!-- Custom CSS -->
+        <div style="margin-bottom: 20px;">
+            <label for="custom_css" style="display: block; margin-bottom: 5px; font-weight: 500;">Custom CSS (Advanced)</label>
+            <textarea id="custom_css" name="custom_css" placeholder="/* Add custom CSS here */" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-height: 120px; font-family: monospace; font-size: 12px;"></textarea>
+            <small style="color: #999;">Override styles with custom CSS. Use carefully.</small>
+        </div>
+
+        <!-- Submit Button -->
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Save Branding Settings</button>
+            <button type="button" onclick="resetBrandingForm()" style="padding: 10px 20px; background: #f0f0f0; color: #333; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 500;">Reset</button>
+        </div>
+    </form>
+
+    <!-- Preview Section -->
+    <div id="branding-preview" style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #e0e0e0;">
+        <h3 style="margin-bottom: 15px;">Preview</h3>
+        <div id="preview-box" style="
+            width: 400px;
+            height: 500px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        ">
+            <div id="preview-header" style="
+                padding: 20px;
+                color: white;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <div>
+                    <h4 id="preview-bot-name" style="margin: 0 0 4px 0; font-size: 16px;">ChatBot</h4>
+                    <p id="preview-bot-desc" style="margin: 0; font-size: 12px; opacity: 0.9;">We're here to help</p>
+                </div>
+            </div>
+            <div style="padding: 20px; height: 380px; overflow-y: auto; background: #f9f9f9;">
+                <div style="background: #f0f0f0; padding: 10px 14px; border-radius: 12px 12px 12px 0; width: 80%; margin-bottom: 12px;">
+                    <p style="margin: 0; font-size: 14px;">Hi! 👋 How can I help you?</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load branding settings
+    async function loadBrandingSettings() {
+        try {
+            const response = await fetch('/admin/api/branding');
+            if (response.ok) {
+                const data = await response.json();
+                const branding = data.branding;
+
+                // Populate form
+                document.getElementById('bot_name').value = branding.bot_name || '';
+                document.getElementById('bot_description').value = branding.bot_description || '';
+                document.getElementById('initial_message').value = branding.initial_message || '';
+                document.getElementById('primary_color').value = branding.primary_color || '#667eea';
+                document.getElementById('primary_color_text').value = branding.primary_color || '#667eea';
+                document.getElementById('secondary_color').value = branding.secondary_color || '#764ba2';
+                document.getElementById('secondary_color_text').value = branding.secondary_color || '#764ba2';
+                document.getElementById('accent_color').value = branding.accent_color || '#4CAF50';
+                document.getElementById('accent_color_text').value = branding.accent_color || '#4CAF50';
+                document.getElementById('logo_url').value = branding.logo_url || '';
+                document.getElementById('favicon_url').value = branding.favicon_url || '';
+                document.getElementById('custom_css').value = branding.custom_css || '';
+                document.getElementById('position').value = branding.position || 'bottom-right';
+                document.getElementById('theme_mode').value = branding.theme_mode || 'light';
+
+                // Update preview
+                updateBrandingPreview();
+            }
+        } catch (error) {
+            console.error('Failed to load branding:', error);
+        }
+    }
+
+    // Update preview
+    function updateBrandingPreview() {
+        const primaryColor = document.getElementById('primary_color').value;
+        const secondaryColor = document.getElementById('secondary_color').value;
+        const botName = document.getElementById('bot_name').value;
+        const botDesc = document.getElementById('bot_description').value;
+        const initialMsg = document.getElementById('initial_message').value;
+
+        document.getElementById('preview-header').style.background = 
+            `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`;
+        document.getElementById('preview-bot-name').textContent = botName || 'ChatBot';
+        document.getElementById('preview-bot-desc').textContent = botDesc || 'We\'re here to help';
+    }
+
+    // Sync color inputs
+    document.getElementById('primary_color')?.addEventListener('input', function() {
+        document.getElementById('primary_color_text').value = this.value;
+        updateBrandingPreview();
+    });
+
+    document.getElementById('primary_color_text')?.addEventListener('input', function() {
+        if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+            document.getElementById('primary_color').value = this.value;
+            updateBrandingPreview();
+        }
+    });
+
+    document.getElementById('secondary_color')?.addEventListener('input', function() {
+        document.getElementById('secondary_color_text').value = this.value;
+        updateBrandingPreview();
+    });
+
+    document.getElementById('secondary_color_text')?.addEventListener('input', function() {
+        if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+            document.getElementById('secondary_color').value = this.value;
+            updateBrandingPreview();
+        }
+    });
+
+    document.getElementById('accent_color')?.addEventListener('input', function() {
+        document.getElementById('accent_color_text').value = this.value;
+    });
+
+    document.getElementById('bot_name')?.addEventListener('input', updateBrandingPreview);
+    document.getElementById('bot_description')?.addEventListener('input', updateBrandingPreview);
+
+    // Handle form submission
+    document.getElementById('branding-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = {
+            bot_name: document.getElementById('bot_name').value,
+            bot_description: document.getElementById('bot_description').value,
+            initial_message: document.getElementById('initial_message').value,
+            primary_color: document.getElementById('primary_color').value,
+            secondary_color: document.getElementById('secondary_color').value,
+            accent_color: document.getElementById('accent_color').value,
+            logo_url: document.getElementById('logo_url').value,
+            favicon_url: document.getElementById('favicon_url').value,
+            custom_css: document.getElementById('custom_css').value,
+            position: document.getElementById('position').value,
+            theme_mode: document.getElementById('theme_mode').value
+        };
+
+        try {
+            const response = await fetch('/admin/api/branding', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert('Branding settings saved successfully!');
+                console.log('Saved:', data.branding);
+            } else {
+                alert('Failed to save branding settings');
+            }
+        } catch (error) {
+            console.error('Error saving branding:', error);
+            alert('Error saving branding settings');
+        }
+    });
+
+    // Reset form
+    function resetBrandingForm() {
+        if (confirm('Reset to defaults?')) {
+            loadBrandingSettings();
+        }
+    }
+
+    // Load on page load
+    window.addEventListener('DOMContentLoaded', loadBrandingSettings);
+</script>
