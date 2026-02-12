@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment
+.env
+venv/
+ENV/
+
+# VS Code
+.vscode/
+
+# Database
+instance/chatbot.db
+*.sqlite
+*.db
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Static build
+build/
+dist/
+
+# Misc
+*.swp
+*.bak
+*.tmp
+
+# Jupyter
+*.ipynb_checkpoints
+
