@@ -13,6 +13,15 @@ def init_db(app):
     Initialize database with Flask app
     Creates all tables if they don't exist
     """
+    # FIX: Ensure the 'instance' directory exists before creating the DB
+    db_dir = os.path.dirname(DATABASE_PATH)
+    if not os.path.exists(db_dir):
+        try:
+            os.makedirs(db_dir)
+            print(f"Created directory: {db_dir}")
+        except OSError as e:
+            print(f"Error creating directory {db_dir}: {e}")
+
     with app.app_context():
         db.create_all()
         print(f"Database initialized at: {DATABASE_PATH}")
