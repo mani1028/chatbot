@@ -17,12 +17,13 @@ SQLALCHEMY_DATABASE_URI = f'sqlite:///{DATABASE_PATH.replace(chr(92), "/")}'
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # AI Service configuration
-CONFIDENCE_THRESHOLD = 0.7  # Only answer if confidence >= 0.7
+# CHANGED: Lowered to 0.65 to be more friendly in the simulator
+CONFIDENCE_THRESHOLD = 0.65 
 
 # Session configuration
 PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
 
-# Admin credentials (for initial login)
+# Admin credentials
 ADMIN_USERNAME = 'admin'
 ADMIN_PASSWORD = 'admin123'
 
@@ -37,22 +38,13 @@ FALLBACK_MESSAGES = [
 CRM_WEBHOOK_URL = os.getenv('CRM_WEBHOOK_URL', 'http://localhost:5001/api/webhook/handoff')
 CRM_WEBHOOK_KEY = os.getenv('CRM_WEBHOOK_KEY', 'your-webhook-key-here')
 
-# Handoff Keywords - trigger CRM webhook if user mentions these
 HANDOFF_KEYWORDS = [
     'agent', 'human', 'representative', 'help', 'support',
-    'manager', 'supervisor', 'live chat', 'speak to',
-    'call me', 'contact me', 'help me', 'urgent',
-    'problem', 'issue', 'complaint', 'frustrated'
+    'manager', 'live chat', 'speak to', 'call me'
 ]
 
-# Session configuration for conversation history
-SESSION_HISTORY_MAX = 10  # Store last 10 messages per session
-
-# ===== WIDGET & BRANDING CONFIGURATION =====
-
-# Widget embedding configuration
+SESSION_HISTORY_MAX = 10 
 WIDGET_EMBED_URL = os.getenv('WIDGET_EMBED_URL', 'http://localhost:5000')
-WIDGET_ENABLE_CORS = os.getenv('WIDGET_ENABLE_CORS', 'true').lower() == 'true'
 
 # Default Branding Settings
 DEFAULT_BRANDING = {
@@ -65,13 +57,11 @@ DEFAULT_BRANDING = {
     'favicon_url': None,
     'custom_css': '',
     'initial_message': "Hi I'am AlinaX! 👋 How can I help you today?",
-    'position': 'bottom-right',  # bottom-right, bottom-left, top-right, top-left
-    'theme_mode': 'light'  # light or dark
+    'position': 'bottom-right',
+    'theme_mode': 'light' 
 }
 
-# Widget sizing
-WIDGET_WIDTH = 420  # pixels
-WIDGET_HEIGHT = 600  # pixels
+WIDGET_WIDTH = 420
+WIDGET_HEIGHT = 600
 WIDGET_MIN_WIDTH = 300
 WIDGET_MIN_HEIGHT = 400
-

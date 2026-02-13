@@ -1,10 +1,10 @@
 from flask import Blueprint, request, jsonify, session
 from database import db
-from models import Site, Admin, ClientConfig, Intent
+from models import Site, Admin, ClientConfig, Intent, BrandingSettings
 from services.importer import import_sector_template
 from functools import wraps
 import traceback
-from sqlalchemy.exc import IntegrityError # Import specific DB error
+from sqlalchemy.exc import IntegrityError
 
 admin_api = Blueprint('admin_api', __name__)
 
@@ -55,6 +55,46 @@ def get_client_intents():
     intents = Intent.query.filter_by(site_id=site_id).all()
     return jsonify({'intents': [i.to_dict() for i in intents]})
 
+# --- BRANDING ROUTES (NEW) ---
+
+@admin_api.route('/client/branding', methods=['GET'])
+def get_branding():
+    if 'admin_id' not in session: return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    
+    branding = BrandingSettings.query.filter_by(site_id=site_id).first()
+    
+    # Create default if missing for this tenant
+    if not branding:
+        branding = BrandingSettings(site_id=site_id)
+        db.session.add(branding)
+        db.session.commit()
+        
+    return jsonify({'branding': branding.to_dict()})
+
+@admin_api.route('/client/branding', methods=['POST'])
+def update_branding():
+    if 'admin_id' not in session: return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    
+    try:
+        data = request.json
+        branding = BrandingSettings.query.filter_by(site_id=site_id).first()
+        if not branding:
+            branding = BrandingSettings(site_id=site_id)
+            db.session.add(branding)
+            
+        # Update fields
+        if 'bot_name' in data: branding.bot_name = data['bot_name']
+        if 'initial_message' in data: branding.initial_message = data['initial_message']
+        if 'primary_color' in data: branding.primary_color = data['primary_color']
+        if 'logo_url' in data: branding.logo_url = data['logo_url']
+        
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # --- SUPER ADMIN ROUTES ---
 
 @admin_api.route('/super/sites', methods=['POST'])
@@ -65,40 +105,40 @@ def create_site_route():
         name = data.get('name')
         admin_user = data.get('admin_username')
         admin_pass = data.get('admin_password')
-        # FIX: Do not default to 'localhost'. Allow None.
         domain = data.get('domain') or None 
 
         if not name or not admin_user or not admin_pass:
-            return jsonify({'error': 'Missing fields (Name, Admin User, Password)'}), 400
+            return jsonify({'error': 'Missing fields'}), 400
 
-        # Check for duplicate username
         if Admin.query.filter_by(username=admin_user).first():
             return jsonify({'error': f'Username "{admin_user}" is already taken.'}), 400
 
         # 1. Create Site
         site = Site(
             name=name,
-            domain=domain, # Will be None if empty, allowing multiple sites
+            domain=domain,
             bot_name=data.get('bot_name', 'ChatBot')
         )
         db.session.add(site)
-        db.session.flush() # Get ID
+        db.session.flush() 
 
         # 2. Create Admin
         new_admin = Admin(username=admin_user, site_id=site.id, is_super=False)
         new_admin.set_password(admin_pass)
         db.session.add(new_admin)
+        
+        # 3. Create Default Branding
+        default_branding = BrandingSettings(site_id=site.id, bot_name=site.bot_name)
+        db.session.add(default_branding)
 
         db.session.commit()
         return jsonify({'success': True, 'site': site.to_dict()})
 
     except IntegrityError as e:
         db.session.rollback()
-        print("Database Integrity Error:", e)
-        # Check if it's the domain constraint
         if 'UNIQUE constraint failed: sites.domain' in str(e):
-            return jsonify({'error': f'The domain "{domain}" is already used by another site.'}), 400
-        return jsonify({'error': 'Database error: Duplicate data found.'}), 400
+            return jsonify({'error': f'The domain "{domain}" is already used.'}), 400
+        return jsonify({'error': 'Database error: Duplicate data.'}), 400
 
     except Exception as e:
         db.session.rollback()

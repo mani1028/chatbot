@@ -5,3 +5,10 @@ Werkzeug==3.0.3
 requests==2.31.0
 thefuzz==0.19.0
 flask-cors==4.0.0
+flask-socketio==5.3.6
+simple-websocket==1.0.0
+eventlet==0.33.3
+
+Optional: Speed up fuzzy matching (removes UserWarning)
+
+python-Levenshtein==0.23.0

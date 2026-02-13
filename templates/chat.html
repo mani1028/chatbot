@@ -1,82 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script>
-        // Load and apply branding settings
-        async function loadBranding() {
-            try {
-                const response = await fetch('/api/widget-settings');
-                if (response.ok) {
-                    const branding = await response.json();
-                    // Apply CSS variables for theming
-                    document.documentElement.style.setProperty('--primary-color', branding.primary_color);
-                    document.documentElement.style.setProperty('--secondary-color', branding.secondary_color);
-                    document.documentElement.style.setProperty('--accent-color', branding.accent_color);
-                    
-                    // Update title
-                    const titleEl = document.querySelector('.chat-title h2');
-                    if (titleEl) titleEl.textContent = branding.bot_name;
-                    
-                    const descEl = document.querySelector('.chat-title p');
-                    if (descEl) descEl.textContent = branding.bot_description;
-                    
-                    // Update initial message
-                    const initialMsg = document.querySelector('.initial-bot-message');
-                    if (initialMsg) initialMsg.textContent = branding.initial_message;
-                    
-                    // Update favicon
-                    if (branding.favicon_url) {
-                        const link = document.createElement('link');
-                        link.rel = 'icon';
-                        link.href = branding.favicon_url;
-                        document.head.appendChild(link);
-                    }
-                    
-                    // Apply custom CSS
-                    if (branding.custom_css) {
-                        const style = document.createElement('style');
-                        style.innerHTML = branding.custom_css;
-                        document.head.appendChild(style);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load branding:', error);
-            }
-        }
-        
-        // Load branding on page load
-        window.addEventListener('DOMContentLoaded', loadBranding);
-    </script>
-    <title>AI Chatbot</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="{{ url_for('static', filename='chat.js') }}"></script>
-    </head>
-    <body>
-        <div class="chat-container">
-            <div class="chat-header">
-                <h2>🤖 AI Assistant</h2>
-            </div>
-            <div id="chat-box" class="chat-box">
-                <div class="bot-message">Hello! How can I help you?</div>
-            </div>
-            <div class="chat-input-area">
-                <input type="text" id="user-input" placeholder="Type your message...">
-                <button id="send-btn">Send</button>
-            </div>
-        </div>
-
-        <script src="{{ url_for('static', filename='chat.js') }}"></script>
-    </body>
-    </html>
-
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chatbot</title>
+    <title>AI Chatbot Demo</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
         // Load and apply branding settings
@@ -85,79 +12,38 @@
                 const response = await fetch('/api/widget-settings');
                 if (response.ok) {
                     const branding = await response.json();
-                    // Apply CSS variables for theming
                     document.documentElement.style.setProperty('--primary-color', branding.primary_color);
                     document.documentElement.style.setProperty('--secondary-color', branding.secondary_color);
                     document.documentElement.style.setProperty('--accent-color', branding.accent_color);
                     
-                    // Update title
-                    const titleEl = document.querySelector('.chat-title h2');
+                    const titleEl = document.querySelector('.chat-header h2');
                     if (titleEl) titleEl.textContent = branding.bot_name;
                     
-                    const descEl = document.querySelector('.chat-title p');
-                    if (descEl) descEl.textContent = branding.bot_description;
-                    
-                    // Update initial message
-                    const initialMsg = document.querySelector('.initial-bot-message');
+                    const initialMsg = document.querySelector('.bot-message');
                     if (initialMsg) initialMsg.textContent = branding.initial_message;
-                    
-                    // Update favicon
-                    if (branding.favicon_url) {
-                        const link = document.createElement('link');
-                        link.rel = 'icon';
-                        link.href = branding.favicon_url;
-                        document.head.appendChild(link);
-                    }
-                    
-                    // Apply custom CSS
-                    if (branding.custom_css) {
-                        const style = document.createElement('style');
-                        style.innerHTML = branding.custom_css;
-                        document.head.appendChild(style);
-                    }
                 }
             } catch (error) {
                 console.error('Failed to load branding:', error);
             }
         }
-        
-        // Load branding on page load
         window.addEventListener('DOMContentLoaded', loadBranding);
     </script>
 </head>
 <body>
-    <!-- Chat popup container -->
     <div class="chat-container">
         <div class="chat-header">
-            <div class="chat-title">
-                <h2>Chat with us</h2>
-                <p>We're here to help</p>
-            </div>
-            <button class="minimize-btn" onclick="minimizeChat()">−</button>
+            <h2>🤖 AI Assistant</h2>
         </div>
-
-        <div class="chat-messages" id="chatMessages">
-            <div class="message bot-message">
-                <div class="message-content">
-                    <p class="initial-bot-message">Hi! 👋 How can I help you today?</p>
-                id="messageInput" 
-                class="chat-input" 
-                placeholder="Type your message..."
-                onkeypress="handleKeyPress(event)"
-            >
-            <button class="send-btn" onclick="sendMessage()">Send</button>
+        <div id="chat-box" class="chat-box">
+            <div class="bot-message">Hello! How can I help you?</div>
         </div>
-
-        <div class="chat-footer">
-            <small>Powered by AI Chatbot</small>
+        <div class="chat-input-area">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button id="send-btn">Send</button>
         </div>
     </div>
 
-    <!-- Floating button (when minimized) -->
-    <div class="chat-toggle" id="chatToggle" onclick="maximizeChat()" style="display: none;">
-        <span>💬</span>
-    </div>
-
+    <!-- Script included only once at the end -->
     <script src="{{ url_for('static', filename='chat.js') }}"></script>
 </body>
 </html>

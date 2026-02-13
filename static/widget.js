@@ -1,130 +1,176 @@
-
 /**
- * Chatbot Widget Embed Script
- * Auto-initializes based on data attributes
+ * ChatbotX Enterprise Widget
+ * Handles UI, WebSockets, Dark Mode, and Typing Indicators
  */
 (function() {
-    // 1. Get configuration immediately from the script tag
-    const currentScript = document.currentScript;
-    // Default to 1 if not provided
-    const siteId = currentScript ? (currentScript.getAttribute('data-site-id') || 1) : 1;
-    const position = currentScript ? (currentScript.getAttribute('data-position') || 'bottom-right') : 'bottom-right';
+    // 1. ENVIRONMENT SETUP
+    const SCRIPT = document.currentScript;
+    const SITE_ID = SCRIPT ? (SCRIPT.getAttribute('data-site-id') || 1) : 1;
+    // Auto-detect backend URL
+    const API_BASE = SCRIPT ? new URL(SCRIPT.src).origin : "http://localhost:5000";
     
-    // API CONFIGURATION
-    const API_URL = "http://localhost:5000"; 
+    let socket = null;
+    let sessionId = localStorage.getItem('chat_session_id') || 'sess_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('chat_session_id', sessionId);
+    
+    let config = {
+        primary_color: '#6366f1',
+        bot_name: 'ChatBot',
+        theme_mode: 'light',
+        initial_message: 'Hello! How can I help?'
+    };
 
-    // 2. Main Initialization Function
-    function initWidget() {
-        // Prevent duplicate widgets
-        if (document.getElementById('chatbot-widget-container')) return;
-
-        // Inject CSS
+    // 2. LOAD RESOURCES
+    function loadResources() {
+        // Load CSS
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = `${API_URL}/static/style.css`;
+        link.href = `${API_BASE}/static/style.css`;
         document.head.appendChild(link);
 
-        // Create Widget HTML
-        const container = document.createElement('div');
-        container.id = 'chatbot-widget-container';
-        container.className = `chatbot-widget-${position}`;
-        container.innerHTML = `
-            <div id="chatbot-bubble">💬</div>
-            <div id="chatbot-window" style="display: none;">
-                <div id="chatbot-header">
-                    <span id="chatbot-title">Chat Support</span>
-                    <button id="chatbot-close">✖</button>
+        // Load Socket.IO
+        const script = document.createElement('script');
+        script.src = "https://cdn.socket.io/4.7.4/socket.io.min.js"; 
+        script.onload = init;
+        document.head.appendChild(script);
+    }
+
+    // 3. INITIALIZATION
+    async function init() {
+        // Fetch Settings
+        try {
+            const res = await fetch(`${API_BASE}/api/widget-settings?site_id=${SITE_ID}`);
+            const data = await res.json();
+            config = { ...config, ...data };
+            
+            buildUI();
+            connectSocket();
+        } catch (e) {
+            console.error("ChatbotX: Failed to init", e);
+        }
+    }
+
+    // 4. UI CONSTRUCTION
+    function buildUI() {
+        if (document.getElementById('chat-widget-wrapper')) return;
+
+        const wrapper = document.createElement('div');
+        wrapper.id = 'chat-widget-wrapper';
+        
+        // CSS Variables for branding
+        wrapper.style.setProperty('--primary', config.primary_color);
+
+        wrapper.innerHTML = `
+            <!-- Launcher -->
+            <div id="chat-launcher" style="background-color: ${config.primary_color}">
+                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+            </div>
+
+            <!-- Widget Window -->
+            <div id="chat-widget" class="${config.theme_mode === 'dark' ? 'dark-mode' : ''}">
+                <div class="widget-header" style="background-color: ${config.primary_color}">
+                    <span>${config.bot_name}</span>
+                    <button class="widget-close">×</button>
                 </div>
-                <div id="chatbot-messages"></div>
-                <div id="chatbot-input-area">
-                    <input type="text" id="chatbot-input" placeholder="Type a message...">
-                    <button id="chatbot-send">➤</button>
+                <div class="widget-body" id="chat-body">
+                    <!-- Initial Message -->
+                    <div class="msg bot">${config.initial_message}</div>
+                </div>
+                <div class="widget-footer">
+                    <input type="text" class="widget-input" id="chat-input" placeholder="Type a message...">
+                    <button class="widget-send" style="background-color: ${config.primary_color}">➤</button>
                 </div>
             </div>
         `;
+        document.body.appendChild(wrapper);
+
+        // Event Listeners
+        document.getElementById('chat-launcher').onclick = toggleChat;
+        wrapper.querySelector('.widget-close').onclick = toggleChat;
+        wrapper.querySelector('.widget-send').onclick = sendMessage;
+        document.getElementById('chat-input').onkeypress = (e) => {
+            if(e.key === 'Enter') sendMessage();
+        };
+    }
+
+    // 5. WEBSOCKET LOGIC
+    function connectSocket() {
+        socket = io(API_BASE, { transports: ['websocket', 'polling'] });
+
+        socket.on('connect', () => {
+            console.log("ChatbotX: Connected");
+            socket.emit('join', { site_id: SITE_ID });
+        });
+
+        // Listen for typing indicator
+        socket.on('typing', () => {
+            showTyping();
+        });
+
+        // Listen for responses
+        socket.on('bot_response', (data) => {
+            hideTyping();
+            appendMessage(data.reply, 'bot');
+        });
+    }
+
+    // 6. ACTIONS
+    function toggleChat() {
+        const widget = document.getElementById('chat-widget');
+        const launcher = document.getElementById('chat-launcher');
         
-        // Append to body safely
-        if (document.body) {
-            document.body.appendChild(container);
-        } else {
-            document.addEventListener('DOMContentLoaded', () => document.body.appendChild(container));
-        }
-
-        // Attach Logic
-        attachEventListeners(siteId, API_URL);
+        widget.classList.toggle('open');
+        launcher.classList.toggle('hidden');
         
-        // Optional: Load Branding
-        fetch(`${API_URL}/api/widget-settings?site_id=${siteId}`)
-            .then(r => r.json())
-            .then(settings => {
-                if(settings && settings.bot_name) {
-                    document.getElementById('chatbot-title').innerText = settings.bot_name;
-                }
-            })
-            .catch(e => console.log("Branding load error (using defaults)", e));
-    }
-
-    // 3. Event Listeners
-    function attachEventListeners(siteId, apiUrl) {
-        const bubble = document.getElementById('chatbot-bubble');
-        const windowEl = document.getElementById('chatbot-window');
-        const closeBtn = document.getElementById('chatbot-close');
-        const input = document.getElementById('chatbot-input');
-        const sendBtn = document.getElementById('chatbot-send');
-        const messages = document.getElementById('chatbot-messages');
-
-        // Toggle Visibility
-        bubble.onclick = () => { windowEl.style.display = 'flex'; bubble.style.display = 'none'; };
-        closeBtn.onclick = () => { windowEl.style.display = 'none'; bubble.style.display = 'flex'; };
-
-        function appendMessage(text, isUser) {
-            const div = document.createElement('div');
-            div.className = isUser ? 'user-message' : 'bot-message';
-            div.innerHTML = `<div class="message-content">${text}</div>`;
-            messages.appendChild(div);
-            messages.scrollTop = messages.scrollHeight;
+        if(widget.classList.contains('open')) {
+            document.getElementById('chat-input').focus();
         }
+    }
 
-        async function sendMessage() {
-            const text = input.value.trim();
-            if (!text) return;
+    function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if(!text) return;
 
-            appendMessage(text, true);
-            input.value = '';
+        appendMessage(text, 'user');
+        input.value = '';
 
-            try {
-                const res = await fetch(`${apiUrl}/api/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        site_id: siteId,
-                        message: text
-                    })
-                });
-
-                if (!res.ok) {
-                    const errData = await res.json();
-                    throw new Error(errData.error || `Server Error ${res.status}`);
-                }
-
-                const data = await res.json();
-                appendMessage(data.reply, false);
-
-            } catch (err) {
-                console.error("Chat Error:", err);
-                appendMessage("⚠️ Error: " + err.message, false);
-            }
+        // Emit to server (app.py handles this via socketio)
+        if(socket) {
+            socket.emit('client_message', {
+                site_id: SITE_ID,
+                message: text,
+                session_id: sessionId
+            });
         }
-
-        sendBtn.onclick = sendMessage;
-        input.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
     }
 
-    // 4. Initialize
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        initWidget();
-    } else {
-        document.addEventListener('DOMContentLoaded', initWidget);
+    function appendMessage(text, sender) {
+        const body = document.getElementById('chat-body');
+        const div = document.createElement('div');
+        div.className = `msg ${sender}`;
+        div.innerText = text; // Safe text insertion
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
     }
+
+    function showTyping() {
+        const body = document.getElementById('chat-body');
+        if(document.querySelector('.typing-indicator')) return;
+
+        const div = document.createElement('div');
+        div.className = 'typing-indicator';
+        div.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div>`;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function hideTyping() {
+        const el = document.querySelector('.typing-indicator');
+        if(el) el.remove();
+    }
+
+    // Start
+    loadResources();
 
 })();

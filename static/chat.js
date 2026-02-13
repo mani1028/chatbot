@@ -4,15 +4,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', function () {
-    const chatBox = document.getElementById('chat-box'); // Ensure your HTML has this ID
-    const userInput = document.getElementById('user-input'); // Ensure your HTML has this ID
-    const sendBtn = document.getElementById('send-btn'); // Ensure your HTML has this ID
-/**
- * Chat UI JavaScript
- * Handles real-time chat interactions for the main demo page
- */
-
-document.addEventListener('DOMContentLoaded', function () {
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
@@ -21,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const DEFAULT_SITE_ID = 1; 
 
     function appendMessage(text, isUser) {
+        if (!chatBox) return;
         const div = document.createElement('div');
         div.className = isUser ? 'user-message' : 'bot-message';
         div.textContent = text;
@@ -29,6 +21,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function sendMessage() {
+        if (!userInput) return;
+        
         const text = userInput.value.trim();
         if (!text) return;
 
@@ -41,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: text,
-                    site_id: DEFAULT_SITE_ID  // <--- THE MISSING PIECE
+                    site_id: DEFAULT_SITE_ID
                 })
             });
 
@@ -64,4 +58,3 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.key === 'Enter') sendMessage();
     });
 });
-            if (e.key === 'Enter') sendMessage();
