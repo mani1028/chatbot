@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from flask_cors import CORS  # Enable CORS for cross-origin requests
+from flask_cors import CORS
 from functools import wraps
 import os
 from datetime import datetime
@@ -10,13 +10,13 @@ from config import (
     SQLALCHEMY_TRACK_MODIFICATIONS, ADMIN_USERNAME, ADMIN_PASSWORD
 )
 from database import db, init_db
-from models import Admin, BrandingSettings, Site, Intent, IntentPhrase, ChatLog
+from models import Admin, BrandingSettings, Site, Intent, IntentPhrase, ChatLog, Plan
 from routes.chat_routes import chat_bp
 from routes.admin_api import admin_api
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Allow all domains to access the API
+CORS(app)
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['DEBUG'] = DEBUG
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
@@ -26,9 +26,6 @@ db.init_app(app)
 
 # --- HELPER FUNCTIONS ---
 def login_required(f):
-    """
-    Decorator to require admin login for routes
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_id' not in session:
@@ -40,7 +37,7 @@ def login_required(f):
 with app.app_context():
     init_db(app)
     
-    # 1. Auto-Create Super Admin if not exists
+    # 1. Auto-Create Super Admin
     super_admin = Admin.query.filter_by(username=ADMIN_USERNAME).first()
     if not super_admin:
         print(f"Creating Super Admin: {ADMIN_USERNAME}")
@@ -49,14 +46,29 @@ with app.app_context():
         db.session.add(super_admin)
         db.session.commit()
 
-    # 2. Auto-Create Default Site (ID: 1)
+    # 2. Auto-Create Plans (New Feature)
+    if Plan.query.count() == 0:
+        print("Seeding Default Plans...")
+        plans = [
+            Plan(name="Free Tier", max_monthly_chats=100, price=0.0),
+            Plan(name="Starter", max_monthly_chats=1000, price=29.0),
+            Plan(name="Pro", max_monthly_chats=10000, price=99.0),
+            Plan(name="Enterprise", max_monthly_chats=100000, price=499.0)
+        ]
+        db.session.add_all(plans)
+        db.session.commit()
+
+    # 3. Auto-Create Default Site
     default_site = Site.query.get(1)
     if not default_site:
         print("Creating Default Site (ID: 1)...")
+        # Assign 'Starter' plan by default
+        starter_plan = Plan.query.filter_by(name="Starter").first()
         default_site = Site(
             name="Platform Demo",
             domain="localhost",
-            bot_name="Demo Bot"
+            bot_name="Demo Bot",
+            plan_id=starter_plan.id if starter_plan else None
         )
         db.session.add(default_site)
         db.session.commit()
@@ -66,7 +78,7 @@ with app.app_context():
             super_admin.site_id = 1
             db.session.commit()
 
-    # 3. Default Branding
+    # 4. Default Branding
     if BrandingSettings.query.count() == 0:
         from config import DEFAULT_BRANDING
         branding = BrandingSettings(**DEFAULT_BRANDING)
@@ -81,14 +93,11 @@ app.register_blueprint(admin_api, url_prefix='/admin/api')
 
 @app.route('/')
 def index():
-    """
-    Main Landing Page for the SaaS Platform
-    """
     return render_template('landing.html')
+
 @app.route('/widget.js')
 def widget_embed():
     from flask import send_file
-    # UPDATED: Pointing to the file you chose (chatbot/static/widget.js)
     return send_file('static/widget.js', mimetype='application/javascript')
 
 @app.route('/api/widget-settings')
@@ -149,15 +158,6 @@ def super_dashboard():
 @login_required
 def admin_dashboard():
     return render_template('admin_dashboard.html', site_id=session.get('site_id'))
-
-@app.route('/admin/api/client/intents', methods=['GET'])
-@login_required
-def get_client_intents():
-    site_id = session.get('site_id')
-    if not site_id:
-        return jsonify({'error': 'No site linked to this admin'}), 400
-    intents = Intent.query.filter_by(site_id=site_id).all()
-    return jsonify({'intents': [i.to_dict() for i in intents]})
 
 # --- ERROR HANDLERS ---
 

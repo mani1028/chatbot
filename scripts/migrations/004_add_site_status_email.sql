@@ -1,0 +1,2 @@
+ALTER TABLE sites ADD COLUMN status VARCHAR(20) DEFAULT 'active';
+ALTER TABLE sites ADD COLUMN owner_email VARCHAR(120);
