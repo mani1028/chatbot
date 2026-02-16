@@ -1,259 +1,394 @@
-:root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --bg-body: #f3f4f6;
-    --bg-card: #ffffff;
-    --text-main: #111827;
-    --text-muted: #6b7280;
-    --border: #e5e7eb;
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
+from flask import Blueprint, request, jsonify, session
+from database import db
+from models import Site, Admin, ClientConfig, Intent, ChatLog, Plan, PlatformSetting, SectorTemplate
+from models.file_manager import SiteFile
+from services.importer import import_sector_template as importer_service
+from services.file_service import delete_file_from_disk
+from functools import wraps
+import traceback
+import json
+from sqlalchemy.exc import IntegrityError
 
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-body);
-    color: var(--text-main);
-    margin: 0;
-    height: 100vh;
-    display: flex;
-    overflow: hidden;
-}
+admin_api = Blueprint('admin_api', __name__)
 
-/* SIDEBAR */
-.sidebar {
-    width: 260px;
-    background: white;
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 24px;
-    flex-shrink: 0;
-}
+def super_admin_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        user_id = session.get('admin_id')
+        admin = Admin.query.get(user_id)
+        if not admin or not getattr(admin, 'is_super', False):
+            return jsonify({'error': 'Super Admin rights required'}), 403
+        return func(*args, **kwargs)
+    return wrapper
 
-.logo {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--primary);
-    margin-bottom: 40px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+# --- CLIENT ROUTES ---
+@admin_api.route('/client/config', methods=['GET'])
+def get_client_config():
+    if 'admin_id' not in session: return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    if not site_id: return jsonify({'error': 'No site linked'}), 400
+    configs = ClientConfig.query.filter_by(client_id=site_id).all()
+    return jsonify({'config': {c.key: c.value for c in configs}})
 
-.badge-pro {
-    background: #000;
-    color: #fff;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    vertical-align: middle;
-}
+@admin_api.route('/client/config', methods=['POST'])
+def update_client_config():
+    if 'admin_id' not in session: return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    try:
+        data = request.json
+        for key, value in data.items():
+            conf = ClientConfig.query.filter_by(client_id=site_id, key=key).first()
+            if conf:
+                conf.value = value
+            else:
+                db.session.add(ClientConfig(client_id=site_id, key=key, value=value))
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-.nav-links { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+@admin_api.route('/client/stats', methods=['GET'])
+def get_client_stats():
+    """Fetch the real status of the client's bot"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    site = Site.query.get(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
 
-.nav-item {
-    padding: 12px;
-    border-radius: 8px;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: all 0.2s;
-}
+    return jsonify({
+        'status': site.status,
+        'bot_name': site.bot_name,
+        'plan_name': site.plan.name if getattr(site, 'plan', None) else 'Unknown Plan'
+    })
 
-.nav-item:hover { background: #f9fafb; color: var(--text-main); }
-.nav-item.active { background: #eff6ff; color: var(--primary); font-weight: 600; }
+@admin_api.route('/client/intents', methods=['GET'])
+def get_client_intents():
+    """Fetch assigned intents for this specific client"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    intents = Intent.query.filter_by(site_id=site_id).all()
+    intent_list = [
+        {
+            'id': i.id,
+            'intent_name': getattr(i, 'intent_name', ''),
+            'response': getattr(i, 'response', '')
+        }
+        for i in intents
+    ]
+    return jsonify({'intents': intent_list})
 
-.user-profile {
-    border-top: 1px solid var(--border);
-    padding-top: 20px;
-    font-size: 0.9rem;
-}
+@admin_api.route('/client/intents', methods=['POST'])
+def add_client_intent():
+    """Add a new intent"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    try:
+        data = request.json
+        new_intent = Intent(
+            site_id=site_id,
+            intent_name=data.get('intent_name'),
+            response=data.get('response')
+        )
+        db.session.add(new_intent)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-.status-online { color: #10b981; font-size: 0.8rem; display: block; margin-top: 4px; }
-.logout-link { color: #ef4444; text-decoration: none; font-weight: 500; display: block; margin-top: 10px; }
+@admin_api.route('/client/intents/<int:intent_id>', methods=['PUT'])
+def update_client_intent(intent_id):
+    """Update an existing assigned intent"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    try:
+        intent = Intent.query.filter_by(id=intent_id, site_id=site_id).first()
+        if not intent:
+            return jsonify({'error': 'Intent not found'}), 404
 
-/* MAIN CONTENT */
-.main-content {
-    flex: 1;
-    padding: 40px;
-    overflow-y: auto;
-}
+        data = request.json
+        intent.intent_name = data.get('intent_name', intent.intent_name)
+        intent.response = data.get('response', intent.response)
 
-.header { margin-bottom: 30px; }
-.header h1 { font-size: 1.8rem; margin: 0; }
-.header p { color: var(--text-muted); margin-top: 5px; }
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-.tab-panel { display: none; }
-.tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
+@admin_api.route('/client/intents/<int:intent_id>', methods=['DELETE'])
+def delete_client_intent(intent_id):
+    """Delete an assigned intent"""
+    if 'admin_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    site_id = session.get('site_id')
+    try:
+        intent = Intent.query.filter_by(id=intent_id, site_id=site_id).first()
+        if not intent:
+            return jsonify({'error': 'Intent not found'}), 404
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        db.session.delete(intent)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-/* CONFIG FORMS */
-.config-section {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
-    max-width: 700px;
-}
+# --- SUPER ADMIN: DASHBOARD STATS ---
+@admin_api.route('/super/stats', methods=['GET'])
+@super_admin_required
+def get_super_stats():
+    try:
+        total_sites = Site.query.count()
+        total_chats = ChatLog.query.count()
+        recent_logs = db.session.query(ChatLog, Site.name).join(Site, ChatLog.site_id == Site.id)\
+            .order_by(ChatLog.created_at.desc()).limit(5).all()
+        
+        activity_data = []
+        for log, site_name in recent_logs:
+            activity_data.append({
+                'site_name': site_name,
+                'message': log.user_message[:50] + '...',
+                'intent': log.detected_intent,
+                'time': log.created_at.strftime('%H:%M')
+            })
 
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
-.form-control {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 1rem;
-    box-sizing: border-box;
-    transition: border 0.2s;
-}
-.form-control:focus { outline: none; border-color: var(--primary); }
+        return jsonify({
+            'total_sites': total_sites,
+            'total_chats': total_chats,
+            'recent_activity': activity_data
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-.btn-save {
-    background: var(--primary);
-    color: white;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.btn-save:hover { background: var(--primary-dark); }
-.btn-save:disabled { opacity: 0.7; cursor: not-allowed; }
+# --- SUPER ADMIN: SITE MANAGEMENT ---
+@admin_api.route('/super/sites', methods=['GET'])
+@super_admin_required
+def list_sites_route():
+    sites = Site.query.all()
+    return jsonify({'sites': [s.to_dict() for s in sites]})
 
-/* PHONE MOCKUP */
-.branding-container { display: grid; grid-template-columns: 1fr 320px; gap: 40px; align-items: start; }
-.phone-mockup {
-    background: #1f2937;
-    border-radius: 40px;
-    padding: 12px;
-    border: 4px solid #374151;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    height: 600px;
-    position: sticky;
-    top: 20px;
-}
-.phone-screen {
-    background: #f3f4f6;
-    border-radius: 28px;
-    height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-.sim-header { background: var(--primary); color: white; padding: 15px; display: flex; align-items: center; gap: 10px; }
-.sim-avatar { width: 30px; height: 30px; background: rgba(255,255,255,0.2); border-radius: 50%; }
-.sim-body { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-.sim-bubble { padding: 10px; border-radius: 12px; font-size: 0.9rem; max-width: 80%; }
-.sim-bubble.bot { background: white; border-bottom-left-radius: 2px; }
-.sim-bubble.user { background: var(--primary); color: white; border-bottom-right-radius: 2px; align-self: flex-end; }
-.sim-footer { padding: 10px; background: white; border-top: 1px solid #eee; }
-.sim-input { height: 35px; background: #f3f4f6; border-radius: 20px; }
+@admin_api.route('/super/sites', methods=['POST'])
+@super_admin_required
+def create_site_route():
+    try:
+        data = request.json
+        name = data.get('name')
+        admin_user = data.get('admin_username')
+        admin_pass = data.get('admin_password')
+        domain = data.get('domain') or None 
 
-/* CODE BLOCK */
-.code-block { background: #111827; color: #e5e7eb; padding: 20px; border-radius: 8px; position: relative; overflow-x: auto; }
-.copy-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        if not name or not admin_user or not admin_pass:
+            return jsonify({'error': 'Missing fields'}), 400
 
-/* --- WIDGET STYLE (Embedded) --- */
-/* These styles are loaded by the widget.js into the client site */
+        if Admin.query.filter_by(username=admin_user).first():
+            return jsonify({'error': f'Username "{admin_user}" taken.'}), 400
 
-#chat-widget-wrapper { font-family: 'Inter', sans-serif; z-index: 99999; }
+        default_plan = Plan.query.filter_by(name="Starter").first()
+        plan_id = default_plan.id if default_plan else None
 
-#chat-widget {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 380px;
-    height: 600px;
-    max-height: 80vh;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    pointer-events: none;
-}
+        site = Site(
+            name=name, domain=domain, bot_name=data.get('bot_name', 'ChatBot'),
+            plan_id=plan_id, status='active', owner_email=data.get('owner_email')
+        )
+        db.session.add(site)
+        db.session.flush()
 
-#chat-widget.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+        new_admin = Admin(username=admin_user, site_id=site.id, is_super=False)
+        new_admin.set_password(admin_pass)
+        db.session.add(new_admin)
 
-/* Widget Header */
-.widget-header {
-    background: var(--primary);
-    color: white;
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: 600;
-}
-.widget-close { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; opacity: 0.8; }
-.widget-close:hover { opacity: 1; }
+        db.session.commit()
+        return jsonify({'success': True, 'site': site.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
-/* Widget Body */
-.widget-body {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background: #f9fafb;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+@admin_api.route('/super/sites/<int:site_id>/status', methods=['PUT'])
+@super_admin_required
+def toggle_site_status(site_id):
+    site = Site.query.get(site_id)
+    if not site: return jsonify({'error': 'Site not found'}), 404
+    
+    site.status = 'suspended' if site.status == 'active' else 'active'
+    site.is_active = (site.status == 'active')
+    
+    db.session.commit()
+    return jsonify({'success': True, 'status': site.status})
 
-/* Messages */
-.msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; }
-.msg.bot { background: white; color: #1f2937; border-bottom-left-radius: 2px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.msg.user { background: var(--primary); color: white; border-bottom-right-radius: 2px; align-self: flex-end; }
+@admin_api.route('/super/sites/<int:site_id>/impersonate', methods=['POST'])
+@super_admin_required
+def impersonate_site(site_id):
+    admin = Admin.query.filter_by(site_id=site_id, is_super=False).first()
+    if not admin: return jsonify({'error': 'No admin user found'}), 404
+    session['admin_id'] = admin.id
+    session['site_id'] = site_id
+    return jsonify({'success': True, 'redirect': '/admin/dashboard'})
 
-/* Widget Footer */
-.widget-footer { padding: 16px; background: white; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; }
-.widget-input { flex: 1; padding: 10px 15px; border: 1px solid #e5e7eb; border-radius: 20px; outline: none; }
-.widget-input:focus { border-color: var(--primary); }
-.widget-send { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-.widget-send:hover { transform: scale(1.05); }
+@admin_api.route('/super/sites/<int:site_id>/plan', methods=['PUT'])
+@super_admin_required
+def update_site_plan(site_id):
+    site = Site.query.get(site_id)
+    if not site: return jsonify({'error': 'Site not found'}), 404
+    data = request.json
+    site.plan_id = data.get('plan_id')
+    db.session.commit()
+    return jsonify({'success': True})
 
-/* Launcher */
-#chat-launcher {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 60px;
-    height: 60px;
-    background: var(--primary);
-    border-radius: 50%;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: transform 0.2s;
-    z-index: 100000;
-}
-#chat-launcher:hover { transform: scale(1.1); }
-#chat-launcher.hidden { display: none; }
-#chat-launcher svg { width: 30px; height: 30px; fill: white; }
+@admin_api.route('/super/sites/<int:site_id>/template_data', methods=['GET'])
+@super_admin_required
+def get_site_template_data(site_id):
+    """Fetch the configuration and intents applied to a specific tenant"""
+    try:
+        site = Site.query.get(site_id)
+        if not site:
+            return jsonify({'error': 'Site not found'}), 404
 
-/* TYPING INDICATOR */
-.typing-indicator { display: flex; gap: 4px; padding: 12px 16px; background: white; width: fit-content; border-radius: 12px; border: 1px solid #e5e7eb; }
-.dot { width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
-.dot:nth-child(1) { animation-delay: -0.32s; }
-.dot:nth-child(2) { animation-delay: -0.16s; }
-@keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        configs = ClientConfig.query.filter_by(client_id=site_id).all()
+        config_dict = {c.key: c.value for c in configs}
 
-/* DARK MODE WIDGET */
-.dark-mode #chat-widget { background: #1f2937; border: 1px solid #374151; }
-.dark-mode .widget-body { background: #111827; }
-.dark-mode .msg.bot { background: #374151; color: #f3f4f6; border-color: #4b5563; }
-.dark-mode .widget-footer { background: #1f2937; border-top-color: #374151; }
-.dark-mode .widget-input { background: #374151; border-color: #4b5563; color: white; }
-.dark-mode .typing-indicator { background: #374151; border-color: #4b5563; }
+        intents = Intent.query.filter_by(site_id=site_id).all()
+        intent_list = [
+            {
+                'id': i.id,
+                'name': i.intent_name,  # Fixed: i.name -> i.intent_name
+                'response': i.response[:50] + '...' if len(i.response) > 50 else i.response
+            }
+            for i in intents
+        ]
+
+        return jsonify({
+            'success': True,
+            'config': config_dict,
+            'intent_count': len(intents),
+            'intents': intent_list
+        })
+    except Exception as e:
+        print("Template Data Fetch Error:", e)
+        return jsonify({'error': str(e)}), 500
+
+@admin_api.route('/super/sites/<int:site_id>/files', methods=['GET'])
+@super_admin_required
+def list_site_files(site_id):
+    site = Site.query.get(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+
+    files = SiteFile.query.filter_by(site_id=site_id).order_by(SiteFile.created_at.desc()).all()
+    return jsonify({'success': True, 'files': [f.to_dict() for f in files]})
+
+@admin_api.route('/super/sites/<int:site_id>/files/<int:file_id>', methods=['DELETE'])
+@super_admin_required
+def delete_site_file(site_id, file_id):
+    site_file = SiteFile.query.filter_by(site_id=site_id, id=file_id).first()
+    if not site_file:
+        return jsonify({'error': 'File not found'}), 404
+
+    disk_deleted = delete_file_from_disk(site_file.file_path)
+    db.session.delete(site_file)
+    db.session.commit()
+    return jsonify({'success': True, 'deleted_id': file_id, 'disk_deleted': disk_deleted})
+
+@admin_api.route('/super/plans', methods=['GET'])
+@super_admin_required
+def list_plans():
+    plans = Plan.query.all()
+    return jsonify({'plans': [p.to_dict() for p in plans]})
+
+# --- SUPER ADMIN: SECTOR TEMPLATES ---
+
+@admin_api.route('/super/templates', methods=['GET'])
+@super_admin_required
+def list_templates():
+    templates = SectorTemplate.query.all()
+    return jsonify({'templates': [t.to_dict() for t in templates]})
+
+@admin_api.route('/super/templates', methods=['POST'])
+@super_admin_required
+def create_template():
+    try:
+        data = request.json
+        name = data.get('name')
+        description = data.get('description')
+        content = data.get('content') 
+
+        if isinstance(content, dict):
+            content = json.dumps(content)
+
+        template = SectorTemplate(name=name, description=description, structure_json=content)
+        db.session.add(template)
+        db.session.commit()
+        return jsonify({'success': True, 'template': template.to_dict()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@admin_api.route('/super/sites/<int:site_id>/apply_template', methods=['POST'])
+@super_admin_required
+def apply_sector_template_route(site_id):
+    try:
+        data = request.json
+        template_id = data.get('template_id')
+        
+        template = SectorTemplate.query.get(template_id)
+        if not template:
+            return jsonify({'error': 'Template not found'}), 404
+
+        import json
+        template_data = json.loads(template.structure_json)
+        result = importer_service(site_id, template_data)
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# --- RESTORED ROUTE FOR FILE UPLOAD TEMPLATE IMPORT ---
+@admin_api.route('/super/import_template', methods=['POST'])
+@super_admin_required
+def upload_template_route():
+    if 'file' not in request.files: return jsonify({'error': 'No file'}), 400
+    file = request.files['file']
+    site_id = request.form.get('site_id')
+    
+    try:
+        # Load JSON from uploaded file
+        json_data = json.load(file)
+        # Call the importer service
+        result = importer_service(int(site_id), json_data)
+        
+        if result['success']: return jsonify(result)
+        return jsonify({'error': result['message']}), 500
+    except Exception as e:
+        print("Import Error:", e)
+        return jsonify({'error': str(e)}), 500
+
+# --- SUPER ADMIN: PLATFORM SETTINGS (KV) ---
+
+@admin_api.route('/super/settings', methods=['GET'])
+@super_admin_required
+def get_platform_settings():
+    settings = PlatformSetting.query.all()
+    return jsonify({'settings': [s.to_dict() for s in settings]})
+
+@admin_api.route('/super/settings', methods=['POST'])
+@super_admin_required
+def update_platform_setting():
+    try:
+        data = request.json
+        key = data.get('key')
+        value = data.get('value')
+        description = data.get('description')
+
+        setting = PlatformSetting.query.get(key)
+        if setting:
+            setting.value = value
+            if description: setting.description = description
+        else:
+            setting = PlatformSetting(key=key, value=value, description=description)
+            db.session.add(setting)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'setting': setting.to_dict()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

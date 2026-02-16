@@ -54,7 +54,7 @@ def process_message(site_id: int, user_message: str, session_id: str = None) -> 
     if settings and settings.maintenance_mode:
         return ChatResponse("SYSTEM", "INFO", "System is currently under maintenance. Please try again later.", 1.0)
 
-    site = Site.query.get(site_id)
+    site = db.session.get(Site, site_id)
     if not site or not site.is_active:
         return ChatResponse("SYSTEM", "INFO", "This chatbot is currently inactive.", 1.0)
 
