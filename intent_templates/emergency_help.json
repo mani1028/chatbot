@@ -1,0 +1,22 @@
+{
+  "sector": "safety",
+  "category": "emergency",
+  "intents": [
+    {
+      "name": "EMERGENCY_HELP",
+      "type": "HUMAN",
+      "response": "URGENT: I have initiated an emergency protocol. A human supervisor is being alerted immediately. Please stay on the line or contact local emergency services if you are in physical danger.",
+      "confidence_threshold": 0.85,
+      "phrases": [
+        "emergency help",
+        "i need help now",
+        "it is an emergency",
+        "call for help",
+        "urgent assistance needed",
+        "safety emergency",
+        "sos"
+      ],
+      "workflow": "trigger_emergency_alert"
+    }
+  ]
+}

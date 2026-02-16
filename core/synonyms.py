@@ -1,35 +1,53 @@
-"""Simple synonyms mapping for sector-agnostic intent matching.
-
-This file contains a lightweight dictionary mapping common synonyms to
-canonical tokens. It is intentionally small and editable; later you can
-load a larger dataset or connect to an external lexical DB.
-"""
-
-SYNONYMS = {
-    # medical
-    'physician': 'doctor',
-    'doc': 'doctor',
-    'md': 'doctor',
-    'ambulance': 'ambulance',
-    'ambulans': 'ambulance',
-
-    # travel / taxi
-    'cab': 'taxi',
-    'taxi': 'taxi',
-    'ride': 'taxi',
-    'uber': 'taxi',
-
-    # common
-    'hi': 'hello',
-    'hey': 'hello',
-    'thanks': 'thank_you',
-    'thankyou': 'thank_you',
+# Synonym dictionary mapping variations to a single canonical "root" word
+SYNONYM_MAP = {
+    # Observability & Monitoring
+    "monitoring": "observability",
+    "telemetry": "observability",
+    "logs": "observability",
+    "tracking": "observability",
+    "metrics": "observability",
+    
+    # Clarification
+    "clarify": "explain",
+    "elaborate": "explain",
+    "detail": "explain",
+    "mean": "explain",
+    "understand": "explain",
+    
+    # Support & Help
+    "assistance": "help",
+    "support": "help",
+    "aid": "help",
+    "issue": "problem",
+    "error": "problem",
+    "bug": "problem",
+    
+    # Contact
+    "call": "contact",
+    "email": "contact",
+    "reach": "contact",
+    "message": "contact",
+    
+    # Human escalation
+    "person": "human",
+    "agent": "human",
+    "representative": "human",
+    "real": "human"
 }
 
+def canonical(word):
+    """
+    Returns the canonical form of a word if it exists in the map, 
+    otherwise returns the word itself.
+    """
+    if not word:
+        return ""
+    
+    word = word.lower().strip()
+    return SYNONYM_MAP.get(word, word)
 
-def canonical(token: str) -> str:
-    """Return a canonical token for a possible synonym, or the token itself."""
-    if not token:
-        return token
-    t = token.lower()
-    return SYNONYMS.get(t, t)
+def normalize_text(tokens):
+    """
+    Helper to normalize a list of tokens using the canonical map.
+    """
+    return [canonical(t) for t in tokens]

@@ -578,69 +578,6 @@
         }
     }
 
-    // --- Fetch Client Template Data ---
-    async function loadClientFiles() {
-        const siteId = document.getElementById('viewTemplateClientSelect').value;
-        const container = document.getElementById('templateDataContainer');
-        const fileList = document.getElementById('clientFileList');
-
-        if (!siteId) {
-            container.style.display = 'none';
-            return;
-        }
-
-        try {
-            container.style.display = 'block';
-            fileList.innerHTML = '<tr><td colspan="4">Loading files...</td></tr>';
-
-            const res = await fetch(`/admin/api/super/sites/${siteId}/files`);
-            const data = await res.json();
-
-            if (res.ok) {
-                fileList.innerHTML = '';
-                if (!data.files || data.files.length === 0) {
-                    fileList.innerHTML = '<tr><td colspan="4" style="text-align: center;">No intent files assigned.</td></tr>';
-                } else {
-                    data.files.forEach(file => {
-                        const uploaded = file.created_at ? new Date(file.created_at).toLocaleString() : '-';
-                        fileList.innerHTML += `
-                            <tr>
-                                <td style="font-weight: 500;">${file.filename}</td>
-                                <td style="color: var(--text-muted);">${file.file_type || '-'}</td>
-                                <td style="color: var(--text-muted);">${uploaded}</td>
-                                <td>
-                                    <button class="btn-icon" title="Delete" onclick="deleteClientFile(${siteId}, ${file.id})">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>`;
-                    });
-                }
-            } else {
-                showToast(data.error || 'Failed to load files', 'error');
-            }
-        } catch (e) {
-            console.error(e);
-            showToast('Network error while fetching files', 'error');
-        }
-    }
-
-    async function deleteClientFile(siteId, fileId) {
-        if (!confirm('Delete this file from the client?')) return;
-        try {
-            const res = await fetch(`/admin/api/super/sites/${siteId}/files/${fileId}`, { method: 'DELETE' });
-            const data = await res.json();
-            if (res.ok) {
-                showToast('File deleted successfully');
-                loadClientFiles();
-            } else {
-                showToast(data.error || 'Failed to delete file', 'error');
-            }
-        } catch (e) {
-            console.error(e);
-            showToast('Network error while deleting file', 'error');
-        }
-    }
 
     // --- Manual Plans Fetch Logic ---
     async function loadPlansData() {

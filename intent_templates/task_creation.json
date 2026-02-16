@@ -1,0 +1,21 @@
+{
+  "sector": "system_control",
+  "category": "tasks",
+  "intents": [
+    {
+      "name": "TASK_CREATION",
+      "type": "action",
+      "response": "New task created and assigned to the queue.",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "create a new task",
+        "add task to list",
+        "new assignment",
+        "schedule a piece of work",
+        "set up a new job",
+        "generate task"
+      ],
+      "workflow": "create_new_task"
+    }
+  ]
+}
