@@ -1,0 +1,22 @@
+{
+  "sector": "intelligence",
+  "category": "logistics",
+  "intents": [
+    {
+      "name": "TRAVEL_PLANNING",
+      "type": "action",
+      "response": "I can help you plan your trip. Would you like me to look for flights, hotels, or generate a custom itinerary?",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "plan a trip",
+        "book a flight",
+        "find hotels in",
+        "travel itinerary",
+        "vacation planning",
+        "best places to visit",
+        "check flight status"
+      ],
+      "workflow": "start_travel_planner"
+    }
+  ]
+}

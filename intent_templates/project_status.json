@@ -1,0 +1,21 @@
+{
+  "sector": "business",
+  "category": "operations",
+  "intents": [
+    {
+      "name": "PROJECT_STATUS",
+      "type": "action",
+      "response": "I am fetching the latest milestones for your project. Please provide your Project ID if it is not already linked to your profile.",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "what is my project status",
+        "project progress",
+        "is my app ready",
+        "milestone update",
+        "track development progress",
+        "delivery timeline"
+      ],
+      "workflow": "get_project_status"
+    }
+  ]
+}

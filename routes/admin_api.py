@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify, session
 from database import db
-from models import Site, Admin, ClientConfig, Intent
-from services.importer import import_sector_template
+from models import Site, Admin, ClientConfig, Intent, Plan, BrandingSettings, PlatformSetting
+from models.file_manager import SiteFile
+from services.importer import import_sector_template as importer_service
 from functools import wraps
 import traceback
+import json
 from sqlalchemy.exc import IntegrityError # Import specific DB error
 
 admin_api = Blueprint('admin_api', __name__)
@@ -66,7 +68,9 @@ def get_client_intents():
     if 'admin_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     site_id = session.get('site_id')
+    print(f"[DEBUG] Fetching intents for site_id={site_id}")
     intents = Intent.query.filter_by(site_id=site_id).all()
+    print(f"[DEBUG] Found {len(intents)} intents for site_id={site_id}")
     return jsonify({'intents': [i.to_dict() for i in intents]})
 
 # --- SUPER ADMIN ROUTES ---
@@ -305,5 +309,29 @@ def update_platform_setting():
         
         db.session.commit()
         return jsonify({'success': True, 'setting': setting.to_dict()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@admin_api.route('/super/sites', methods=['GET'])
+@super_admin_required
+def list_sites():
+    try:
+        sites = Site.query.all()
+        return jsonify({'sites': [s.to_dict() for s in sites]})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@admin_api.route('/super/stats', methods=['GET'])
+@super_admin_required
+def super_stats():
+    try:
+        site_count = Site.query.count()
+        admin_count = Admin.query.count()
+        plan_count = Plan.query.count()
+        return jsonify({
+            'site_count': site_count,
+            'admin_count': admin_count,
+            'plan_count': plan_count
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

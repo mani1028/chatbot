@@ -1,0 +1,21 @@
+{
+  "sector": "system_control",
+  "category": "commands",
+  "intents": [
+    {
+      "name": "COMMAND_CANCEL",
+      "type": "action",
+      "response": "The current command execution has been cancelled safely.",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "cancel the command",
+        "stop the execution",
+        "abort the process",
+        "kill the task",
+        "terminate operation",
+        "halt system"
+      ],
+      "workflow": "cancel_system_command"
+    }
+  ]
+}

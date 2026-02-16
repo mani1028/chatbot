@@ -1,0 +1,21 @@
+{
+  "sector": "intelligence",
+  "category": "conversation_flow",
+  "intents": [
+    {
+      "name": "MULTI_TURN_FOLLOWUP",
+      "type": "info",
+      "response": "I see. Continuing from our previous point, how would you like to proceed?",
+      "confidence_threshold": 0.65,
+      "phrases": [
+        "and that",
+        "what about this",
+        "tell me more about it",
+        "go on",
+        "then what",
+        "elaborate on that",
+        "follow up question"
+      ]
+    }
+  ]
+}

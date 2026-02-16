@@ -1,23 +1,35 @@
 import re
 
-# Expanded stop words to reduce noise across sectors
+# Comprehensive list of stop words to filter out noise from queries
 STOP_WORDS = {
-    "the", "a", "an", "is", "are", "please",
-    "can", "you", "i", "we", "do", "does", "me", "my",
-    "your", "it", "that", "this", "for", "to", "of", "in",
-    "on", "at", "by", "with", "from", "about", "as", "be"
+    'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'else', 'when', 'at', 
+    'from', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 
+    'during', 'before', 'after', 'above', 'below', 'to', 'up', 'down', 'in', 'out', 
+    'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 
+    'there', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 
+    'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 
+    'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now',
+    'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', "you're", 
+    "you've", "you'll", "you'd", 'your', 'yours', 'yourself', 'yourselves', 
+    'he', 'him', 'his', 'himself', 'she', "she's", 'her', 'hers', 'herself', 
+    'it', "it's", 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves',
+    'what', 'which', 'who', 'whom', 'this', 'that', "that'll", 'these', 'those', 
+    'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 
+    'having', 'do', 'does', 'did', 'doing', 'please', 'would', 'could'
 }
 
-
 def tokenize(text):
-    """Tokenize text in a sector-agnostic way.
-
-    - Lowercase and strip punctuation
-    - Split on whitespace
-    - Remove common stop words
-    Returns a list of tokens.
+    """
+    Standardized tokenization for the entire application.
+    Used by both the legacy intent engine and the new AI Service.
     """
     if not text:
         return []
-    text = re.sub(r"[^\w\s]", " ", text.lower())
-    return [w for w in text.split() if w and w not in STOP_WORDS]
+    
+    # Clean text: lowercase and remove special characters
+    text = text.lower()
+    text = re.sub(r'[^a-z0-9\s]', ' ', text)
+    
+    # Split and filter stop words
+    tokens = [word for word in text.split() if word and word not in STOP_WORDS]
+    return tokenso

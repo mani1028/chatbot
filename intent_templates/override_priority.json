@@ -1,0 +1,22 @@
+{
+  "sector": "safety",
+  "category": "override",
+  "intents": [
+    {
+      "name": "OVERRIDE_PRIORITY",
+      "type": "action",
+      "response": "System Override Acknowledged. Elevating this task to maximum priority and bypassing standard queue procedures.",
+      "confidence_threshold": 0.9,
+      "phrases": [
+        "priority override",
+        "bypass queue",
+        "force execute",
+        "maximum priority",
+        "override system limits",
+        "immediate execution required",
+        "admin override"
+      ],
+      "workflow": "execute_priority_override"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "sector": "system_control",
+  "category": "reminders",
+  "intents": [
+    {
+      "name": "REMINDER_SET",
+      "type": "action",
+      "response": "Reminder set. I will notify you at the requested time.",
+      "confidence_threshold": 0.65,
+      "phrases": [
+        "set a reminder",
+        "remind me to",
+        "alert me later",
+        "notify me at",
+        "schedule a notification",
+        "don't let me forget"
+      ],
+      "workflow": "set_system_reminder"
+    }
+  ]
+}

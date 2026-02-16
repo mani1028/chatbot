@@ -1,0 +1,22 @@
+{
+  "sector": "safety",
+  "category": "wellbeing",
+  "intents": [
+    {
+      "name": "EMOTIONAL_DISTRESS",
+      "type": "HUMAN",
+      "response": "I'm here for you, and I can tell you're going through a difficult time. I am connecting you with a team member who can provide support and resources.",
+      "confidence_threshold": 0.75,
+      "phrases": [
+        "i am so depressed",
+        "i want to give up",
+        "feeling very down",
+        "emotional help",
+        "i am struggling",
+        "need someone to talk to",
+        "extreme distress"
+      ],
+      "workflow": "escalate_to_wellbeing_team"
+    }
+  ]
+}

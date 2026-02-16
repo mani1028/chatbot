@@ -1,0 +1,22 @@
+{
+  "sector": "intelligence",
+  "category": "analysis",
+  "intents": [
+    {
+      "name": "RESEARCH_REQUEST",
+      "type": "action",
+      "response": "I am initiating a deep-dive research protocol on this topic. I will analyze available data and provide a comprehensive summary shortly.",
+      "confidence_threshold": 0.75,
+      "phrases": [
+        "research this topic",
+        "find in-depth information on",
+        "perform a study on",
+        "detailed analysis of",
+        "gather data about",
+        "technical research",
+        "investigate this"
+      ],
+      "workflow": "initiate_deep_research"
+    }
+  ]
+}

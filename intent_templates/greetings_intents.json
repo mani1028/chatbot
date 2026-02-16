@@ -1,0 +1,75 @@
+{
+"intents": [
+{
+"tag": "greeting",
+"patterns": [
+"hello",
+"hi",
+"hey",
+"greetings",
+"good morning",
+"good afternoon",
+"is anyone there",
+"hi there",
+"howdy"
+],
+"responses": [
+"Hello! How can I assist you today?",
+"Hi there! What can I help you with?",
+"Greetings! How are things going? How can I help?",
+"Hey! Need some help? I'm here for you."
+]
+},
+{
+"tag": "goodbye",
+"patterns": [
+"bye",
+"goodbye",
+"see you later",
+"i am leaving",
+"have a good day",
+"talk to you later",
+"exit"
+],
+"responses": [
+"Goodbye! Have a great day ahead.",
+"See you later! Feel free to return if you have more questions.",
+"Bye! Stay safe and have a wonderful time.",
+"Take care! I'm here whenever you need me."
+]
+},
+{
+"tag": "thanks",
+"patterns": [
+"thanks",
+"thank you",
+"that's helpful",
+"much appreciated",
+"awesome thanks",
+"thx"
+],
+"responses": [
+"You're very welcome!",
+"Happy to help!",
+"Anytime! Let me know if there's anything else.",
+"My pleasure!"
+]
+},
+{
+"tag": "options",
+"patterns": [
+"what can you do",
+"how can you help me",
+"help",
+"what are your features",
+"support",
+"tell me about yourself"
+],
+"responses": [
+"I am an AI assistant designed to help you with information and tasks related to this platform. You can ask me about services, contact details, or general information.",
+"I can answer your questions, provide support, and guide you through our offerings. Just type what you're looking for!",
+"I'm here to support you! I can provide details on our work, services, and how to get in touch."
+]
+}
+]
+}

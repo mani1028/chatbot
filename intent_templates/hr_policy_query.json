@@ -1,0 +1,21 @@
+{
+  "sector": "business",
+  "category": "hr",
+  "intents": [
+    {
+      "name": "HR_POLICY_QUERY",
+      "type": "info",
+      "response": "ChowdhuryX policies cover remote work flexibility, professional development, and comprehensive health benefits. You can find the full employee handbook in the internal documents folder.",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "company policy",
+        "vacation days",
+        "remote work rules",
+        "hr manual",
+        "benefits package",
+        "code of conduct",
+        "holiday schedule"
+      ]
+    }
+  ]
+}
