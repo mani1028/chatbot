@@ -3,145 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Portal | ChatbotX SaaS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Client Admin Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Specific override for the simulator to make it large */
-        .simulator-frame {
-            width: 100%;
-            height: 85vh; /* Occupy 85% of the viewport height */
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            background: white;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            margin-top: 20px;
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-base: #F3F4F6;
+            --surface: #FFFFFF;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --danger: #EF4444;
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-base); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border); }
+        .sidebar-header h2 { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .nav-links { padding: 1rem 0; flex-grow: 1; }
+        .nav-item { padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 0.75rem; color: var(--text-muted); text-decoration: none; font-weight: 500; transition: all 0.2s; cursor: pointer; }
+        .nav-item:hover, .nav-item.active { background: #EEF2FF; color: var(--primary); border-right: 3px solid var(--primary); }
+        .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px;}
+
+        /* Main Content */
+        .main-content { flex-grow: 1; overflow-y: auto; padding: 2rem; }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+        .card-body { padding: 1.5rem; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+        td { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.875rem; }
+
+        .btn { padding: 0.625rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-icon { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-icon:hover { background: var(--bg-base); color: var(--primary); }
+
+        .badge { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+        .badge.active { background: #D1FAE5; color: #065F46; }
+        .badge.suspended { background: #FEE2E2; color: #991B1B; }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; }
+        .form-control { width: 100%; padding: 0.625rem; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 500px; max-width: 90%; }
+        .modal-header { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .toast { position: fixed; bottom: 20px; right: 20px; padding: 1rem; border-radius: 8px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.75rem; transform: translateY(150%); transition: 0.3s; z-index: 1000; border-left: 4px solid var(--primary); }
+        .toast.show { transform: translateY(0); }
+        .simulator-frame { width: 100%; height: 85vh; border: 1px solid #e5e7eb; border-radius: 12px; background: white; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden; margin-top: 20px; }
+
+        /* Mobile Preview */
+        .branding-container { display: grid; grid-template-columns: 1fr 320px; gap: 40px; align-items: start; }
+        .phone-mockup { background: #1f2937; border-radius: 40px; padding: 12px; border: 4px solid #374151; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); height: 600px; position: sticky; top: 20px; }
+        .phone-screen { background: #f3f4f6; border-radius: 28px; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+        .sim-header { background: var(--primary); color: white; padding: 15px; display: flex; align-items: center; gap: 10px; }
+        .sim-avatar { width: 30px; height: 30px; background: rgba(255,255,255,0.2); border-radius: 50%; }
+        .sim-body { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .sim-bubble { padding: 10px; border-radius: 12px; font-size: 0.9rem; max-width: 80%; }
+        .sim-bubble.bot { background: white; border-bottom-left-radius: 2px; }
+        .sim-bubble.user { background: var(--primary); color: white; border-bottom-right-radius: 2px; align-self: flex-end; }
+        .sim-footer { padding: 10px; background: white; border-top: 1px solid #eee; }
+        .sim-input { height: 35px; background: #e5e7eb; border-radius: 20px; }
+        
+        .code-block { background:#1f2937; padding:15px; border-radius:8px; color:#fff; position:relative; overflow-x:auto; }
     </style>
 </head>
 <body>
-
-    <!-- SIDEBAR -->
     <aside class="sidebar">
-        <div class="logo">
-            <span>⚡</span> ChatbotX <span class="badge-pro">PRO</span>
+        <div class="sidebar-header">
+            <h2><i class="fas fa-robot"></i> Client Panel</h2>
         </div>
-        
         <nav class="nav-links">
-            <div class="nav-item active" onclick="switchTab('config', this)">
-                <span>⚙️</span> Configuration
-            </div>
-            <div class="nav-item" onclick="switchTab('branding', this)">
-                <span>🎨</span> Branding
-            </div>
-            <div class="nav-item" onclick="switchTab('install', this)">
-                <span>🔌</span> Installation
-            </div>
-            <div class="nav-item" onclick="switchTab('simulator', this)">
-                <span>📱</span> Simulator
-            </div>
+            <a class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-chart-bar"></i> Overview</a>
+            <a class="nav-item" onclick="switchTab('intents', this)"><i class="fas fa-brain"></i> Knowledge Base</a>
+            <a class="nav-item" onclick="switchTab('branding', this)"><i class="fas fa-paint-brush"></i> Branding</a>
+            <a class="nav-item" onclick="switchTab('install', this)"><i class="fas fa-code"></i> Installation</a>
+            <a class="nav-item" onclick="switchTab('simulator', this)"><i class="fas fa-mobile-alt"></i> Simulator</a>
         </nav>
-
-        <div class="user-profile">
-            <div class="user-info">
-                <span>Site ID: <b>{{ site_id }}</b></span>
-                <small class="status-online">● System Online</small>
-            </div>
-            <a href="/admin/logout" class="logout-link">Log Out</a>
+        <div class="sidebar-footer">
+            <span style="font-size: 0.85rem; color: var(--text-muted); text-align: center;">Site ID: <b>{{ site_id }}</b></span>
+            <a href="/admin/logout" class="btn btn-outline" style="width: 100%; justify-content: center;"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="main-content">
-        
-        <!-- 1. CONFIGURATION TAB -->
-        <div id="config" class="tab-panel active">
-            <div class="header">
-                <h1>Service Configuration</h1>
-                <p>Manage your AI behavior and business logic.</p>
+        <div id="dashboard" class="tab-content active">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem;">Bot Overview</h1>
+                    <p style="color: var(--text-muted);">View your system's current status and settings.</p>
+                </div>
             </div>
-
-            <div class="config-section">
-                <form id="configForm">
-                    <div class="form-group">
-                        <label>Consultation Price (Currency)</label>
-                        <input type="text" name="consultation_price" class="form-control" placeholder="e.g. 500">
-                        <small>Used by the AI to answer pricing questions.</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Operating Hours</label>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <input type="text" name="open_time" class="form-control" placeholder="Opens (e.g. 9 AM)">
-                            <input type="text" name="close_time" class="form-control" placeholder="Closes (e.g. 6 PM)">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>AI Mode</label>
-                        <select name="ai_mode" class="form-control">
-                            <option value="on">✅ Enabled (Auto-Reply)</option>
-                            <option value="off">❌ Disabled (Human Only)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn-save">Save Configuration</button>
-                    </div>
-                </form>
+            <div class="card" style="max-width: 600px;">
+                <div class="card-body">
+                    <h3 style="margin-bottom: 1rem;">System Status</h3>
+                    <p><strong>Status:</strong> <span id="siteStatusBadge" class="badge">Loading...</span></p>
+                    <p style="margin-top: 0.5rem;"><strong>Current Plan:</strong> <span id="sitePlan">Loading...</span></p>
+                </div>
             </div>
         </div>
 
-        <!-- 2. BRANDING TAB -->
-        <div id="branding" class="tab-panel">
-            <div class="header">
-                <h1>Branding & Design</h1>
-                <p>Customize the look and feel to match your brand identity.</p>
+        <div id="intents" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem;">Knowledge Base</h1>
+                    <p style="color: var(--text-muted);">Manage your assigned intents and bot responses.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openIntentModal()"><i class="fas fa-plus"></i> Add New Intent</button>
+            </div>
+            <div class="card">
+                <div class="card-body" style="padding: 0; overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Intent Trigger Name</th>
+                                <th>Bot Response</th>
+                                <th style="width: 100px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="intentTableBody">
+                            <tr><td colspan="3" style="text-align: center; padding: 2rem;">Loading intents...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="branding" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem;">Branding & Design</h1>
+                    <p style="color: var(--text-muted);">Customize the look and feel to match your brand identity.</p>
+                </div>
             </div>
             
             <div class="branding-container">
-                <div class="config-section">
-                    <form id="brandingForm">
-                        <div class="form-group">
-                            <label>Bot Name</label>
-                            <input type="text" name="bot_name" class="form-control" placeholder="e.g. Apollo Assistant">
+                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin-bottom: 1rem;">Visual Settings</h3>
+                            <form id="brandingForm">
+                                <div class="form-group">
+                                    <label>Bot Name</label>
+                                    <input type="text" name="bot_name" class="form-control" placeholder="e.g. Apollo Assistant">
+                                </div>
+                                <div class="form-group">
+                                    <label>Welcome Message</label>
+                                    <textarea name="initial_message" class="form-control" rows="3" placeholder="Hi! How can I help you?"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Theme Mode</label>
+                                    <select name="theme_mode" class="form-control">
+                                        <option value="light">☀️ Light Mode</option>
+                                        <option value="dark">🌙 Dark Mode</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Brand Color</label>
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        <input type="color" name="primary_color" id="colorPicker" value="#6366f1">
+                                        <span id="colorHex">#6366f1</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Widget Position</label>
+                                    <select name="position" class="form-control">
+                                        <option value="bottom-right">Bottom Right</option>
+                                        <option value="bottom-left">Bottom Left</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update Design</button>
+                            </form>
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Welcome Message</label>
-                            <textarea name="initial_message" class="form-control" rows="3" placeholder="Hi! How can I help you?"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Theme Mode</label>
-                            <select name="theme_mode" class="form-control">
-                                <option value="light">☀️ Light Mode</option>
-                                <option value="dark">🌙 Dark Mode</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Brand Color</label>
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <input type="color" name="primary_color" id="colorPicker" value="#6366f1">
-                                <span id="colorHex">#6366f1</span>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Widget Position</label>
-                            <select name="position" class="form-control">
-                                <option value="bottom-right">Bottom Right</option>
-                                <option value="bottom-left">Bottom Left</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="btn-save">Update Design</button>
-                    </form>
+                    </div>
                 </div>
 
-                <!-- Live Mobile Preview -->
                 <div class="phone-mockup">
                     <div class="phone-screen">
                         <div class="sim-header" id="simHeader">
@@ -160,76 +211,197 @@
             </div>
         </div>
 
-        <!-- 3. INSTALLATION TAB -->
-        <div id="install" class="tab-panel">
-            <div class="header">
-                <h1>Installation</h1>
-                <p>Copy this code to your website.</p>
+        <div id="install" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem;">Installation</h1>
+                    <p style="color: var(--text-muted);">Copy this code and paste it just before the closing <code>&lt;/body&gt;</code> tag on your website.</p>
+                </div>
             </div>
-            <div class="config-section">
-                <div class="code-block">
-                    <button class="copy-btn" onclick="copyEmbed()">Copy</button>
-                    <pre id="embedCode">&lt;!-- ChatbotX Widget --&gt;
+            <div class="card" style="max-width: 600px;">
+                <div class="card-body">
+                    <div class="code-block">
+                        <button class="btn btn-primary" onclick="copyEmbed()" style="position:absolute; top:10px; right:10px; padding: 5px 10px; font-size: 0.8rem;">Copy Code</button>
+                        <pre id="embedCode" style="margin:0;">&lt;!-- ChatbotX Widget --&gt;
 &lt;script 
   src="{{ request.host_url }}widget.js"
   data-site-id="{{ site_id }}"
   async
 &gt;&lt;/script&gt;</pre>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 4. SIMULATOR TAB -->
-        <div id="simulator" class="tab-panel">
-            <div class="header">
-                <h1>Live Simulator</h1>
-                <p>Test your widget in a large, real-time environment.</p>
+        <div id="simulator" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem;">Live Simulator</h1>
+                    <p style="color: var(--text-muted);">Test your widget in a real-time environment.</p>
+                </div>
             </div>
             <div class="simulator-frame">
-                <!-- Direct load of widget.html for full screen experience -->
                 <iframe id="sim-frame" src="{{ url_for('widget_init') }}?api={{ request.host_url }}&site_id={{ site_id }}" width="100%" height="100%" frameborder="0"></iframe>
             </div>
         </div>
-
     </main>
+
+    <div class="modal-overlay" id="intentModal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalTitle">Add New Intent</div>
+            <form id="intentForm">
+                <input type="hidden" id="intentId" name="id">
+                <div class="form-group">
+                    <label>Intent Name (e.g. 'pricing', 'hours')</label>
+                    <input type="text" id="intentName" name="intent_name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Bot Response Text</label>
+                    <textarea id="intentResponse" name="response" class="form-control" rows="4" required></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeIntentModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Intent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <i class="fas fa-check-circle" style="color: var(--primary);"></i>
+        <span id="toastMessage">Success</span>
+    </div>
 
     <script>
         // --- Navigation ---
-        function switchTab(tabId, el) {
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            el.classList.add('active');
+            element.classList.add('active');
             
-            // Reload simulator if switching to it, to apply new branding settings
+            if (tabId === 'dashboard') loadStats();
+            if (tabId === 'intents') loadIntents();
             if(tabId === 'simulator') {
                 const iframe = document.getElementById('sim-frame');
                 if(iframe) iframe.src = iframe.src;
             }
         }
 
-        // --- Data Loading ---
-        async function loadData() {
-            // Load Config
-            try {
-                const confRes = await fetch('/admin/api/client/config');
-                const confData = await confRes.json();
-                const confForm = document.getElementById('configForm');
-                
-                if (confData.config) {
-                    for (const [key, val] of Object.entries(confData.config)) {
-                        if (confForm.elements[key]) confForm.elements[key].value = val;
-                    }
-                }
-            } catch(e) { console.error("Config Load Error", e); }
+        function showToast(msg, type='success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            toast.style.borderLeftColor = type === 'error' ? 'var(--danger)' : 'var(--primary)';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
 
-            // Load Branding
+        // --- Dashboard / Stats ---
+        async function loadStats() {
+            try {
+                const res = await fetch('/admin/api/client/stats');
+                const data = await res.json();
+                if(res.ok) {
+                    const badge = document.getElementById('siteStatusBadge');
+                    const isActive = data.status === 'active';
+                    badge.textContent = isActive ? 'Active' : 'Suspended';
+                    badge.className = 'badge ' + (isActive ? 'active' : 'suspended');
+                    document.getElementById('sitePlan').textContent = data.plan_name;
+                }
+            } catch(e) { console.error("Error loading stats", e); }
+        }
+
+        // --- Intents Logic ---
+        async function loadIntents() {
+            const tbody = document.getElementById('intentTableBody');
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">Loading...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/client/intents');
+                const data = await res.json();
+                tbody.innerHTML = '';
+                if(data.intents && data.intents.length > 0) {
+                    data.intents.forEach(intent => {
+                        const tr = document.createElement('tr');
+                        const safeName = intent.intent_name.replace(/'/g, "\\'");
+                        const safeResp = intent.response.replace(/'/g, "\\'").replace(/\n/g, "\\n");
+                        tr.innerHTML = `
+                            <td><span style="font-weight: 600;">${intent.intent_name}</span></td>
+                            <td style="color: var(--text-muted); font-size: 0.8rem;">
+                                ${intent.response.length > 80 ? intent.response.substring(0,80) + '...' : intent.response}
+                            </td>
+                            <td>
+                                <button class="btn-icon" title="Edit" onclick="editIntent('${intent.id}', '${safeName}', '${safeResp}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon" style="color: var(--danger);" title="Delete" onclick="deleteIntent('${intent.id}')"><i class="fas fa-trash"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">No intents found. Add one manually or apply a template from Super Admin.</td></tr>';
+                }
+            } catch(e) { console.error("Error loading intents", e); }
+        }
+
+        function openIntentModal() {
+            document.getElementById('intentForm').reset();
+            document.getElementById('intentId').value = '';
+            document.getElementById('modalTitle').textContent = 'Add New Intent';
+            document.getElementById('intentModal').style.display = 'flex';
+        }
+
+        function closeIntentModal() {
+            document.getElementById('intentModal').style.display = 'none';
+        }
+
+        function editIntent(id, name, response) {
+            document.getElementById('intentId').value = id;
+            document.getElementById('intentName').value = name;
+            document.getElementById('intentResponse').value = response;
+            document.getElementById('modalTitle').textContent = 'Edit Assigned Intent';
+            document.getElementById('intentModal').style.display = 'flex';
+        }
+
+        document.getElementById('intentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = "Saving...";
+            btn.disabled = true;
+            const id = document.getElementById('intentId').value;
+            const payload = {
+                intent_name: document.getElementById('intentName').value,
+                response: document.getElementById('intentResponse').value
+            };
+            const url = id ? `/admin/api/client/intents/${id}` : '/admin/api/client/intents';
+            const method = id ? 'PUT' : 'POST';
+            try {
+                const res = await fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                if(res.ok) {
+                    showToast(id ? 'Intent successfully updated!' : 'Intent successfully created!');
+                    closeIntentModal();
+                    loadIntents();
+                } else {
+                    showToast('Failed to save intent', 'error');
+                }
+            } catch(err) { showToast('Network error occurred', 'error'); } 
+            finally { btn.innerHTML = "Save Intent"; btn.disabled = false; }
+        });
+
+        async function deleteIntent(id) {
+            if(!confirm('Are you absolutely sure you want to delete this intent?')) return;
+            try {
+                const res = await fetch(`/admin/api/client/intents/${id}`, { method: 'DELETE' });
+                if(res.ok) { showToast('Intent deleted successfully'); loadIntents(); } 
+                else { showToast('Failed to delete intent', 'error'); }
+            } catch(err) { showToast('Network error occurred', 'error'); }
+        }
+
+        // --- Branding & Config Logic ---
+        async function loadData() {
             try {
                 const brandRes = await fetch('/admin/api/client/branding');
                 const brandData = await brandRes.json();
                 const brandForm = document.getElementById('brandingForm');
                 const b = brandData.branding;
-
                 if (b) {
                     if(brandForm.elements['bot_name']) brandForm.elements['bot_name'].value = b.bot_name;
                     if(brandForm.elements['initial_message']) brandForm.elements['initial_message'].value = b.initial_message;
@@ -241,37 +413,23 @@
             } catch(e) { console.error("Branding Load Error", e); }
         }
 
-        // --- Form Submission ---
         async function handleSave(e, url) {
             e.preventDefault();
             const btn = e.target.querySelector('button');
             const originalText = btn.innerText;
             btn.innerText = 'Saving...';
             btn.disabled = true;
-            
             try {
-                await fetch(url, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(Object.fromEntries(new FormData(e.target)))
-                });
+                await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
                 btn.innerText = 'Saved ✅';
-                // Trigger preview update if it's branding
+                showToast('Settings successfully updated!');
                 if(url.includes('branding')) updatePreview();
-            } catch(err) {
-                btn.innerText = 'Error ❌';
-            }
-            
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }, 2000);
+            } catch(err) { btn.innerText = 'Error ❌'; }
+            setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 2000);
         }
 
-        document.getElementById('configForm').addEventListener('submit', (e) => handleSave(e, '/admin/api/client/config'));
         document.getElementById('brandingForm').addEventListener('submit', (e) => handleSave(e, '/admin/api/client/branding'));
 
-        // --- Preview Logic (Mobile Mockup) ---
         function updatePreview() {
             const form = document.getElementById('brandingForm');
             const color = form.elements['primary_color'].value;
@@ -284,7 +442,6 @@
             document.getElementById('simName').innerText = name;
             document.getElementById('simMsg').innerText = msg;
             
-            // Dark Mode Simulation
             const simBody = document.getElementById('simBody');
             if(theme === 'dark') {
                 simBody.style.backgroundColor = '#1f2937';
@@ -296,17 +453,16 @@
                 document.getElementById('simMsg').style.color = '#1f2937';
             }
         }
-
         document.getElementById('brandingForm').addEventListener('input', updatePreview);
-        
-        // --- Copy Logic ---
+
         function copyEmbed() {
             const code = document.getElementById('embedCode').innerText;
             navigator.clipboard.writeText(code);
-            alert("Code copied to clipboard!");
+            showToast("Embed Code copied to clipboard!");
         }
 
-        // Init
+        // Init App Data
+        loadStats();
         loadData();
     </script>
 </body>

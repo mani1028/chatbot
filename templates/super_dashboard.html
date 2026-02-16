@@ -3,167 +3,793 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Admin | SaaS Platform</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Command Center | Super Admin</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .super-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        h1 { margin-bottom: 30px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        h2 { margin-top: 0; color: #667eea; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        .btn-primary { width: 100%; background: #667eea; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
-        .btn-primary:hover { background: #5a6fd6; }
-        .site-list { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
-        .site-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #f5f5f5; }
-        .badge { background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-base: #F3F4F6;
+            --surface: #FFFFFF;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        
+        body { background-color: var(--bg-base); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 1.5rem; border-bottom: 1px solid var(--border); }
+        .sidebar-header h2 { font-size: 1.25rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .nav-links { padding: 1rem 0; flex-grow: 1; }
+        .nav-item { padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 0.75rem; color: var(--text-muted); text-decoration: none; font-weight: 500; transition: all 0.2s; }
+        .nav-item:hover, .nav-item.active { background: #EEF2FF; color: var(--primary); border-right: 3px solid var(--primary); }
+        .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); }
+
+        /* Main Content */
+        .main-content { flex-grow: 1; overflow-y: auto; padding: 2rem; }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem; }
+        .stat-icon { width: 48px; height: 48px; border-radius: 12px; background: #EEF2FF; color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+        .stat-info h3 { font-size: 0.875rem; color: var(--text-muted); font-weight: 500; }
+        .stat-info p { font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-top: 0.25rem; }
+
+        /* Content Grid */
+        .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+        @media (max-width: 1024px) { .content-grid { grid-template-columns: 1fr; } }
+        
+        .card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 1.5rem; }
+        .card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #F9FAFB; }
+        .card-header h3 { font-size: 1rem; font-weight: 600; }
+        .card-body { padding: 1.5rem; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+        td { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.875rem; vertical-align: middle; }
+        
+        .badge { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+        .badge.active { background: #D1FAE5; color: #065F46; }
+        .badge.inactive { background: #FEE2E2; color: #991B1B; }
+
+        .usage-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-top: 4px; overflow: hidden; }
+        .usage-fill { height: 100%; background: var(--primary); border-radius: 3px; }
+
+        /* Forms & Buttons */
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-main); }
+        .form-control { width: 100%; padding: 0.625rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.875rem; transition: all 0.2s; }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        
+        .btn { padding: 0.625rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-outline:hover { background: var(--bg-base); }
+        
+        .action-btns { display: flex; gap: 0.5rem; }
+        .btn-icon { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-icon:hover { background: var(--bg-base); color: var(--primary); }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 400px; max-width: 90%; }
+        .modal-header { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+
+        /* Toast */
+        .toast { position: fixed; bottom: 20px; right: 20px; padding: 1rem; border-radius: 8px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.75rem; transform: translateY(150%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; border-left: 4px solid var(--primary); }
+        .toast.show { transform: translateY(0); }
+
+        /* Tab System */
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Template Management UI */
+        .config-card { background: #F9FAFB; padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; }
+        .config-item { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px dashed var(--border); }
+        .config-item:last-child { border-bottom: none; }
     </style>
 </head>
-<body style="background: #f8f9fa;">
+<body>
 
-<div class="super-container">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h1>⚡ Super Admin Dashboard</h1>
-        <a href="/admin/logout" style="color: #e74c3c; text-decoration: none; font-weight: 600;">Logout</a>
-    </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fas fa-layer-group"></i> SaaS Control</h2>
+        </div>
+        <nav class="nav-links">
+            <a href="#" class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-home"></i> Dashboard & Clients</a>
+            <a href="#" class="nav-item" onclick="switchTab('templates', this)"><i class="fas fa-file-code"></i> Sector Templates</a>
+            <a href="#" class="nav-item" onclick="switchTab('billing', this)"><i class="fas fa-credit-card"></i> Billing & Plans</a>
+            <a href="#" class="nav-item" onclick="switchTab('settings', this)"><i class="fas fa-cog"></i> Platform Settings</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/admin/logout" class="btn btn-outline" style="width: 100%; justify-content: center;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </aside>
 
-    <div class="grid">
-        <div class="card">
-            <h2>🏭 Create New Tenant</h2>
-            <form id="createSiteForm">
-                <div class="form-group">
-                    <label>Company Name</label>
-                    <input type="text" name="name" class="form-control" placeholder="e.g. Apollo Hospital" required>
+    <!-- Main Content -->
+    <main class="main-content">
+        <div id="dashboard" class="tab-content active">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem; font-weight: 700;">Platform Overview</h1>
+                    <p style="color: var(--text-muted); font-size: 0.875rem;">Manage your chatbot tenants and system health.</p>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="form-group">
-                        <label>Client Admin Username</label>
-                        <input type="text" name="admin_username" class="form-control" placeholder="e.g. apollo_admin" required>
+                <button class="btn btn-primary" onclick="document.getElementById('tenantName').focus()"><i class="fas fa-plus"></i> New Tenant</button>
+            </div>
+
+            <!-- Top Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-building"></i></div>
+                    <div class="stat-info">
+                        <h3>Total Tenants</h3>
+                        <p id="statTenants">0</p>
                     </div>
-                    <div class="form-group">
-                        <label>Client Admin Password</label>
-                        <input type="password" name="admin_password" class="form-control" placeholder="e.g. secret123" required>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #ECFDF5; color: var(--success);"><i class="fas fa-comments"></i></div>
+                    <div class="stat-info">
+                        <h3>Messages Processed</h3>
+                        <p id="statMessages">0</p>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Domain (Optional)</label>
-                    <input type="text" name="domain" class="form-control" placeholder="e.g. apollo.com">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #FEF3C7; color: var(--warning);"><i class="fas fa-server"></i></div>
+                    <div class="stat-info">
+                        <h3>System Status</h3>
+                        <p style="color: var(--success); font-size: 1.2rem;">All Systems Operational</p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Bot Name</label>
-                    <input type="text" name="bot_name" class="form-control" value="Support Bot">
+            </div>
+
+            <div class="content-grid">
+                <!-- Left Col: Tenant Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Active Clients</h3>
+                        <button class="btn btn-outline btn-icon" onclick="loadDashboardData()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="card-body" style="padding: 0; overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Client Name</th>
+                                    <th>Plan / Usage</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tenantTableBody">
+                                <tr><td colspan="4" style="text-align: center; padding: 2rem;">Loading data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <button type="submit" class="btn-primary">Create Site & User</button>
-            </form>
-            
-            <div class="site-list" id="siteList">
-                <h3>Existing Tenants</h3>
-                <p>Loading...</p>
+
+                <!-- Right Col: Forms -->
+                <div style="display: flex; flex-direction: column;">
+                    
+                    <!-- Quick Create Form -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-magic"></i> Quick Provision</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="createSiteForm">
+                                <div class="form-group">
+                                    <label>Company Name</label>
+                                    <input type="text" id="tenantName" name="name" class="form-control" placeholder="e.g. City Hospital" required>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label>Admin User</label>
+                                        <input type="text" name="admin_username" class="form-control" placeholder="admin" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Password</label>
+                                        <input type="password" name="admin_password" class="form-control" placeholder="••••••" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Domain (Optional)</label>
+                                    <input type="text" name="domain" class="form-control" placeholder="website.com">
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Provision Tenant</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="card">
-            <h2>📦 Import Sector Template</h2>
-            <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
-                Upload a JSON template to configure intents and workflows for a specific tenant.
-            </p>
-            <form id="importForm">
-                <div class="form-group">
-                    <label>Select Tenant</label>
-                    <select id="siteSelect" name="site_id" class="form-control" required>
-                        <option value="">-- Choose Site --</option>
-                    </select>
+        <div id="templates" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem; font-weight: 700;">Template Management</h1>
+                    <p style="color: var(--text-muted); font-size: 0.875rem;">Apply and inspect JSON sector templates for your clients.</p>
                 </div>
-                <div class="form-group">
-                    <label>Template File (JSON)</label>
-                    <input type="file" name="file" class="form-control" accept=".json" required>
+            </div>
+
+            <div class="content-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-folder-open"></i> Assigned Intent Files</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Select Tenant to View Files</label>
+                            <select id="viewTemplateClientSelect" class="form-control" onchange="loadClientFiles()">
+                                <option value="">-- Select Client --</option>
+                            </select>
+                        </div>
+
+                        <div id="templateDataContainer" style="display: none; margin-top: 1.5rem;">
+                            <table style="margin-top: 0.5rem;">
+                                <thead><tr><th>File Name</th><th>Type</th><th>Uploaded</th><th>Actions</th></tr></thead>
+                                <tbody id="clientFileList"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <button type="submit" class="btn-primary" style="background: #4caf50;">Upload & Apply Template</button>
-            </form>
-            <div id="importResult" style="margin-top: 15px; display: none; padding: 10px; border-radius: 4px;"></div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-file-import"></i> Apply Template</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="importForm">
+                            <div class="form-group">
+                                <label>Target Tenant</label>
+                                <select id="siteSelect" name="site_id" class="form-control" required>
+                                    <option value="">-- Select Client --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>JSON Template</label>
+                                <input type="file" name="file" accept=".json" class="form-control" required>
+                            </div>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">
+                                Warning: Applying a template will overwrite existing intents for the selected client.
+                            </p>
+                            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Apply Configuration</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="billing" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem; font-weight: 700;">Plan Limits <span style="background: var(--warning); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; vertical-align: middle;">BETA</span></h1>
+                    <p style="color: var(--text-muted); font-size: 0.875rem;">View the tier limits available to your tenants. (Billing is currently handled manually offline).</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-layer-group"></i> System Plans</h3>
+                    <button class="btn btn-outline btn-icon" onclick="loadPlansData()"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div class="card-body" style="padding: 0; overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Plan Name</th>
+                                <th>Monthly Message Limit</th>
+                                <th>Display Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plansTableBody">
+                            <tr><td colspan="3" style="text-align: center; padding: 2rem;">Loading plans...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div id="settings" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem; font-weight: 700;">Platform Settings</h1>
+                    <p style="color: var(--text-muted); font-size: 0.875rem;">Manage global system variables for your self-hosted platform.</p>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-sliders-h"></i> Global Settings</h3>
+                        <button class="btn btn-outline btn-icon" onclick="loadPlatformSettings()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="card-body" style="padding: 0; overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th>Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="platformSettingsBody">
+                                <tr><td colspan="3" style="text-align: center; padding: 2rem;">Loading settings...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-pen"></i> Update Setting</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="platformSettingForm">
+                                <div class="form-group">
+                                    <label>Key</label>
+                                    <input type="text" name="key" class="form-control" placeholder="SMTP_HOST" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Value</label>
+                                    <input type="text" name="value" class="form-control" placeholder="smtp.example.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Description (Optional)</label>
+                                    <input type="text" name="description" class="form-control" placeholder="Outgoing mail server">
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Save Setting</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 1.5rem; background: #EEF2FF; border-color: #C7D2FE;">
+                        <div class="card-body">
+                            <h4 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 0.95rem;"><i class="fas fa-lightbulb"></i> Standard Variables</h4>
+                            <ul style="font-size: 0.8rem; color: var(--text-muted); padding-left: 1.2rem; line-height: 1.8;">
+                                <li><code>SUPPORT_EMAIL</code>: The global contact address for widget fallbacks.</li>
+                                <li><code>SMTP_HOST</code> & <code>SMTP_PASS</code>: For routing system emails to admins.</li>
+                                <li><code>MAX_GLOBAL_RATE_LIMIT</code>: Maximum API requests allowed per minute.</li>
+                                <li><code>MAINTENANCE_MODE</code>: Set to "TRUE" to temporarily disable all chat widgets.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Plan Modal -->
+    <div class="modal-overlay" id="planModal">
+        <div class="modal-content">
+            <div class="modal-header">Update Plan</div>
+            <div class="form-group">
+                <label>Select Plan</label>
+                <select id="planDropdown" class="form-control">
+                    <option>Loading...</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="savePlanChange()">Save Change</button>
+            </div>
         </div>
     </div>
-</div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i class="fas fa-info-circle" style="color: var(--primary); font-size: 1.25rem;"></i>
+        <span id="toastMessage">Action completed successfully.</span>
+    </div>
 
 <script>
-    // Load Sites
-    async function loadSites() {
-        const res = await fetch('/admin/api/super/sites');
-        const data = await res.json();
-        const list = document.getElementById('siteList');
-        const select = document.getElementById('siteSelect');
+    let currentSiteId = null;
+
+    // --- Tab Navigation System ---
+    function switchTab(tabId, element) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+
+        document.getElementById(tabId).classList.add('active');
+        element.classList.add('active');
+
+        if (tabId === 'settings') loadPlatformSettings();
+        if (tabId === 'billing') loadPlansData();
+    }
+
+    // --- UI Utilities ---
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const msg = document.getElementById('toastMessage');
+        const icon = toast.querySelector('i');
         
-        list.innerHTML = '<h3>Existing Tenants</h3>';
-        select.innerHTML = '<option value="">-- Choose Site --</option>';
+        toast.style.borderLeftColor = type === 'error' ? 'var(--danger)' : 'var(--primary)';
+        icon.className = type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+        icon.style.color = type === 'error' ? 'var(--danger)' : 'var(--primary)';
+        
+        msg.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
 
-        if(data.sites) {
-            data.sites.forEach(site => {
-                // Add to list
-                const div = document.createElement('div');
-                div.className = 'site-item';
-                div.innerHTML = `<span><strong>${site.name}</strong> (ID: ${site.id})</span> <span class="badge">${site.domain || 'No Domain'}</span>`;
-                list.appendChild(div);
+    // --- Actions ---
+    async function toggleStatus(siteId) {
+        if(!confirm('Are you sure you want to change the status of this tenant?')) return;
+        try {
+            const res = await fetch(`/admin/api/super/sites/${siteId}/status`, { method: 'PUT' });
+            if(res.ok) {
+                showToast('Status updated successfully');
+                loadDashboardData();
+            } else {
+                showToast('Failed to update status', 'error');
+            }
+        } catch(e) { console.error(e); showToast('Network Error', 'error'); }
+    }
 
-                // Add to dropdown
-                const opt = document.createElement('option');
-                opt.value = site.id;
-                opt.textContent = `${site.name} (ID: ${site.id})`;
-                select.appendChild(opt);
+    async function impersonate(siteId) {
+        try {
+            const res = await fetch(`/admin/api/super/sites/${siteId}/impersonate`, { method: 'POST' });
+            const data = await res.json();
+            if(res.ok) {
+                window.location.href = data.redirect;
+            } else {
+                showToast(data.error || 'Impersonation failed', 'error');
+            }
+        } catch(e) { console.error(e); showToast('Network Error', 'error'); }
+    }
+
+    // --- Plan Modal ---
+    async function openPlanModal(siteId) {
+        currentSiteId = siteId;
+        const modal = document.getElementById('planModal');
+        const dropdown = document.getElementById('planDropdown');
+        modal.style.display = 'flex';
+        
+        // Fetch plans
+        const res = await fetch('/admin/api/super/plans');
+        const data = await res.json();
+        dropdown.innerHTML = '';
+        data.plans.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.name} (${p.max_monthly_chats || p.message_limit || 0} msgs/mo) - $${p.price}`;
+            dropdown.appendChild(opt);
+        });
+    }
+
+    function closeModal() {
+        document.getElementById('planModal').style.display = 'none';
+        currentSiteId = null;
+    }
+
+    async function savePlanChange() {
+        if(!currentSiteId) return;
+        const planId = document.getElementById('planDropdown').value;
+        try {
+            const res = await fetch(`/admin/api/super/sites/${currentSiteId}/plan`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ plan_id: planId })
             });
+            if(res.ok) {
+                showToast('Plan updated successfully');
+                closeModal();
+                loadDashboardData();
+            } else {
+                showToast('Failed to update plan', 'error');
+            }
+        } catch(e) { console.error(e); showToast('Network Error', 'error'); }
+    }
+
+    // --- Data Loading ---
+    async function loadDashboardData() {
+        try {
+            // Load Sites
+            const siteRes = await fetch('/admin/api/super/sites');
+            const siteData = await siteRes.json();
+            
+            // Load Global Stats
+            const statsRes = await fetch('/admin/api/super/stats');
+            const statsData = await statsRes.json();
+
+            // Update Top Cards
+            document.getElementById('statTenants').textContent = statsData.total_sites || 0;
+            document.getElementById('statMessages').textContent = statsData.total_chats || 0;
+
+            const tbody = document.getElementById('tenantTableBody');
+            const select = document.getElementById('siteSelect');
+            const viewSelect = document.getElementById('viewTemplateClientSelect');
+            
+            tbody.innerHTML = '';
+            const currentSelection = select.value;
+            select.innerHTML = '<option value="">-- Select Client --</option>';
+            viewSelect.innerHTML = '<option value="">-- Select Client --</option>';
+
+            if(siteData.sites && siteData.sites.length > 0) {
+                siteData.sites.forEach(site => {
+                    const percent = site.usage_percent || 0;
+                    const statusClass = site.is_active ? 'active' : 'inactive';
+                    const statusText = site.is_active ? 'Active' : 'Suspended';
+                    const suspendIcon = site.is_active ? 'fa-ban' : 'fa-check';
+                    const suspendTitle = site.is_active ? 'Suspend' : 'Activate';
+                    const suspendColor = site.is_active ? 'var(--danger)' : 'var(--success)';
+                    
+                    // Populate Table
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <div style="font-weight: 600; color: var(--text-main);">${site.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">
+                                ID: ${site.id} • ${site.domain ? `<a href="http://${site.domain}" target="_blank" style="color: var(--primary);">Link</a>` : 'Local'}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size: 0.75rem; display: flex; justify-content: space-between; margin-bottom: 2px;">
+                                <span style="font-weight:600;">${site.plan_name}</span>
+                                <span>${percent}%</span>
+                            </div>
+                            <div class="usage-bar"><div class="usage-fill" style="width: ${percent}%; ${percent > 90 ? 'background: var(--danger);' : ''}"></div></div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top:2px;">${site.message_count} / ${site.plan_limit || '∞'} msgs</div>
+                        </td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="btn-icon" title="Edit Plan" onclick="openPlanModal(${site.id})"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon" title="Login As Admin" onclick="impersonate(${site.id})"><i class="fas fa-sign-in-alt"></i></button>
+                                <button class="btn-icon" style="color: ${suspendColor};" title="${suspendTitle}" onclick="toggleStatus(${site.id})"><i class="fas ${suspendIcon}"></i></button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+
+                    // Populate Dropdown
+                    const opt = document.createElement('option');
+                    opt.value = site.id;
+                    opt.textContent = `${site.name}`;
+                    if (site.id == currentSelection) opt.selected = true;
+                    select.appendChild(opt);
+
+                    const opt2 = document.createElement('option');
+                    opt2.value = site.id;
+                    opt2.textContent = `${site.name}`;
+                    viewSelect.appendChild(opt2);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No tenants found. Provision one to get started.</td></tr>';
+            }
+        } catch (error) {
+            console.error("Dashboard Load Error:", error);
+            showToast('Failed to sync dashboard data', 'error');
         }
     }
 
-    // Handle Create Site
+    // --- Fetch Client Template Data ---
+    async function loadClientFiles() {
+        const siteId = document.getElementById('viewTemplateClientSelect').value;
+        const container = document.getElementById('templateDataContainer');
+        const fileList = document.getElementById('clientFileList');
+
+        if (!siteId) {
+            container.style.display = 'none';
+            return;
+        }
+
+        try {
+            container.style.display = 'block';
+            fileList.innerHTML = '<tr><td colspan="4">Loading files...</td></tr>';
+
+            const res = await fetch(`/admin/api/super/sites/${siteId}/files`);
+            const data = await res.json();
+
+            if (res.ok) {
+                fileList.innerHTML = '';
+                if (!data.files || data.files.length === 0) {
+                    fileList.innerHTML = '<tr><td colspan="4" style="text-align: center;">No intent files assigned.</td></tr>';
+                } else {
+                    data.files.forEach(file => {
+                        const uploaded = file.created_at ? new Date(file.created_at).toLocaleString() : '-';
+                        fileList.innerHTML += `
+                            <tr>
+                                <td style="font-weight: 500;">${file.filename}</td>
+                                <td style="color: var(--text-muted);">${file.file_type || '-'}</td>
+                                <td style="color: var(--text-muted);">${uploaded}</td>
+                                <td>
+                                    <button class="btn-icon" title="Delete" onclick="deleteClientFile(${siteId}, ${file.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                }
+            } else {
+                showToast(data.error || 'Failed to load files', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Network error while fetching files', 'error');
+        }
+    }
+
+    async function deleteClientFile(siteId, fileId) {
+        if (!confirm('Delete this file from the client?')) return;
+        try {
+            const res = await fetch(`/admin/api/super/sites/${siteId}/files/${fileId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('File deleted successfully');
+                loadClientFiles();
+            } else {
+                showToast(data.error || 'Failed to delete file', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Network error while deleting file', 'error');
+        }
+    }
+
+    // --- Manual Plans Fetch Logic ---
+    async function loadPlansData() {
+        const tbody = document.getElementById('plansTableBody');
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">Loading data...</td></tr>';
+
+        try {
+            const res = await fetch('/admin/api/super/plans');
+            const data = await res.json();
+
+            tbody.innerHTML = '';
+            if (data.plans && data.plans.length > 0) {
+                data.plans.forEach(plan => {
+                    const limit = plan.max_monthly_chats || plan.message_limit || 0;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><span style="font-weight: 600; color: var(--text-main);">${plan.name}</span></td>
+                        <td><span style="font-family: monospace; color: var(--primary);">${limit.toLocaleString()} msgs</span></td>
+                        <td style="color: var(--text-muted);">$${plan.price} / mo</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">No plans configured in database.</td></tr>';
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Failed to load plans', 'error');
+        }
+    }
+
+    // --- Platform Settings Fetch Logic ---
+    async function loadPlatformSettings() {
+        const tbody = document.getElementById('platformSettingsBody');
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">Loading settings...</td></tr>';
+
+        try {
+            const res = await fetch('/admin/api/super/settings');
+            const data = await res.json();
+
+            tbody.innerHTML = '';
+            if (data.settings && data.settings.length > 0) {
+                data.settings.forEach(setting => {
+                    const updated = setting.updated_at ? new Date(setting.updated_at).toLocaleString() : '-';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight: 600;">${setting.key}</td>
+                        <td style="color: var(--text-muted);">${setting.value ?? ''}</td>
+                        <td style="color: var(--text-muted);">${updated}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">No platform settings configured.</td></tr>';
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Failed to load platform settings', 'error');
+        }
+    }
+
+    // --- Form Handlers ---
     document.getElementById('createSiteForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        
-        const res = await fetch('/admin/api/super/sites', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        
-        if(res.ok) {
-            alert('Site Created!');
-            e.target.reset();
-            loadSites();
-        } else {
-            alert('Error creating site');
+        const btn = e.target.querySelector('button');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Provisioning...';
+        btn.disabled = true;
+
+        try {
+            const data = Object.fromEntries(new FormData(e.target).entries());
+            const res = await fetch('/admin/api/super/sites', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            
+            const result = await res.json();
+            if(res.ok) {
+                showToast('Tenant successfully provisioned!');
+                e.target.reset();
+                loadDashboardData();
+            } else {
+                showToast(result.error || 'Provisioning failed', 'error');
+            }
+        } catch (err) {
+            showToast('Network error occurred', 'error');
+        } finally {
+            btn.innerHTML = 'Provision Tenant';
+            btn.disabled = false;
         }
     });
 
-    // Handle Import
     document.getElementById('importForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        const resultDiv = document.getElementById('importResult');
-        
-        resultDiv.style.display = 'block';
-        resultDiv.style.background = '#e2e8f0';
-        resultDiv.textContent = 'Uploading...';
+        const btn = e.target.querySelector('button');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
+        btn.disabled = true;
 
-        const res = await fetch('/admin/api/super/import_template', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await res.json();
-        if(res.ok) {
-            resultDiv.style.background = '#d4edda';
-            resultDiv.style.color = '#155724';
-            resultDiv.textContent = '✅ ' + data.message;
-        } else {
-            resultDiv.style.background = '#f8d7da';
-            resultDiv.style.color = '#721c24';
-            resultDiv.textContent = '❌ ' + (data.error || 'Upload failed');
+        try {
+            const res = await fetch('/admin/api/super/import_template', {
+                method: 'POST',
+                body: new FormData(e.target)
+            });
+            const data = await res.json();
+            if(res.ok) {
+                showToast('Template configuration applied successfully!');
+                e.target.reset();
+            } else {
+                showToast(data.error || 'Import failed', 'error');
+            }
+        } catch (err) {
+            showToast('Network error during import', 'error');
+        } finally {
+            btn.innerHTML = 'Apply Configuration';
+            btn.disabled = false;
         }
     });
 
-    loadSites();
+    document.getElementById('platformSettingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        btn.disabled = true;
+
+        try {
+            const payload = Object.fromEntries(new FormData(e.target).entries());
+            const res = await fetch('/admin/api/super/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Setting updated successfully');
+                e.target.reset();
+                loadPlatformSettings();
+            } else {
+                showToast(data.error || 'Failed to update setting', 'error');
+            }
+        } catch (err) {
+            showToast('Network error while saving setting', 'error');
+        } finally {
+            btn.innerHTML = 'Save Setting';
+            btn.disabled = false;
+        }
+    });
+
+    // Init
+    document.addEventListener('DOMContentLoaded', loadDashboardData);
 </script>
 </body>
 </html>

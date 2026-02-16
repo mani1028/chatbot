@@ -1,6 +1,6 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit, join_room
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask_cors import CORS  # Enable CORS for cross-origin requests
+from flask_socketio import SocketIO
 from functools import wraps
 import os
 import json
@@ -10,20 +10,20 @@ from config import (
     SQLALCHEMY_TRACK_MODIFICATIONS, ADMIN_USERNAME, ADMIN_PASSWORD
 )
 from database import db, init_db
-from models import Admin, BrandingSettings, Site, ClientConfig
+from models import Admin, BrandingSettings, Site, Intent, IntentPhrase, ChatLog
 from routes.chat_routes import chat_bp
 from routes.admin_api import admin_api
 from services.chat_service import process_message
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)  # Allow all domains to access the API
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['DEBUG'] = DEBUG
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
 
 # --- 1. INITIALIZE SOCKETIO (REAL-TIME ENGINE) ---
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 db.init_app(app)
 
@@ -38,28 +38,42 @@ def login_required(f):
 # --- INITIALIZATION LOGIC ---
 with app.app_context():
     init_db(app)
-    # Ensure default admins exist (logic preserved from original)
-    try:
-        if not Admin.query.filter_by(username=ADMIN_USERNAME).first():
-            print(f"Creating default super admin: {ADMIN_USERNAME}")
-            admin = Admin(username=ADMIN_USERNAME, is_super=True)
-            admin.set_password(ADMIN_PASSWORD)
-            db.session.add(admin)
-            db.session.commit()
-            
-        if not Admin.query.filter_by(username='client').first():
-            site = Site.query.get(1)
-            if not site:
-                site = Site(name="Demo Company", domain="localhost")
-                db.session.add(site)
-                db.session.flush()
-            client_admin = Admin(username='client', site_id=site.id, is_super=False)
-            client_admin.set_password('client123')
-            db.session.add(client_admin)
-            db.session.commit()
-    except Exception as e:
-        print(f"Error creating default users: {e}")
+    # 1. Auto-Create Super Admin if not exists
+    super_admin = Admin.query.filter_by(username=ADMIN_USERNAME).first()
+    if not super_admin:
+        print(f"Creating Super Admin: {ADMIN_USERNAME}")
+        super_admin = Admin(username=ADMIN_USERNAME, is_super=True)
+        super_admin.set_password(ADMIN_PASSWORD)
+        db.session.add(super_admin)
+        db.session.commit()
 
+    # 2. Auto-Create Default Site (ID: 1)
+    # FIX: Use db.session.get() to resolve the LegacyAPIWarning
+    default_site = db.session.get(Site, 1)
+    if not default_site:
+        print("Creating Default Site (ID: 1)...")
+        default_site = Site(
+            id=1, # FIX: Explicitly set id=1 to ensure the relations match up
+            name="Platform Demo",
+            domain="localhost",
+            bot_name="Demo Bot"
+        )
+        db.session.add(default_site)
+        db.session.commit()
+        # Link Super Admin to this site
+        if super_admin:
+            super_admin.site_id = 1
+            db.session.commit()
+
+    # 3. Default Branding
+    if BrandingSettings.query.count() == 0:
+        from config import DEFAULT_BRANDING
+        # FIX: Explicitly pass site_id=1 to prevent the NOT NULL IntegrityError
+        branding = BrandingSettings(site_id=1, **DEFAULT_BRANDING)
+        db.session.add(branding)
+        db.session.commit()
+
+# Register Blueprints
 app.register_blueprint(chat_bp)
 app.register_blueprint(admin_api, url_prefix='/admin/api')
 
@@ -71,6 +85,8 @@ def index():
 
 @app.route('/widget.js')
 def widget_embed():
+    from flask import send_file
+    # UPDATED: Pointing to the file you chose (chatbot/static/widget.js)
     return send_file('static/widget.js', mimetype='application/javascript')
 
 @app.route('/api/widget-settings')
@@ -144,50 +160,25 @@ def super_dashboard():
 def admin_dashboard():
     return render_template('admin_dashboard.html', site_id=session.get('site_id'))
 
-# --- 2. WEBSOCKET EVENTS (SAAS LOGIC) ---
+@app.route('/admin/api/client/intents', methods=['GET'])
+@login_required
+def get_client_intents():
+    site_id = session.get('site_id')
+    if not site_id:
+        return jsonify({'error': 'No site linked to this admin'}), 400
+    intents = Intent.query.filter_by(site_id=site_id).all()
+    return jsonify({'intents': [i.to_dict() for i in intents]})
 
-@socketio.on('join')
-def on_join(data):
-    """User joins a specific site room"""
-    site_id = data.get('site_id')
-    room = f"site_{site_id}"
-    join_room(room)
-    print(f"User joined room: {room}")
+# --- ERROR HANDLERS ---
 
-@socketio.on('client_message')
-def handle_client_message(data):
-    """
-    Handle real-time message from widget.
-    Data expected: { 'message': '...', 'site_id': 1, 'session_id': '...' }
-    """
-    site_id = data.get('site_id')
-    user_msg = data.get('message')
-    session_id = data.get('session_id')
-    
-    # 1. Check AI Mode
-    ai_config = ClientConfig.query.filter_by(client_id=site_id, key='ai_mode').first()
-    ai_enabled = ai_config.value == 'on' if ai_config else False
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Not found'}), 404
 
-    # 2. Emit typing indicator to the specific user (or room)
-    # In a real socket scenario, we usually emit back to the specific client `request.sid`
-    emit('typing', {'status': 'active'})
-
-    # 3. Process Logic (Simulating AI Delay for UX)
-    import time
-    
-    # Check if we should use the Intent Engine or Mock OpenAI
-    # (Here we use the existing robust intent engine, but wrap it for sockets)
-    response_obj = process_message(site_id, user_msg, session_id)
-    
-    # Simulate thinking time based on message length
-    time.sleep(1.0) 
-
-    # 4. Send Response
-    emit('bot_response', {
-        'reply': response_obj.reply,
-        'intent': response_obj.intent_name,
-        'confidence': response_obj.confidence
-    })
+@app.errorhandler(500)
+def internal_error(error):
+    print(f"Internal server error: {error}")
+    return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
     # USE SOCKETIO.RUN INSTEAD OF APP.RUN
