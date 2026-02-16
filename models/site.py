@@ -28,6 +28,10 @@ class Site(db.Model):
     intents = db.relationship('Intent', backref='site', lazy='dynamic')
     plan = db.relationship('Plan', backref='sites')
 
+    @property
+    def is_active(self):
+        return (self.status or 'active') == 'active'
+
     def to_dict(self):
         plan_name = self.plan.name if self.plan else 'No Plan'
         # Handle plan limit from either Plan object or property
@@ -39,11 +43,13 @@ class Site(db.Model):
             'domain': self.domain,
             'owner_email': self.owner_email,
             'status': self.status,
+            'is_active': self.is_active,
             'bot_name': self.bot_name,
             'theme': self.theme,
             'message_count': self.message_count,
             'plan_id': self.plan_id,
             'plan_name': plan_name,
+            'plan_limit': plan_limit,
             'usage_percent': int((self.message_count / plan_limit * 100)) if plan_limit > 0 else 0,
             'created_at': self.created_at.isoformat()
         }
