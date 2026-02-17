@@ -94,6 +94,7 @@
             <a class="nav-item" onclick="switchTab('branding', this)"><i class="fas fa-paint-brush"></i> Branding</a>
             <a class="nav-item" onclick="switchTab('install', this)"><i class="fas fa-code"></i> Installation</a>
             <a class="nav-item" onclick="switchTab('simulator', this)"><i class="fas fa-mobile-alt"></i> Simulator</a>
+            <a class="nav-item" onclick="switchTab('config', this)"><i class="fas fa-cogs"></i> Business Rules</a>
         </nav>
         <div class="sidebar-footer">
             <span style="font-size: 0.85rem; color: var(--text-muted); text-align: center;">Site ID: <b>{{ site_id }}</b></span>
@@ -102,6 +103,25 @@
     </aside>
 
     <main class="main-content">
+        <!-- Dynamic Business Rules Tab -->
+        <div id="config" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem;">Business Settings</h1>
+                    <p style="color: var(--text-muted);">Customize values used in bot responses (e.g., prices, times).</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body" id="dynamicConfigContainer">
+                    <p>Loading settings...</p>
+                </div>
+                <div class="card-footer" style="padding: 1.5rem; border-top: 1px solid var(--border); display: flex; gap: 1rem;">
+                    <button class="btn btn-primary" onclick="saveAllConfig()">Save All Settings</button>
+                    <button class="btn btn-outline" onclick="loadDynamicConfig()">Refresh</button>
+                </div>
+            </div>
+        </div>
+        <!-- The dynamic config JS logic is now moved to the main script block at the bottom of the file. -->
         <div id="dashboard" class="tab-content active">
             <div class="header-actions">
                 <div>
@@ -137,7 +157,6 @@
                             </tr>
                         </thead>
                         <tbody id="intentTableBody">
-                            <tr><td colspan="3" style="text-align: center; padding: 2rem;">Loading intents...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -282,9 +301,57 @@
             
             if (tabId === 'dashboard') loadStats();
             if (tabId === 'intents') loadIntents();
+            if (tabId === 'config') loadDynamicConfig();
             if(tabId === 'simulator') {
                 const iframe = document.getElementById('sim-frame');
                 if(iframe) iframe.src = iframe.src;
+            }
+        }
+        // --- Dynamic Business Rules (Config) ---
+        async function loadDynamicConfig() {
+            const container = document.getElementById('dynamicConfigContainer');
+            container.innerHTML = '<p>Loading settings...</p>';
+            try {
+                const res = await fetch('/admin/api/client/config');
+                const data = await res.json();
+                if (res.ok && data.config) {
+                    let html = '';
+                    Object.keys(data.config).forEach(key => {
+                        html += `<div class="form-group">
+                            <label for="config_${key}">${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</label>
+                            <input type="text" class="form-control" id="config_${key}" name="${key}" value="${data.config[key] || ''}" />
+                        </div>`;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p style="color: var(--danger);">Failed to load config.</p>';
+                }
+            } catch (e) {
+                container.innerHTML = '<p style="color: var(--danger);">Error loading config.</p>';
+            }
+        }
+
+        async function saveAllConfig() {
+            const container = document.getElementById('dynamicConfigContainer');
+            const inputs = container.querySelectorAll('input[name]');
+            const payload = {};
+            inputs.forEach(input => {
+                payload[input.name] = input.value;
+            });
+            try {
+                const res = await fetch('/admin/api/client/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    showToast('Settings saved!');
+                    loadDynamicConfig();
+                } else {
+                    showToast('Failed to save settings', 'error');
+                }
+            } catch (e) {
+                showToast('Network error', 'error');
             }
         }
 

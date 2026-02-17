@@ -6,6 +6,9 @@
     <title>Command Center | Super Admin</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+            /* Small Button */
+            .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8rem; border-radius: 5px; }
+
         :root {
             --primary: #4F46E5;
             --primary-hover: #4338CA;
@@ -60,6 +63,62 @@
         .badge { padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
         .badge.active { background: #D1FAE5; color: #065F46; }
         .badge.inactive { background: #FEE2E2; color: #991B1B; }
+        .badge.urgent { background: #EF4444; color: #fff; }
+
+    /* Responsive Table/Card Overflow */
+    .card-body { border-radius: 0 0 12px 12px; overflow-x: auto; }
+    table { background: var(--surface); border-radius: 10px; }
+
+
+        /* Audit Log Table Styles */
+        .audit-log-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(79,70,229,0.04);
+            margin-bottom: 1.5rem;
+        }
+        .audit-log-table th {
+            background: #EEF2FF;
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .audit-log-table td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+        .audit-log-table tr:last-child td {
+            border-bottom: none;
+        }
+        .audit-log-table tbody tr:hover {
+            background: #F3F4F6;
+        }
+        .audit-log-action {
+            color: var(--primary);
+            font-weight: 600;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .audit-log-timestamp {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .audit-log-admin {
+            font-weight: 500;
+            color: var(--primary-hover);
+        }
+        .audit-log-site {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
 
         .usage-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-top: 4px; overflow: hidden; }
         .usage-fill { height: 100%; background: var(--primary); border-radius: 3px; }
@@ -83,7 +142,8 @@
 
         /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 400px; max-width: 90%; }
+        .modal-content { background: white; padding: 2rem; border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+
         .modal-header { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
 
@@ -93,7 +153,8 @@
 
         /* Tab System */
         .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
-        .tab-content.active { display: block; }
+        .tab-content.active { display: block; min-height: 300px; }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Template Management UI */
@@ -109,13 +170,193 @@
         <div class="sidebar-header">
             <h2><i class="fas fa-layer-group"></i> SaaS Control</h2>
         </div>
+                <!-- Health Monitor Tab -->
+                <div id="health" class="tab-content">
+                    <div class="header-actions">
+                        <div>
+                            <h1 style="font-size: 1.5rem; font-weight: 700;">Health Monitor</h1>
+                            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.5rem;">Live system health, performance, and uptime metrics for your SaaS platform.</p>
+                        </div>
+                    </div>
+                    <div class="stats-grid" style="margin-bottom:2rem;">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#E0F2FE;"><i class="fas fa-database"></i></div>
+                            <div class="stat-info">
+                                <h3>Database Connection</h3>
+                                <p id="dbStatus">Checking...</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#FEF9C3;"><i class="fas fa-bolt"></i></div>
+                            <div class="stat-info">
+                                <h3>API Latency</h3>
+                                <p id="apiLatency">-- ms</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#F3E8FF;"><i class="fas fa-hdd"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Storage</h3>
+                                <p id="totalStorage">--</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#DCFCE7;"><i class="fas fa-users"></i></div>
+                            <div class="stat-info">
+                                <h3>Active Sessions</h3>
+                                <p id="activeSessions">--</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom:2rem;">
+                        <div class="card-header"><h3 style="margin:0;"><i class="fas fa-info-circle"></i> System Notes</h3></div>
+                        <div class="card-body" style="font-size:0.95rem; color:var(--text-muted);">
+                            <ul style="margin-left:1.2rem;">
+                                <li>Database status and API latency update every 30 seconds.</li>
+                                <li>Active sessions are counted from unique users in the last 24 hours.</li>
+                                <li>Contact support if any metric is red or shows "Offline".</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Logs Tab -->
+                <div id="logs" class="tab-content">
+                    <div class="header-actions">
+                        <div>
+                            <h1 style="font-size: 1.5rem; font-weight: 700;">Audit Logs</h1>
+                            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.5rem;">Track all super admin actions for compliance and security. All changes are logged in real time.</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom:2rem;">
+                        <div class="card-header">
+                            <h3 style="margin:0;"><i class="fas fa-clipboard-list"></i> Audit Log</h3>
+                        </div>
+                        <div class="card-body" style="padding: 0; overflow-x: auto;">
+                            <table class="audit-log-table">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Admin User</th>
+                                        <th>Action</th>
+                                        <th>Target Site</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auditLogTableBody">
+                                    <tr><td colspan="4" style="text-align: center; padding: 2rem;">Loading logs...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Handoffs Tab -->
+                <div id="handoffs" class="tab-content">
+                    <div class="header-actions">
+                        <div>
+                            <h1 style="font-size: 1.5rem; font-weight: 700;">Global Handoffs</h1>
+                            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.5rem;">Monitor all users requesting human help across all tenants. Urgent requests are highlighted.</p>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom:2rem;">
+                        <div class="card-header">
+                            <h3 style="margin:0;"><i class="fas fa-headset"></i> Handoff Requests</h3>
+                        </div>
+                        <div class="card-body" style="padding: 0; overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Tenant Name</th>
+                                        <th>User Session ID</th>
+                                        <th>Last Message</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="handoffTableBody">
+                                    <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading handoffs...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Users Tab -->
+                <div id="users" class="tab-content">
+                    <div class="header-actions">
+                        <div>
+                            <h1 style="font-size: 1.5rem; font-weight: 700;">Admin Users</h1>
+                            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0.5rem;">Manage super admin and staff access to this dashboard. Only super admins can invite or revoke staff.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openAdminModal()"><i class="fas fa-user-plus"></i> New Admin</button>
+                    </div>
+                    <div class="card" style="margin-bottom:2rem;">
+                        <div class="card-header">
+                            <h3 style="margin:0;"><i class="fas fa-user-shield"></i> Staff Members</h3>
+                        </div>
+                        <div class="card-body" style="padding: 0; overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Created</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTableBody">
+                                    <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading admins...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- New Admin Modal -->
+                    <div class="modal-overlay" id="adminModal">
+                        <div class="modal-content">
+                            <div class="modal-header">Invite New Admin</div>
+                            <form id="adminForm">
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" name="username" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" name="email" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Temporary Password</label>
+                                    <input type="text" name="password" class="form-control" required>
+                                </div>
+                                <div class="modal-actions">
+                                    <button type="button" class="btn btn-outline" onclick="closeAdminModal()">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Invite Admin</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
         <nav class="nav-links">
-            <a href="#" class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-home"></i> Dashboard & Clients</a>
-            <a href="#" class="nav-item" onclick="switchTab('templates', this)"><i class="fas fa-file-code"></i> Sector Templates</a>
-            <a href="#" class="nav-item" onclick="switchTab('billing', this)"><i class="fas fa-credit-card"></i> Billing & Plans</a>
-            <a href="#" class="nav-item" onclick="switchTab('settings', this)"><i class="fas fa-cog"></i> Platform Settings</a>
+            <div style="margin-bottom: 1.2rem;">
+                <div style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin: 1.2rem 0 0.5rem 1.5rem; text-transform: uppercase;">Core</div>
+                <a href="#" class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-home"></i> Insights & Overview</a>
+                <a href="#" class="nav-item" onclick="switchTab('clients', this)"><i class="fas fa-users"></i> Client Management</a>
+                <a href="#" class="nav-item" onclick="switchTab('templates', this)"><i class="fas fa-file-code"></i> Sector Blueprints</a>
+            </div>
+            <div style="margin-bottom: 1.2rem;">
+                <div style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin: 1.2rem 0 0.5rem 1.5rem; text-transform: uppercase;">Monitoring</div>
+                <a href="#" class="nav-item" onclick="switchTab('health', this)"><i class="fas fa-heartbeat"></i> Health Monitor</a>
+                <a href="#" class="nav-item" onclick="switchTab('logs', this)"><i class="fas fa-clipboard-list"></i> Audit Logs</a>
+                <a href="#" class="nav-item" onclick="switchTab('handoffs', this)"><i class="fas fa-headset"></i> Global Handoffs</a>
+            </div>
+            <div style="margin-bottom: 1.2rem;">
+                <div style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin: 1.2rem 0 0.5rem 1.5rem; text-transform: uppercase;">System</div>
+                <a href="#" class="nav-item" onclick="switchTab('users', this)"><i class="fas fa-user-shield"></i> Admin Users</a>
+                <a href="#" class="nav-item" onclick="switchTab('settings', this)"><i class="fas fa-cog"></i> Platform Settings</a>
+            </div>
         </nav>
-        <div class="sidebar-footer">
+        <div class="sidebar-footer" style="margin-top: auto;">
             <a href="/admin/logout" class="btn btn-outline" style="width: 100%; justify-content: center;">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
@@ -125,6 +366,40 @@
     <!-- Main Content -->
     <main class="main-content">
         <div id="dashboard" class="tab-content active">
+                    <!-- Client Management Tab -->
+                    <div id="clients" class="tab-content">
+                        <div class="header-actions">
+                            <div>
+                                <h1 style="font-size: 1.5rem; font-weight: 700;">Active Clients</h1>
+                                <p style="color: var(--text-muted); font-size: 0.875rem;">Manage all tenants, view owner emails, and contact for support or billing.</p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                                <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+                                    <h3>Active Clients</h3>
+                                    <button class="btn btn-outline btn-icon" onclick="loadDashboardData()"><i class="fas fa-sync-alt"></i></button>
+                                </div>
+                                <input type="text" id="clientSearch" class="form-control" placeholder="Search by company name..." style="max-width: 300px; margin-top: 0.5rem;">
+                            </div>
+                            <div class="card-body" style="padding: 0; overflow-x: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Client Name</th>
+                                            <th>Owner Email</th>
+                                            <th>Plan / Usage</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tenantTableBody">
+                                        <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
             <div class="header-actions">
                 <div>
                     <h1 style="font-size: 1.5rem; font-weight: 700;">Platform Overview</h1>
@@ -161,9 +436,12 @@
             <div class="content-grid">
                 <!-- Left Col: Tenant Table -->
                 <div class="card">
-                    <div class="card-header">
-                        <h3>Active Clients</h3>
-                        <button class="btn btn-outline btn-icon" onclick="loadDashboardData()"><i class="fas fa-sync-alt"></i></button>
+                    <div class="card-header" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                        <div style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+                            <h3>Active Clients</h3>
+                            <button class="btn btn-outline btn-icon" onclick="loadDashboardData()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                        <input type="text" id="clientSearch" class="form-control" placeholder="Search by company name..." style="max-width: 300px; margin-top: 0.5rem;">
                     </div>
                     <div class="card-body" style="padding: 0; overflow-x: auto;">
                         <table>
@@ -226,23 +504,31 @@
                 </div>
             </div>
 
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h3><i class="fas fa-database"></i> Available Intent Templates</h3>
+                </div>
+                <div class="card-body" id="templateFileList">
+                    <p>Loading template files...</p>
+                </div>
+            </div>
+
             <div class="content-grid">
                 <div class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-folder-open"></i> Assigned Intent Files</h3>
+                        <h3><i class="fas fa-folder-open"></i> Assigned Intents</h3>
                     </div>
                     <div class="card-body">
                         <div class="form-group">
-                            <label>Select Tenant to View Files</label>
-                            <select id="viewTemplateClientSelect" class="form-control" onchange="loadClientFiles()">
+                            <label>Select Tenant to View Intents</label>
+                            <select id="viewIntentClientSelect" class="form-control" onchange="loadClientIntents()">
                                 <option value="">-- Select Client --</option>
                             </select>
                         </div>
-
-                        <div id="templateDataContainer" style="display: none; margin-top: 1.5rem;">
+                        <div id="intentDataContainer" style="display: none; margin-top: 1.5rem;">
                             <table style="margin-top: 0.5rem;">
-                                <thead><tr><th>File Name</th><th>Type</th><th>Uploaded</th><th>Actions</th></tr></thead>
-                                <tbody id="clientFileList"></tbody>
+                                <thead><tr><th>Intent Name</th><th>Bot Response</th></tr></thead>
+                                <tbody id="clientIntentList"></tbody>
                             </table>
                         </div>
                     </div>
@@ -398,19 +684,153 @@
     </div>
 
 <script>
+            // --- Load Intent Template File Names ---
+            async function loadTemplateFiles() {
+                const container = document.getElementById('templateFileList');
+                container.innerHTML = '<p>Loading template files...</p>';
+                try {
+                    const res = await fetch('/admin/api/super/template_files');
+                    const data = await res.json();
+                    if (res.ok && data.files && data.files.length > 0) {
+                        let html = '<ul style="list-style:none; padding:0;">';
+                        data.files.forEach(file => {
+                            html += `<li style="padding: 0.5rem 0; border-bottom: 1px solid #eee;"><i class="fas fa-file-code" style="color: var(--primary); margin-right: 8px;"></i>${file}</li>`;
+                        });
+                        html += '</ul>';
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = '<p style="color: var(--danger);">No template files found.</p>';
+                    }
+                } catch (e) {
+                    container.innerHTML = '<p style="color: var(--danger);">Failed to load template files.</p>';
+                }
+            }
+
+            // Load template files when the tab is shown
+            function switchTab(tabId, element) {
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+                element.classList.add('active');
+                if (tabId === 'dashboard') loadDashboardData();
+                if (tabId === 'intents') loadIntents();
+                if (tabId === 'config') loadDynamicConfig();
+                if (tabId === 'templates') loadTemplateFiles();
+                if (tabId === 'settings') loadPlatformSettings();
+                if (tabId === 'billing') loadPlansData();
+                if (tabId === 'health') loadHealthData();
+                if (tabId === 'logs') loadAuditLogs();
+                if (tabId === 'handoffs') loadHandoffData();
+                if (tabId === 'users') loadAdminUsers();
+                if(tabId === 'simulator') {
+                    const iframe = document.getElementById('sim-frame');
+                    if(iframe) iframe.src = iframe.src;
+                }
+                // --- Health Monitor Data Loader ---
+                async function loadHealthData() {
+                    try {
+                        const res = await fetch('/admin/api/super/health-check');
+                        const data = await res.json();
+                        document.getElementById('dbStatus').textContent = data.database && data.database.exists ? (data.database.writable ? 'Online' : 'Read-Only') : 'Offline';
+                        document.getElementById('apiLatency').textContent = data.api_latency ? `${data.api_latency} ms` : '-- ms';
+                        document.getElementById('totalStorage').textContent = data.total_storage || '--';
+                        document.getElementById('activeSessions').textContent = data.active_sessions || '--';
+                    } catch (e) {
+                        document.getElementById('dbStatus').textContent = 'Error';
+                        document.getElementById('apiLatency').textContent = '--';
+                        document.getElementById('totalStorage').textContent = '--';
+                        document.getElementById('activeSessions').textContent = '--';
+                    }
+                }
+
+                // --- Audit Logs Data Loader ---
+                async function loadAuditLogs(page=1) {
+                    const tbody = document.getElementById('auditLogTableBody');
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Loading logs...</td></tr>';
+                    try {
+                        const res = await fetch(`/admin/api/super/audit-logs?page=${page}`);
+                        const data = await res.json();
+                        tbody.innerHTML = '';
+                        if (data.logs && data.logs.length > 0) {
+                            data.logs.forEach(log => {
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `
+                                    <td class="audit-log-timestamp">${new Date(log.timestamp).toLocaleString()}</td>
+                                    <td class="audit-log-admin">${log.admin_id}</td>
+                                    <td class="audit-log-action">${log.action}</td>
+                                    <td class="audit-log-site">${log.site_id || '-'}</td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+                        } else {
+                            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:2rem;">No audit logs found.</td></tr>';
+                        }
+                    } catch (e) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--danger); padding:2rem;">Failed to load logs.</td></tr>';
+                    }
+                }
+
+                // --- Global Handoffs Data Loader ---
+                async function loadHandoffData() {
+                    const tbody = document.getElementById('handoffTableBody');
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem;">Loading handoffs...</td></tr>';
+                    try {
+                        const res = await fetch('/admin/api/super/handoffs');
+                        const data = await res.json();
+                        tbody.innerHTML = '';
+                        if (data.handoffs && data.handoffs.length > 0) {
+                            data.handoffs.forEach(h => {
+                                const badge = h.urgency_score && h.urgency_score > 0.8 ? '<span class="badge inactive" style="background:var(--danger);color:white;">Needs Action</span>' : '<span class="badge active">Normal</span>';
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `
+                                    <td>${h.tenant_name || '-'}</td>
+                                    <td>${h.session_id}</td>
+                                    <td>${h.last_message}</td>
+                                    <td>${badge}</td>
+                                    <td><button class="btn btn-primary btn-sm" onclick="window.open('/admin/chat/${h.session_id}','_blank')">Join Chat</button></td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+                        } else {
+                            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:2rem;">No handoff requests found.</td></tr>';
+                        }
+                    } catch (e) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:2rem;">Failed to load handoffs.</td></tr>';
+                    }
+                }
+
+                // --- Admin Users Data Loader ---
+                async function loadAdminUsers() {
+                    const tbody = document.getElementById('adminTableBody');
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem;">Loading admins...</td></tr>';
+                    try {
+                        const res = await fetch('/admin/api/super/admins');
+                        const data = await res.json();
+                        tbody.innerHTML = '';
+                        if (data.admins && data.admins.length > 0) {
+                            data.admins.forEach(a => {
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `
+                                    <td>${a.username}</td>
+                                    <td>${a.email || '-'}</td>
+                                    <td>${a.is_super ? 'Super Admin' : 'Staff'}</td>
+                                    <td>${a.created_at ? new Date(a.created_at).toLocaleString() : '-'}</td>
+                                    <td><button class="btn btn-danger btn-sm" onclick="revokeAdmin('${a.id}')">Revoke</button></td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+                        } else {
+                            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:2rem;">No admin users found.</td></tr>';
+                        }
+                    } catch (e) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger); padding:2rem;">Failed to load admins.</td></tr>';
+                    }
+                }
+            }
     let currentSiteId = null;
 
     // --- Tab Navigation System ---
-    function switchTab(tabId, element) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-
-        document.getElementById(tabId).classList.add('active');
-        element.classList.add('active');
-
-        if (tabId === 'settings') loadPlatformSettings();
-        if (tabId === 'billing') loadPlansData();
-    }
+    // (Removed duplicate switchTab definition)
 
     // --- UI Utilities ---
     function showToast(message, type = 'info') {
@@ -495,6 +915,36 @@
             }
         } catch(e) { console.error(e); showToast('Network Error', 'error'); }
     }
+                // --- Assigned Intents for Selected Client ---
+            async function loadClientIntents() {
+                const select = document.getElementById('viewIntentClientSelect');
+                const siteId = select ? select.value : '';
+                const tbody = document.getElementById('clientIntentList');
+                const container = document.getElementById('intentDataContainer');
+                if (!siteId) {
+                    tbody.innerHTML = '';
+                    container.style.display = 'none';
+                    return;
+                }
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:2rem;">Loading...</td></tr>';
+                container.style.display = 'block';
+                try {
+                    const res = await fetch(`/admin/api/super/sites/${siteId}/template_data`);
+                    const data = await res.json();
+                    tbody.innerHTML = '';
+                    if (res.ok && data.intents && data.intents.length > 0) {
+                        data.intents.forEach(intent => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `<td><span style="font-weight:600;">${intent.intent_name}</span></td><td>${intent.response}</td>`;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:var(--text-muted); padding:2rem;">No intents assigned to this client.</td></tr>';
+                    }
+                } catch (e) {
+                    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:var(--danger); padding:2rem;">Failed to load intents.</td></tr>';
+                }
+            }
 
     // --- Data Loading ---
     async function loadDashboardData() {
@@ -508,17 +958,18 @@
             const statsData = await statsRes.json();
 
             // Update Top Cards
-            document.getElementById('statTenants').textContent = statsData.total_sites || 0;
+            document.getElementById('statTenants').textContent = statsData.site_count || 0;
             document.getElementById('statMessages').textContent = statsData.total_chats || 0;
+
 
             const tbody = document.getElementById('tenantTableBody');
             const select = document.getElementById('siteSelect');
-            const viewSelect = document.getElementById('viewTemplateClientSelect');
-            
-            tbody.innerHTML = '';
-            const currentSelection = select.value;
-            select.innerHTML = '<option value="">-- Select Client --</option>';
-            viewSelect.innerHTML = '<option value="">-- Select Client --</option>';
+            const viewIntentSelect = document.getElementById('viewIntentClientSelect');
+
+            if (tbody) tbody.innerHTML = '';
+            const currentSelection = select ? select.value : '';
+            if (select) select.innerHTML = '<option value="">-- Select Client --</option>';
+            if (viewIntentSelect) viewIntentSelect.innerHTML = '<option value="">-- Select Client --</option>';
 
             if(siteData.sites && siteData.sites.length > 0) {
                 siteData.sites.forEach(site => {
@@ -555,22 +1006,25 @@
                             </div>
                         </td>
                     `;
-                    tbody.appendChild(tr);
+                    if (tbody) tbody.appendChild(tr);
 
-                    // Populate Dropdown
-                    const opt = document.createElement('option');
-                    opt.value = site.id;
-                    opt.textContent = `${site.name}`;
-                    if (site.id == currentSelection) opt.selected = true;
-                    select.appendChild(opt);
-
-                    const opt2 = document.createElement('option');
-                    opt2.value = site.id;
-                    opt2.textContent = `${site.name}`;
-                    viewSelect.appendChild(opt2);
+                    // Populate Dropdowns with null checks
+                    if (select) {
+                        const opt = document.createElement('option');
+                        opt.value = site.id;
+                        opt.textContent = `${site.name}`;
+                        if (site.id == currentSelection) opt.selected = true;
+                        select.appendChild(opt);
+                    }
+                    if (viewIntentSelect) {
+                        const opt3 = document.createElement('option');
+                        opt3.value = site.id;
+                        opt3.textContent = `${site.name}`;
+                        viewIntentSelect.appendChild(opt3);
+                    }
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No tenants found. Provision one to get started.</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No tenants found. Provision one to get started.</td></tr>';
             }
         } catch (error) {
             console.error("Dashboard Load Error:", error);

@@ -9,3 +9,7 @@ flask-socketio==5.3.6
 simple-websocket==1.0.0
 eventlet==0.33.3
 python-Levenshtein
+python-dotenv 
+Flask-Migrate 
+flask-limiter 
+psycopg2-binary

@@ -6,14 +6,18 @@ from database import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 # Gather other models to ensure they register with SQLAlchemy
 from models.site import Site
 from models.intent import Intent, IntentPhrase, Workflow
 from models.plan import Plan, Subscription
-from models.platform_settings import PlatformSetting
+from models.platform_settings import PlatformSetting, AuditLog
 from models.sector_template import SectorTemplate
 from models.chat_log import ChatLog
 from models.file_manager import TemplateFile, SiteFile
+from models.client_config import ClientConfig
+
+
 
 class Admin(db.Model):
     __tablename__ = 'admins'
@@ -77,9 +81,3 @@ class BrandingSettings(db.Model):
     custom_css = db.Column(db.Text, default="")
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-class ClientConfig(db.Model):
-    __tablename__ = 'client_config'
-    id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, nullable=False)
-    key = db.Column(db.String(255), nullable=False)
-    value = db.Column(db.Text, nullable=True)

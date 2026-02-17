@@ -1,14 +1,97 @@
+
 from flask import Blueprint, request, jsonify, session
 from database import db
-from models import Site, Admin, ClientConfig, Intent, Plan, BrandingSettings, PlatformSetting
+from models import Site, Admin, ClientConfig, Intent, Plan, BrandingSettings, PlatformSetting, SectorTemplate
+from models.platform_settings import AuditLog
 from models.file_manager import SiteFile
 from services.importer import import_sector_template as importer_service
 from functools import wraps
 import traceback
 import json
 from sqlalchemy.exc import IntegrityError # Import specific DB error
+import os
+
+# --- Super Admin Decorator (must be defined before use) ---
+def super_admin_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        user_id = session.get('admin_id')
+        admin = Admin.query.get(user_id)
+        if not admin or not getattr(admin, 'is_super', False):
+            return jsonify({'error': 'Super Admin rights required'}), 403
+        return func(*args, **kwargs)
+    return wrapper
 
 admin_api = Blueprint('admin_api', __name__)
+
+## --- Audit Log: Paginated List ---
+@admin_api.route('/super/audit-logs', methods=['GET'])
+@super_admin_required
+def get_audit_logs():
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return jsonify({
+        'logs': [
+            {
+                'id': log.id,
+                'admin_id': log.admin_id,
+                'site_id': log.site_id,
+                'action': log.action,
+                'timestamp': log.timestamp.isoformat()
+            } for log in logs.items
+        ],
+        'total': logs.total,
+        'page': logs.page,
+        'pages': logs.pages
+    })
+
+## --- Health Check: DB File Accessibility ---
+@admin_api.route('/super/health-check', methods=['GET'])
+@super_admin_required
+def health_check():
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'instance', 'chatbot.db')
+    db_status = {'exists': False, 'writable': False}
+    try:
+        db_status['exists'] = os.path.isfile(db_path)
+        if db_status['exists']:
+            with open(db_path, 'a'):
+                pass
+            db_status['writable'] = True
+    except Exception:
+        db_status['writable'] = False
+    return jsonify({'database': db_status})
+
+
+# List all intent template files for super admin dashboard
+@admin_api.route('/super/template_files', methods=['GET'])
+@super_admin_required
+def list_template_files():
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        template_dir = os.path.join(base_dir, 'intent_templates')
+        files = [f for f in os.listdir(template_dir) if f.endswith('.json')]
+        return jsonify({'files': files})
+    except Exception as e:
+        return jsonify({'error': str(e), 'files': []}), 500
+
+# Consultation Price API
+@admin_api.route('/api/consultation-price', methods=['GET', 'POST'])
+def consultation_price():
+    site_id = request.args.get('site_id', type=int)
+    if request.method == 'GET':
+        cfg = ClientConfig.query.filter_by(client_id=site_id, key='consultation_price').first()
+        return jsonify({'consultation_price': cfg.value if cfg else ''})
+    else:
+        price = request.json.get('consultation_price')
+        cfg = ClientConfig.query.filter_by(client_id=site_id, key='consultation_price').first()
+        if cfg:
+            cfg.value = price
+        else:
+            cfg = ClientConfig(client_id=site_id, key='consultation_price', value=price)
+            db.session.add(cfg)
+        db.session.commit()
+        return jsonify({'success': True, 'consultation_price': price})
 
 def super_admin_required(func):
     @wraps(func)
@@ -21,13 +104,15 @@ def super_admin_required(func):
     return wrapper
 
 # --- CLIENT ROUTES ---
+
 @admin_api.route('/client/config', methods=['GET'])
 def get_client_config():
     if 'admin_id' not in session: return jsonify({'error': 'Unauthorized'}), 401
     site_id = session.get('site_id')
     if not site_id: return jsonify({'error': 'No site linked'}), 400
-    configs = ClientConfig.query.filter_by(client_id=site_id).all()
-    return jsonify({'config': {c.key: c.value for c in configs}})
+    # Return all ClientConfig key-value pairs for this site
+    configs = {c.key: c.value for c in ClientConfig.query.filter_by(client_id=site_id).all()}
+    return jsonify({'config': configs})
 
 @admin_api.route('/client/config', methods=['POST'])
 def update_client_config():
@@ -172,7 +257,7 @@ def get_site_template_data(site_id):
         intent_list = [
             {
                 'id': i.id,
-                'name': i.intent_name,  # Fixed: i.name -> i.intent_name
+                'intent_name': i.intent_name,
                 'response': i.response[:50] + '...' if len(i.response) > 50 else i.response
             }
             for i in intents
@@ -328,10 +413,13 @@ def super_stats():
         site_count = Site.query.count()
         admin_count = Admin.query.count()
         plan_count = Plan.query.count()
+        # Sum all message_count fields for total chats
+        total_chats = db.session.query(db.func.sum(Site.message_count)).scalar() or 0
         return jsonify({
             'site_count': site_count,
             'admin_count': admin_count,
-            'plan_count': plan_count
+            'plan_count': plan_count,
+            'total_chats': total_chats
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

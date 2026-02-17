@@ -32,4 +32,4 @@ def tokenize(text):
     
     # Split and filter stop words
     tokens = [word for word in text.split() if word and word not in STOP_WORDS]
-    return tokenso
+    return tokens

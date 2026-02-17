@@ -3,17 +3,34 @@ Configuration file for AI Chatbot application
 """
 import os
 from datetime import timedelta
+from dotenv import load_dotenv # Run: pip install python-dotenv
+
+load_dotenv()
 
 # Flask app configuration
-SECRET_KEY = 'your-secret-key-change-in-production'
-DEBUG = True
+SECRET_KEY = os.getenv('SECRET_KEY', 'default-unsecure-key-change-me')
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-# Get absolute path to database
+
+# Get absolute path to database (cross-platform)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATABASE_PATH = os.path.join(BASE_DIR, 'instance', 'chatbot.db')
+INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+DEFAULT_DB_PATH = os.path.join(INSTANCE_DIR, 'chatbot.db')
 
-# Database configuration - use absolute path for reliability
-SQLALCHEMY_DATABASE_URI = f'sqlite:///{DATABASE_PATH.replace(chr(92), "/")}'
+# Prefer env DATABASE_URL, else use relative sqlite path (cross-platform)
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL and DATABASE_URL.startswith('sqlite:///'):
+    # Always use absolute path in instance/
+    db_file = DATABASE_URL.replace('sqlite:///', '')
+    if not os.path.isabs(db_file):
+        db_file = os.path.join(INSTANCE_DIR, os.path.basename(db_file))
+    DATABASE_URL = f"sqlite:///{db_file}"
+elif not DATABASE_URL:
+    rel_path = os.path.relpath(DEFAULT_DB_PATH, BASE_DIR)
+    DATABASE_URL = f"sqlite:///{rel_path.replace(os.sep, '/')}"
+SQLALCHEMY_DATABASE_URI = DATABASE_URL
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # AI Service configuration
@@ -24,8 +41,8 @@ CONFIDENCE_THRESHOLD = 0.65
 PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
 
 # Admin credentials
-ADMIN_USERNAME = 'admin'
-ADMIN_PASSWORD = 'admin123'
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
 
 # Default fallback messages
 FALLBACK_MESSAGES = [

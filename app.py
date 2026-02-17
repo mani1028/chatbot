@@ -10,7 +10,7 @@ from config import (
     SQLALCHEMY_TRACK_MODIFICATIONS, ADMIN_USERNAME, ADMIN_PASSWORD
 )
 from database import db, init_db
-from models import Admin, BrandingSettings, Site, Intent, IntentPhrase, ChatLog
+from models import Admin, BrandingSettings, Site, Intent, IntentPhrase, ChatLog, ClientConfig
 from routes.chat_routes import chat_bp
 from routes.admin_api import admin_api
 from services.chat_service import process_message
@@ -93,7 +93,7 @@ def widget_embed():
 def get_widget_settings():
     site_id = request.args.get('site_id', 1, type=int)
     branding = BrandingSettings.query.filter_by(site_id=site_id).first()
-    
+
     # Check AI Mode status
     ai_config = ClientConfig.query.filter_by(client_id=site_id, key='ai_mode').first()
     ai_enabled = ai_config.value == 'on' if ai_config else False
@@ -106,8 +106,13 @@ def get_widget_settings():
             'theme_mode': 'light',
             'ai_enabled': ai_enabled
         })
-        
-    data = branding.to_dict()
+
+    data = branding.to_dict() if hasattr(branding, 'to_dict') else {
+        'bot_name': getattr(branding, 'bot_name', 'ChatBot'),
+        'primary_color': getattr(branding, 'primary_color', '#667eea'),
+        'initial_message': getattr(branding, 'initial_message', 'How can I help?'),
+        'theme_mode': getattr(branding, 'theme_mode', 'light')
+    }
     data['ai_enabled'] = ai_enabled
     response = jsonify(data)
     response.headers['Access-Control-Allow-Origin'] = '*'
