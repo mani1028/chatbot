@@ -1,0 +1,21 @@
+{
+  "sector": "business",
+  "category": "hr",
+  "intents": [
+    {
+      "name": "HIRING_QUERY",
+      "type": "info",
+      "response": "ChowdhuryX is always looking for top-tier talent. We currently have openings in AI development, cloud infrastructure, and product management. You can view all open roles on our careers page or submit your resume here.",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "are you hiring",
+        "job openings",
+        "careers at chowdhuryx",
+        "how to apply for a job",
+        "looking for work",
+        "employment opportunities",
+        "join the team"
+      ]
+    }
+  ]
+}

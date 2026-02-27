@@ -1,0 +1,21 @@
+{
+  "sector": "intelligence",
+  "category": "escalation",
+  "intents": [
+    {
+      "name": "ESCALATION_REQUEST",
+      "type": "HUMAN",
+      "response": "I understand. I am connecting you with a human representative from ChowdhuryX to assist you further.",
+      "confidence_threshold": 0.8,
+      "phrases": [
+        "talk to a human",
+        "speak with a person",
+        "i want to talk to an agent",
+        "human support",
+        "escalate this",
+        "get me a manager",
+        "representative please"
+      ]
+    }
+  ]
+}

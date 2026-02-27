@@ -1,0 +1,20 @@
+{
+  "sector": "system_control",
+  "category": "commands",
+  "intents": [
+    {
+      "name": "COMMAND_MODIFY",
+      "type": "action",
+      "response": "System parameters updated. Adjusting execution details.",
+      "confidence_threshold": 0.75,
+      "phrases": [
+        "change the command",
+        "modify the parameters",
+        "update settings for this task",
+        "adjust the process",
+        "edit command details"
+      ],
+      "workflow": "modify_system_command"
+    }
+  ]
+}

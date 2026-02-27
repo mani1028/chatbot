@@ -1,22 +1,40 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from flask_cors import CORS  # Enable CORS for cross-origin requests
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
+from flask_cors import CORS
 from functools import wraps
-import os
 from datetime import datetime
 
-# Import config and database
+# Config
 from config import (
-    SECRET_KEY, DEBUG, SQLALCHEMY_DATABASE_URI, 
-    SQLALCHEMY_TRACK_MODIFICATIONS, ADMIN_USERNAME, ADMIN_PASSWORD
+    SECRET_KEY,
+    DEBUG,
+    SQLALCHEMY_DATABASE_URI,
+    SQLALCHEMY_TRACK_MODIFICATIONS,
+    ADMIN_USERNAME,
+    ADMIN_PASSWORD,
+    DEFAULT_BRANDING,
+    WIDGET_EMBED_URL
 )
+
+# Database
 from database import db, init_db
-from models import Admin, BrandingSettings, Site, Intent, IntentPhrase, ChatLog
+from models import (
+    Admin,
+    BrandingSettings,
+    Site,
+    Plan,
+    ClientConfig
+)
+
+# Blueprints
 from routes.chat_routes import chat_bp
 from routes.admin_api import admin_api
 
-# Initialize Flask app
+# ---------------------------------------------------
+# APP INIT
+# ---------------------------------------------------
 app = Flask(__name__)
-CORS(app)  # Allow all domains to access the API
+CORS(app)
+
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['DEBUG'] = DEBUG
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
@@ -24,11 +42,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
 
 db.init_app(app)
 
-# --- HELPER FUNCTIONS ---
+# ---------------------------------------------------
+# LOGIN REQUIRED DECORATOR
+# ---------------------------------------------------
 def login_required(f):
-    """
-    Decorator to require admin login for routes
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_id' not in session:
@@ -36,143 +53,203 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- INITIALIZATION ---
+
+# ---------------------------------------------------
+# DATABASE INIT + SEEDING
+# ---------------------------------------------------
 with app.app_context():
     init_db(app)
-    
-    # 1. Auto-Create Super Admin if not exists
+
+    # Create Super Admin
     super_admin = Admin.query.filter_by(username=ADMIN_USERNAME).first()
     if not super_admin:
-        print(f"Creating Super Admin: {ADMIN_USERNAME}")
         super_admin = Admin(username=ADMIN_USERNAME, is_super=True)
         super_admin.set_password(ADMIN_PASSWORD)
         db.session.add(super_admin)
         db.session.commit()
 
-    # 2. Auto-Create Default Site (ID: 1)
-    default_site = Site.query.get(1)
-    if not default_site:
-        print("Creating Default Site (ID: 1)...")
-        default_site = Site(
-            name="Platform Demo",
-            domain="localhost",
-            bot_name="Demo Bot"
-        )
-        db.session.add(default_site)
+    # Seed Plans
+    if Plan.query.count() == 0:
+        plans = [
+            Plan(name="Free Tier", max_monthly_chats=100, price=0.0),
+            Plan(name="Starter", max_monthly_chats=1000, price=29.0),
+            Plan(name="Pro", max_monthly_chats=10000, price=99.0),
+            Plan(name="Enterprise", max_monthly_chats=100000, price=499.0)
+        ]
+        db.session.add_all(plans)
         db.session.commit()
-        
-        # Link Super Admin to this site
-        if super_admin:
-            super_admin.site_id = 1
+
+
+    # Default Site (DISABLED)
+    # if not db.session.get(Site, 1):
+    #     starter = Plan.query.filter_by(name="Starter").first()
+    #     site = Site(
+    #         name="Platform Demo",
+    #         domain="localhost",
+    #         bot_name="Demo Bot",
+    #         plan_id=starter.id if starter else None
+    #     )
+    #     db.session.add(site)
+    #     db.session.commit()
+    #
+    #     super_admin.site_id = site.id
+    #     db.session.commit()
+
+    # Default Branding (Attach to Site 1)
+    default_site = db.session.get(Site, 1)
+
+    if default_site:
+        existing_branding = BrandingSettings.query.filter_by(site_id=default_site.id).first()
+
+        if not existing_branding:
+            branding = BrandingSettings(
+                site_id=default_site.id,
+                **DEFAULT_BRANDING
+            )
+            db.session.add(branding)
             db.session.commit()
 
-    # 3. Default Branding
-    if BrandingSettings.query.count() == 0:
-        from config import DEFAULT_BRANDING
-        branding = BrandingSettings(**DEFAULT_BRANDING)
-        db.session.add(branding)
-        db.session.commit()
 
-# Register Blueprints
+# ---------------------------------------------------
+# REGISTER BLUEPRINTS
+# ---------------------------------------------------
 app.register_blueprint(chat_bp)
-app.register_blueprint(admin_api, url_prefix='/admin/api')
+app.register_blueprint(admin_api, url_prefix="/admin/api")
 
-# --- PUBLIC ROUTES ---
 
-@app.route('/')
+# ---------------------------------------------------
+# PUBLIC ROUTES
+# ---------------------------------------------------
+@app.route("/")
 def index():
-    """
-    Main Landing Page for the SaaS Platform
-    """
-    return render_template('landing.html')
-@app.route('/widget.js')
+    return render_template("landing.html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
+
+
+@app.route("/widget.js")
 def widget_embed():
-    from flask import send_file
-    # UPDATED: Pointing to the file you chose (chatbot/static/widget.js)
-    return send_file('static/widget.js', mimetype='application/javascript')
+    return send_file("static/widget.js", mimetype="application/javascript")
 
-@app.route('/api/widget-settings')
+
+@app.route("/api/widget-settings")
 def get_widget_settings():
-    branding = BrandingSettings.query.first()
+    site_id = request.args.get("site_id", 1, type=int)
+    branding = BrandingSettings.query.filter_by(site_id=site_id).first()
+
+    ai_config = ClientConfig.query.filter_by(site_id=site_id, key="ai_mode").first()
+    ai_enabled = ai_config.value == "on" if ai_config else False
+
     if not branding:
-        return jsonify({})
-    response = jsonify(branding.to_dict())
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    return response
+        return jsonify({
+            "bot_name": "ChatBot",
+            "primary_color": "#667eea",
+            "initial_message": "How can I help?",
+            "theme_mode": "light",
+            "ai_enabled": ai_enabled
+        })
 
-@app.route('/widget/init.html')
+    data = branding.to_dict()
+    data["ai_enabled"] = ai_enabled
+    return jsonify(data)
+
+# Locate widget_init() and update the final return line:
+@app.route("/widget/init.html")
 def widget_init():
-    branding = BrandingSettings.query.first()
-    api_url = request.args.get('api', 'http://localhost:5000')
-    return render_template('widget.html', api_url=api_url, branding=branding)
-
-# --- AUTHENTICATION ---
-
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        
-        admin = Admin.query.filter_by(username=username).first()
-        
-        if admin and admin.check_password(password):
-            session['admin_id'] = admin.id
-            session['site_id'] = getattr(admin, 'site_id', None)
-            session.permanent = True
-            
-            if getattr(admin, 'is_super', False):
-                return redirect(url_for('super_dashboard'))
-            return redirect(url_for('admin_dashboard'))
-        else:
-            return render_template('admin_login.html', error='Invalid credentials')
+    site_id = request.args.get("site_id", 1, type=int)
+    branding = BrandingSettings.query.filter_by(site_id=site_id).first()
     
-    return render_template('admin_login.html')
+    if not branding:
+         branding = BrandingSettings.query.first()
+         
+    api_url = request.args.get("api", "http://localhost:5000")
+    
+    # FIX: Explicitly pass site_id=site_id to the template
+    return render_template("widget.html", api_url=api_url, branding=branding, site_id=site_id)
 
-@app.route('/admin/logout')
+# ---------------------------------------------------
+# AUTH
+# ---------------------------------------------------
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        admin = Admin.query.filter_by(username=username).first()
+
+        if admin and admin.check_password(password):
+            session["admin_id"] = admin.id
+            session["site_id"] = getattr(admin, "site_id", None)
+            session.permanent = True
+
+            if getattr(admin, "is_super", False):
+                return redirect(url_for("super_dashboard"))
+            return redirect(url_for("admin_dashboard"))
+
+        return render_template("admin_login.html", error="Invalid credentials")
+
+    return render_template("admin_login.html")
+
+
+@app.route("/admin/logout")
 def admin_logout():
     session.clear()
-    return redirect(url_for('index'))
+    return redirect(url_for("index"))
 
-# --- DASHBOARDS ---
 
-@app.route('/super/dashboard')
+# ---------------------------------------------------
+# DASHBOARDS
+# ---------------------------------------------------
+@app.route("/super/dashboard")
 @login_required
 def super_dashboard():
-    user_id = session.get('admin_id')
-    admin = Admin.query.get(user_id)
-    if not admin or not getattr(admin, 'is_super', False):
-        return "Access Denied: Super Admin rights required", 403
-    return render_template('super_dashboard.html')
+    admin = db.session.get(Admin, session.get("admin_id"))
+    if not admin or not admin.is_super:
+        return "Access Denied", 403
+    return render_template("super_dashboard.html")
 
-@app.route('/admin/dashboard')
+@app.route("/admin/dashboard")
 @login_required
 def admin_dashboard():
-    return render_template('admin_dashboard.html', site_id=session.get('site_id'))
+    # Pass the widget_url to the template
+    from flask import request
+    site_id = session.get("site_id")
+    site = None
+    if site_id:
+        site = Site.query.get(site_id)
+    # Dynamically determine the base API URL
+    api_url = request.url_root.rstrip("/")
+    return render_template(
+        "admin_dashboard.html",
+        site=site,
+        site_id=site_id,
+        widget_url=WIDGET_EMBED_URL,
+        api_url=api_url
+    )
 
-@app.route('/admin/api/client/intents', methods=['GET'])
-@login_required
-def get_client_intents():
-    site_id = session.get('site_id')
-    if not site_id:
-        return jsonify({'error': 'No site linked to this admin'}), 400
-    intents = Intent.query.filter_by(site_id=site_id).all()
-    return jsonify({'intents': [i.to_dict() for i in intents]})
-
-# --- ERROR HANDLERS ---
-
+# Utility route to fetch the current base URL
+@app.route("/api/base-url")
+def get_base_url():
+    # This returns the base URL as seen by the client/browser
+    from flask import request
+    return {"base_url": request.url_root.rstrip("/")}
+# ---------------------------------------------------
+# ERROR HANDLERS
+# ---------------------------------------------------
 @app.errorhandler(404)
-def not_found(error):
-    return jsonify({'error': 'Not found'}), 404
+def not_found(e):
+    return jsonify({"error": "Not found"}), 404
+
 
 @app.errorhandler(500)
-def internal_error(error):
-    print(f"Internal server error: {error}")
-    return jsonify({'error': 'Internal server error'}), 500
+def internal_error(e):
+    return jsonify({"error": "Internal server error"}), 500
 
-if __name__ == '__main__':
-    print("=" * 50)
-    print(f"--- AI Chatbot Server Running on http://localhost:5000 ---")
-    print(f"Super Admin Login: http://localhost:5000/admin/login")
-    print("=" * 50)
-    app.run(host='0.0.0.0', port=5000, debug=DEBUG)
+
+if __name__ == "__main__":
+    print("AI Chatbot Server Running on http://localhost:5000")
+    app.run(host="0.0.0.0", port=5000, debug=DEBUG)

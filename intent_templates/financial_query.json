@@ -1,0 +1,22 @@
+{
+  "sector": "intelligence",
+  "category": "finance",
+  "intents": [
+    {
+      "name": "FINANCIAL_QUERY",
+      "type": "info",
+      "response": "Accessing market data and financial trends. Please note: I provide information for educational purposes only, not as professional financial advice.",
+      "confidence_threshold": 0.75,
+      "phrases": [
+        "stock market update",
+        "price of bitcoin",
+        "financial trends",
+        "market analysis",
+        "how is the economy doing",
+        "investment insights",
+        "currency exchange rates"
+      ],
+      "workflow": "get_market_data"
+    }
+  ]
+}

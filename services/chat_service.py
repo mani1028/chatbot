@@ -9,25 +9,8 @@ import uuid
 from services.intent_service import handle_message as intent_handle_message
 
 
-class ChatResponse:
-    """Standardized chat response object"""
-    def __init__(self, intent_name, intent_type, reply, confidence, handoff=False, lead_capture=False):
-        self.intent_name = intent_name
-        self.intent_type = intent_type
-        self.reply = reply
-        self.confidence = confidence
-        self.handoff = handoff
-        self.lead_capture = lead_capture
 
-    def to_dict(self):
-        return {
-            'reply': self.reply,
-            'intent': self.intent_name,
-            'intent_type': self.intent_type,
-            'confidence': self.confidence,
-            'handoff': self.handoff,
-            'lead_capture': self.lead_capture
-        }
+from utils.chat_response import ChatResponse
 
 
 def process_message(site_id: int, user_message: str, session_id: str = None) -> ChatResponse:
@@ -45,7 +28,7 @@ def process_message(site_id: int, user_message: str, session_id: str = None) -> 
         session_id = str(uuid.uuid4())
     
     # Use new intent service pipeline (returns dict)
-    intent_result = intent_handle_message(user_message, client_id=site_id, site_id=site_id)
+    intent_result = intent_handle_message(user_message, site_id=site_id)
 
     intent_name = intent_result.get('intent_name', 'UNKNOWN')
     intent_type = intent_result.get('intent_type', 'UNKNOWN')

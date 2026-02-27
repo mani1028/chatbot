@@ -5,7 +5,22 @@ ChatbotX is a multi-tenant AI chatbot platform. This document outlines the file 
 
 ---
 
-## 👥 Team Roles & Responsibilities
+## 👥 Team Roles & Domain Ownership
+
+| Developer | Domain/Role                | Key Responsibilities & Areas                                                               |
+|-----------|----------------------------|--------------------------------------------------------------------------------------------|
+| Harika    | Super Admin (Platform)     | Super admin portal, site/tenant management, models, workflows, platform settings, super_dashboard.html |
+| Meghan    | Client Admin & Widget      | Client admin portal, client dashboard, chat widget, services, all client-facing frontend, admin_dashboard.html, widget.js, style.css |
+| Nandini   | AI & Intents               | Intent engine, intent templates, training data, import scripts, core/intent_engine.py, intent_templates/ |
+
+**Summary:**
+- Harika: Owns all super admin, platform, and backend model logic.
+- Meghan: Owns all client admin, widget, and service/frontend logic.
+- Nandini: Owns all AI, intent, and data import logic.
+
+This division ensures clear ownership and efficient collaboration.
+
+---
 
 ### 👩‍💻 1. Nandini - AI & Intents Specialist
 **Responsibility:** Designing conversation flows, training data, and JSON templates.
@@ -55,37 +70,78 @@ ChatbotX is a multi-tenant AI chatbot platform. This document outlines the file 
 
 ---
 
-## 📂 Master File Structure
+## 📂 Full Project Structure with Developer Assignments
 
 ```text
 chatbot/
-├── app.py                      # Main Entry Point (Shared)
-├── config.py                   # Global Config (Shared)
+├── app.py                      # Main Entry Point (Shared: All)
+├── config.py                   # Global Config (Shared: All)
+├── database.py                 # DB Utilities (Shared: All)
+├── DEPLOYMENT_STATUS.md        # Deployment Notes (Shared)
+├── README.md                   # Project Overview (Shared)
+├── requirements.txt            # Python Dependencies (Shared)
+├── team.md                     # Team Workflow (Shared)
+├── TEST_WIDGET.html            # Widget Test Page (Meghan)
 │
-├── core/                       # AI Engine (Nandini's Domain)
+├── core/                       # AI Engine (Nandini)
 │   ├── intent_engine.py
+│   ├── synonyms.py
 │   ├── tokenizer.py
-│   └── synonyms.py
+│   └── __pycache__/
 │
-├── intent_templates/           # JSON Data (Nandini's Workspace)
-│   ├── hospital_intents.json
-│   └── travel_intents.json
+├── instance/
+│   └── chatbot.db              # SQLite DB (Local)
+│
+├── intent_templates/           # JSON Data (Nandini)
+│   └── hospital_intents.json
+│
+├── models/                     # DB Models (Harika)
+│   ├── chat_log.py
+│   ├── file_manager.py
+│   ├── intent.py
+│   ├── plan.py
+│   ├── platform_settings.py
+│   ├── sector_template.py
+│   ├── site.py
+│   ├── __init__.py
+│   └── __pycache__/
 │
 ├── routes/                     # API Logic
-│   ├── admin_api.py            # (Harika & Meghan overlap here)
-│   └── chat_routes.py          # (Meghan - Widget APIs)
+│   ├── admin_api.py            # (Harika & Meghan)
+│   ├── chat_routes.py          # (Meghan)
+│   └── __pycache__/
 │
-├── static/                     # Frontend Assets
-│   ├── style.css               # (Meghan - Styling)
-│   └── widget/
-│       └── widget.js           # (Meghan - Widget Logic)
+├── scripts/                    # Utilities (Nandini)
+│   ├── apply_migration.py
+│   ├── import_intents.py
+│   └── migrations/
+│       ├── 001_add_workflow_clientconfig.sql
+│       ├── 002_add_plan_limits.sql
+│       ├── 003_add_plan_is_active.sql
+│       ├── 004_add_site_status_email.sql
+│       └── 005_create_file_tables.sql
+│
+├── services/                   # Service Layer (Meghan)
+│   ├── chat_service.py
+│   ├── file_service.py
+│   ├── importer.py
+│   ├── intent_service.py
+│   ├── response_builder.py
+│   └── __pycache__/
+│
+├── static/                     # Frontend Assets (Meghan)
+│   ├── chat.js
+│   ├── style.css
+│   └── widget.js
 │
 ├── templates/                  # HTML Views
-│   ├── super_dashboard.html    # (Harika's Workspace)
-│   ├── admin_dashboard.html    # (Meghan's Workspace)
-│   ├── branding_panel.html     # (Meghan's Workspace)
-│   ├── admin_login.html
-│   └── widget.html
+│   ├── admin_dashboard.html    # (Meghan)
+│   ├── admin_login.html        # (Meghan)
+│   ├── chat.html               # (Meghan)
+│   ├── landing.html            # (Meghan)
+│   ├── super_dashboard.html    # (Harika)
+│   ├── widget.html             # (Meghan)
 │
-└── scripts/                    # Utilities
-    └── import_intents.py       # (Nandini's Tool)
+├── workflows/                  # Workflow Handlers (Harika)
+│   ├── handler.py
+│   └── __pycache__/

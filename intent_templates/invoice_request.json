@@ -1,0 +1,21 @@
+{
+  "sector": "business",
+  "category": "finance",
+  "intents": [
+    {
+      "name": "INVOICE_REQUEST",
+      "type": "action",
+      "response": "Understood. I am generating your latest invoice request and sending a copy to your registered email address.",
+      "confidence_threshold": 0.8,
+      "phrases": [
+        "send me an invoice",
+        "billing statement",
+        "i need a receipt",
+        "invoice for last month",
+        "where is my bill",
+        "request payment link"
+      ],
+      "workflow": "generate_invoice"
+    }
+  ]
+}

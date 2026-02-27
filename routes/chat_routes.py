@@ -32,29 +32,34 @@ def send_message():
     if not data:
         return jsonify({'error': 'No JSON data provided'}), 400
         
-    site_id = data.get('site_id')
+    public_key = data.get('site_key')
     message = data.get('message')
     session_id = data.get('session_id') # Optional
 
     # 2. Validate Required Fields
-    if not site_id:
-        return jsonify({'error': 'Missing site_id parameter. Frontend must send site_id.'}), 400
+    if not public_key:
+        return jsonify({'error': 'Missing site_key parameter. Frontend must send site_key.'}), 400
     if not message:
         return jsonify({'error': 'Message cannot be empty'}), 400
 
-    # 3. Validate Site
-    site = Site.query.filter_by(id=site_id).first()
+    # 3. Validate Site by public_key
+    site = Site.query.filter_by(public_key=public_key).first()
     if not site:
-        return jsonify({'error': f'Site ID {site_id} not found'}), 404
+        return jsonify({'error': 'Invalid Site Key'}), 403
 
-    # 4. Domain Whitelisting (Security)
-    # request_domain = get_request_domain()
-    # if not site.is_domain_allowed(request_domain):
-    #     return jsonify({'error': f'Domain {request_domain} is not whitelisted for this site'}), 403
-    
+
+    # 4. Check if site is active
+    if not site.is_active:
+        return jsonify({'error': 'This site is currently suspended.'}), 403
+
+    # 5. Domain Whitelisting (Production: Anti-Theft)
+    request_domain = request.headers.get('Origin') or request.host
+    if not site.is_domain_allowed(request_domain):
+        return jsonify({'error': 'Unauthorized domain'}), 403
+
     # 5. Process message
     try:
-        response = process_message(site_id, message, session_id)
+        response = process_message(site.id, message, session_id)
         # Handle response object or dict
         if hasattr(response, 'to_dict'):
             return jsonify(response.to_dict()), 200

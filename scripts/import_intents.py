@@ -19,15 +19,17 @@ import json
 from pathlib import Path
 
 if __name__ == '__main__':
+
+
     if len(sys.argv) < 2:
-        print('Usage: python scripts/import_intents.py <json-file> [--client <client_id>]')
+        print('Usage: python scripts/import_intents.py <json-file> [--site <site_id>]')
         sys.exit(1)
 
     json_path = Path(sys.argv[1])
-    client_id = 1
-    if '--client' in sys.argv:
+    site_id = 1
+    if '--site' in sys.argv:
         try:
-            client_id = int(sys.argv[sys.argv.index('--client') + 1])
+            site_id = int(sys.argv[sys.argv.index('--site') + 1])
         except Exception:
             pass
 
@@ -52,6 +54,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     with app.app_context():
+
         for it in intents:
             name = it.get('name')
             itype = it.get('type', 'info')
@@ -65,8 +68,7 @@ if __name__ == '__main__':
                 print('Skipping intent with no name')
                 continue
 
-            # Check if intent exists for site (site_id 1) else create. Use site_id=1 for client import.
-            site_id = client_id
+            # Check if intent exists for site else create.
             existing = Intent.query.filter_by(site_id=site_id, intent_name=name).first()
             if existing:
                 intent = existing
@@ -98,15 +100,15 @@ if __name__ == '__main__':
                     db.session.add(Workflow(intent_id=intent.id, function_name=workflow))
                     print(f'  + workflow: {workflow}')
 
-            # Client config keys (create empty entries if missing)
+            # Site config keys (create empty entries if missing)
             for key in config_required:
                 key = key.strip()
                 if not key:
                     continue
-                exists_cfg = ClientConfig.query.filter_by(client_id=client_id, key=key).first()
+                exists_cfg = ClientConfig.query.filter_by(site_id=site_id, key=key).first()
                 if not exists_cfg:
-                    db.session.add(ClientConfig(client_id=client_id, key=key, value=''))
-                    print(f'  + client_config key: {key} (empty)')
+                    db.session.add(ClientConfig(site_id=site_id, key=key, value=''))
+                    print(f'  + site_config key: {key} (empty)')
 
         try:
             db.session.commit()

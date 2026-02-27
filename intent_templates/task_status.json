@@ -1,0 +1,20 @@
+{
+  "sector": "system_control",
+  "category": "tasks",
+  "intents": [
+    {
+      "name": "TASK_STATUS",
+      "type": "action",
+      "response": "Fetching the current status of your tasks.",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "what is the status of my task",
+        "is the task finished",
+        "track my assignment",
+        "show task progress",
+        "check job status"
+      ],
+      "workflow": "get_task_status"
+    }
+  ]
+}

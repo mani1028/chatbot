@@ -1,0 +1,21 @@
+{
+  "sector": "business",
+  "category": "sales",
+  "intents": [
+    {
+      "name": "CLIENT_INQUIRY",
+      "type": "LEAD",
+      "response": "Thank you for your interest in ChowdhuryX. To better assist you, could you please provide a brief overview of your project or the services you are looking for? Our executive team will reach out shortly.",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "business inquiry",
+        "i want to hire you",
+        "request a consultation",
+        "partner with chowdhuryx",
+        "quote for services",
+        "become a client",
+        "services for my company"
+      ]
+    }
+  ]
+}

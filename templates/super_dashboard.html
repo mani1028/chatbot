@@ -3,167 +3,1608 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Admin | SaaS Platform</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>SaaS Control | Super Admin</title>
+    <!-- Fonts: Inter for that clean Enterprise look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        .super-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        h1 { margin-bottom: 30px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-        h2 { margin-top: 0; color: #667eea; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        .btn-primary { width: 100%; background: #667eea; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
-        .btn-primary:hover { background: #5a6fd6; }
-        .site-list { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
-        .site-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #f5f5f5; }
-        .badge { background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+        :root {
+            /* Palette: Modern Enterprise */
+            --primary: #2563EB; /* Royal Blue */
+            --primary-hover: #1D4ED8;
+            --primary-light: #EFF6FF;
+            
+            --bg-body: #F3F4F6; /* Cool Gray 100 */
+            --surface: #FFFFFF;
+            
+            --text-main: #111827; /* Cool Gray 900 */
+            --text-secondary: #6B7280; /* Cool Gray 500 */
+            --border: #E5E7EB; /* Cool Gray 200 */
+            
+            --success: #10B981;
+            --success-bg: #D1FAE5;
+            --warning: #F59E0B;
+            --warning-bg: #FEF3C7;
+            --danger: #EF4444;
+            --danger-bg: #FEE2E2;
+
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; font-size: 0.9rem; }
+
+        /* --- Sidebar --- */
+        .sidebar { 
+            width: 260px; 
+            background: var(--surface); 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 20;
+        }
+        
+        .sidebar-header { 
+            padding: 1.5rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 0.75rem;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .sidebar-header i { font-size: 1.4rem; color: var(--primary); }
+        .sidebar-header h2 { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.025em; }
+
+        .nav-links { padding: 1.5rem 1rem; flex-grow: 1; overflow-y: auto; }
+        
+        .nav-category {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin: 1.5rem 0 0.5rem 0.75rem;
+        }
+        .nav-category:first-child { margin-top: 0; }
+
+        .nav-item { 
+            padding: 0.65rem 0.75rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 0.75rem; 
+            color: var(--text-secondary); 
+            text-decoration: none; 
+            font-weight: 500; 
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            margin-bottom: 0.25rem;
+        }
+        
+        .nav-item i { width: 20px; text-align: center; }
+        
+        .nav-item:hover { background: var(--bg-body); color: var(--text-main); }
+        .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+
+        .sidebar-footer { 
+            padding: 1rem; 
+            border-top: 1px solid var(--border); 
+        }
+
+        /* --- Main Content --- */
+        .main-content { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            padding: 2rem; 
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .header-actions { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-end; 
+        }
+        
+        .page-title h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.025em; margin-bottom: 0.25rem; }
+        .page-title p { color: var(--text-secondary); }
+
+        /* --- Cards & Glassmorphism --- */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 1.5rem; 
+        }
+        
+        .stat-card { 
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            padding: 1.5rem; 
+            border-radius: var(--radius); 
+            box-shadow: var(--shadow-sm); 
+            display: flex; 
+            align-items: flex-start; 
+            justify-content: space-between;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+        .stat-content h3 { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .stat-content p { font-size: 2rem; font-weight: 700; color: var(--text-main); line-height: 1; }
+        
+        .stat-icon { 
+            width: 48px; height: 48px; 
+            border-radius: 12px; 
+            background: var(--primary-light); 
+            color: var(--primary); 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 1.25rem; 
+        }
+
+        /* --- Content Layout --- */
+        .content-grid { display: grid; grid-template-columns: 2.5fr 1fr; gap: 1.5rem; }
+        @media (max-width: 1200px) { .content-grid { grid-template-columns: 1fr; } }
+
+        .card { 
+            background: var(--surface); 
+            border-radius: var(--radius); 
+            border: 1px solid var(--border); 
+            box-shadow: var(--shadow-sm); 
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-header { 
+            padding: 1.25rem 1.5rem; 
+            border-bottom: 1px solid var(--border); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: #FAFAFA;
+        }
+        
+        .card-header h3 { font-size: 1rem; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; }
+        .card-body { padding: 1.5rem; flex-grow: 1; }
+        .card-body.no-padding { padding: 0; }
+
+        /* --- Tables --- */
+        table { width: 100%; border-collapse: collapse; }
+        
+        th { 
+            text-align: left; 
+            padding: 1rem 1.5rem; 
+            font-size: 0.75rem; 
+            text-transform: uppercase; 
+            color: var(--text-secondary); 
+            font-weight: 600; 
+            border-bottom: 1px solid var(--border); 
+            background: #F9FAFB;
+            letter-spacing: 0.05em;
+        }
+        
+        td { 
+            padding: 1rem 1.5rem; 
+            border-bottom: 1px solid var(--border); 
+            font-size: 0.9rem; 
+            vertical-align: middle; 
+            color: var(--text-main);
+        }
+        
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #F9FAFB; }
+
+        /* --- UI Elements --- */
+        .badge { 
+            padding: 0.35em 0.8em; 
+            border-radius: 999px; 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .badge.active { background: var(--success-bg); color: #047857; }
+        .badge.inactive { background: var(--danger-bg); color: #B91C1C; }
+        .badge.warning { background: var(--warning-bg); color: #B45309; }
+        .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        .btn { 
+            padding: 0.6rem 1.2rem; 
+            border-radius: 8px; 
+            font-size: 0.9rem; 
+            font-weight: 500; 
+            cursor: pointer; 
+            border: 1px solid transparent; 
+            transition: all 0.2s; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 0.5rem; 
+            text-decoration: none;
+        }
+        
+        .btn-primary { 
+            background: var(--primary); 
+            color: white; 
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.3);
+        }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        
+        .btn-outline { 
+            background: white; 
+            border-color: var(--border); 
+            color: var(--text-main); 
+        }
+        .btn-outline:hover { border-color: var(--text-secondary); background: #F9FAFB; }
+        
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+        
+        .btn-icon { 
+            width: 32px; height: 32px; 
+            border-radius: 6px; 
+            border: 1px solid transparent; 
+            background: transparent; 
+            color: var(--text-secondary); 
+            cursor: pointer; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: 0.2s; 
+        }
+        .btn-icon:hover { background: var(--bg-body); color: var(--primary); }
+
+        .usage-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+        .usage-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.5s ease; }
+
+        /* --- Forms --- */
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-main); }
+        .form-control { 
+            width: 100%; 
+            padding: 0.75rem 1rem; 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            font-size: 0.9rem; 
+            transition: all 0.2s; 
+            background: white;
+        }
+        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+
+        /* --- Modals & Utilities --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 450px; max-width: 90%; box-shadow: var(--shadow-lg); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        .toast { position: fixed; bottom: 24px; right: 24px; padding: 1rem 1.5rem; border-radius: 10px; background: white; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.75rem; transform: translateY(150%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 2000; border-left: 4px solid var(--primary); font-weight: 500; }
+        .toast.show { transform: translateY(0); }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* --- Custom Scrollbar --- */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
     </style>
 </head>
-<body style="background: #f8f9fa;">
+<body>
 
-<div class="super-container">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h1>⚡ Super Admin Dashboard</h1>
-        <a href="/admin/logout" style="color: #e74c3c; text-decoration: none; font-weight: 600;">Logout</a>
-    </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-layer-group"></i>
+            <h2>SaaS Control</h2>
+        </div>
+        
 
-    <div class="grid">
-        <div class="card">
-            <h2>🏭 Create New Tenant</h2>
-            <form id="createSiteForm">
-                <div class="form-group">
-                    <label>Company Name</label>
-                    <input type="text" name="name" class="form-control" placeholder="e.g. Apollo Hospital" required>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="form-group">
-                        <label>Client Admin Username</label>
-                        <input type="text" name="admin_username" class="form-control" placeholder="e.g. apollo_admin" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Client Admin Password</label>
-                        <input type="password" name="admin_password" class="form-control" placeholder="e.g. secret123" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Domain (Optional)</label>
-                    <input type="text" name="domain" class="form-control" placeholder="e.g. apollo.com">
-                </div>
-                <div class="form-group">
-                    <label>Bot Name</label>
-                    <input type="text" name="bot_name" class="form-control" value="Support Bot">
-                </div>
-                <button type="submit" class="btn-primary">Create Site & User</button>
-            </form>
+        <nav class="nav-links">
+            <div class="nav-category">Core</div>
+            <a class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-chart-pie"></i> Platform Insights</a>
+            <a class="nav-item" onclick="switchTab('templates', this)"><i class="fas fa-file-invoice"></i> Blueprints</a>
             
-            <div class="site-list" id="siteList">
-                <h3>Existing Tenants</h3>
-                <p>Loading...</p>
+            <div class="nav-category">Client Management</div>
+            <a class="nav-item" onclick="switchTab('dashboard', this)"><i class="fas fa-users"></i> Active Clients</a>
+            <a class="nav-item" onclick="switchTab('bots', this)"><i class="fas fa-robot"></i> Bots Management</a>
+            <a class="nav-item" onclick="switchTab('billing', this)"><i class="fas fa-credit-card"></i> Billing & Plans</a>
+            
+            <div class="nav-category">Monitoring</div>
+            <a class="nav-item" onclick="switchTab('health', this)"><i class="fas fa-heartbeat"></i> System Health</a>
+            <a class="nav-item" onclick="switchTab('logs', this)"><i class="fas fa-list-alt"></i> Audit Logs</a>
+            <a class="nav-item" onclick="switchTab('global-convs', this)"><i class="fas fa-comments"></i> Global Chats</a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/admin/logout" class="btn btn-outline" style="width: 100%; justify-content: center; border: 1px solid var(--border);">
+                <i class="fas fa-sign-out-alt"></i> Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <!-- DASHBOARD TAB -->
+        <div id="dashboard" class="tab-content active">
+            <div class="header-actions">
+                <div class="page-title">
+                    <h1>Platform Overview</h1>
+                    <p>Real-time metrics and tenant management.</p>
+                </div>
+                <!-- Search bar for Tenants could go here, or in the card -->
+                <button class="btn btn-primary" onclick="document.getElementById('tenantName').focus()">
+                    <i class="fas fa-plus"></i> New Tenant
+                </button>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="stats-grid" style="margin-top: 2rem;">
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <h3>Total Tenants</h3>
+                        <p id="statTenants">--</p>
+                    </div>
+                    <div class="stat-icon"><i class="fas fa-building"></i></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <h3>Messages Processed</h3>
+                        <p id="statMessages">--</p>
+                    </div>
+                    <div class="stat-icon" style="background: #ECFDF5; color: var(--success);"><i class="fas fa-comments"></i></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <h3>System Status</h3>
+                        <p style="font-size: 1.2rem; color: var(--success);">Operational</p>
+                    </div>
+                    <div class="stat-icon" style="background: #ECFDF5; color: var(--success);"><i class="fas fa-check-circle"></i></div>
+                </div>
+            </div>
+
+            <div class="content-grid" style="margin-top: 2rem;">
+                
+                <!-- Active Clients Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-users" style="color: var(--primary);"></i> Active Clients</h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="clientSearch" placeholder="Search..." class="form-control" style="padding: 0.4rem 0.8rem; width: 200px; font-size: 0.85rem;">
+                            <button class="btn-icon" onclick="loadDashboardData()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body no-padding">
+                        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1rem;">
+                            <label for="siteSelect" style="margin-right: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Tenant Quick Jump:</label>
+                            <select id="siteSelect" class="form-control" style="width: 220px;"></select>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Company</th>
+                                        <th>Usage / Plan</th>
+                                        <th>Status</th>
+                                        <th style="text-align: right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tenantTableBody">
+                                    <tr><td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-secondary);">Loading clients...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Provision Side Widget -->
+                <div class="card" style="height: fit-content;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-bolt" style="color: var(--warning);"></i> Quick Provision</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="createSiteForm">
+                            <div class="form-group">
+                                <label>Company Name</label>
+                                <input type="text" id="tenantName" name="name" class="form-control" placeholder="Acme Corp" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Admin Username</label>
+                                <input type="text" name="admin_username" class="form-control" placeholder="admin_acme" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="password" name="admin_password" class="form-control" placeholder="••••••••" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Domain (Optional)</label>
+                                <input type="text" name="domain" class="form-control" placeholder="acme.com">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+                                Provision Tenant
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- TEMPLATES TAB (REDESIGNED) -->
+<div id="templates" class="tab-content">
+
+    <div class="header-actions">
+        <div class="page-title">
+            <h1>Sector Blueprints</h1>
+            <p>Deploy and manage intent configurations for clients.</p>
+        </div>
+    </div>
+
+    <div class="content-grid" style="margin-top: 2rem;">
+
+        <!-- LEFT — AVAILABLE BLUEPRINT FILES -->
         <div class="card">
-            <h2>📦 Import Sector Template</h2>
-            <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
-                Upload a JSON template to configure intents and workflows for a specific tenant.
-            </p>
-            <form id="importForm">
-                <div class="form-group">
-                    <label>Select Tenant</label>
-                    <select id="siteSelect" name="site_id" class="form-control" required>
-                        <option value="">-- Choose Site --</option>
-                    </select>
+            <div class="card-header">
+                <h3><i class="fas fa-layer-group" style="color: var(--primary);"></i> Available Blueprints</h3>
+            </div>
+
+            <div class="card-body no-padding" id="templateFileList"
+                 style="max-height: 520px; overflow-y: auto;">
+                <p style="padding:2rem;color:var(--text-secondary);">
+                    Loading blueprint files...
+                </p>
+            </div>
+        </div>
+
+
+        <!-- RIGHT — DEPLOYMENT + MANAGEMENT -->
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+            <!-- DEPLOY PANEL -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-paper-plane" style="color: var(--primary);"></i> Deploy Blueprint</h3>
                 </div>
-                <div class="form-group">
-                    <label>Template File (JSON)</label>
-                    <input type="file" name="file" class="form-control" accept=".json" required>
+
+                <div class="card-body">
+
+                    <div class="form-group">
+                        <label>Select Target Tenant</label>
+                        <select id="siteSelectTemplates"
+                                class="form-control"
+                                onchange="loadAssignedIntents(this.value)">
+                            <option value="">-- Choose Tenant --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Selected Blueprint</label>
+                        <input type="text"
+                               id="selectedFileName"
+                               class="form-control"
+                               readonly
+                               placeholder="Click a file from the list">
+                    </div>
+
+                    <button class="btn btn-primary"
+                            style="width:100%;justify-content:center;"
+                            onclick="deployBlueprint()">
+                        Apply Blueprint
+                    </button>
+
                 </div>
-                <button type="submit" class="btn-primary" style="background: #4caf50;">Upload & Apply Template</button>
-            </form>
-            <div id="importResult" style="margin-top: 15px; display: none; padding: 10px; border-radius: 4px;"></div>
+            </div>
+
+
+            <!-- ASSIGNED INTENTS MANAGEMENT -->
+            <div class="card" id="intentManagementCard" style="display:none;">
+                <div class="card-header">
+                    <h3><i class="fas fa-tasks" style="color: var(--warning);"></i> Active Intents</h3>
+                </div>
+
+                <div class="card-body no-padding">
+                    <table>
+                        <tbody id="activeIntentsList"></tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
-<script>
-    // Load Sites
-    async function loadSites() {
-        const res = await fetch('/admin/api/super/sites');
-        const data = await res.json();
-        const list = document.getElementById('siteList');
-        const select = document.getElementById('siteSelect');
+        <!-- HEALTH MONITOR TAB -->
+        <div id="health" class="tab-content">
+            <div class="header-actions">
+                <div class="page-title">
+                    <h1>System Health</h1>
+                    <p>Real-time infrastructure monitoring.</p>
+                </div>
+                <button class="btn btn-outline" onclick="loadHealthData()"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+            
+            <div class="stats-grid" style="margin-top: 2rem;">
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <h3>Database</h3>
+                        <p id="dbStatus">--</p>
+                    </div>
+                    <div class="stat-icon" style="background: #DBEAFE; color: var(--primary);"><i class="fas fa-database"></i></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <h3>API Latency</h3>
+                        <p id="apiLatency">-- ms</p>
+                    </div>
+                    <div class="stat-icon" style="background: #FEF3C7; color: var(--warning);"><i class="fas fa-bolt"></i></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-content">
+                        <h3>Storage</h3>
+                        <p id="totalStorage">OK</p>
+                    </div>
+                    <div class="stat-icon" style="background: #F3E8FF; color: #9333EA;"><i class="fas fa-hdd"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AUDIT LOGS TAB -->
+        <div id="logs" class="tab-content">
+            <div class="header-actions">
+                <div class="page-title">
+                    <h1>Audit Logs</h1>
+                    <p>Track administrative actions and security events.</p>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 2rem;">
+                <div class="card-body no-padding">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Admin User</th>
+                                <th>Action</th>
+                                <th>Target ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditLogTableBody">
+                            <tr><td colspan="4" style="text-align: center; padding: 2rem;">Loading logs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- HANDOFFS TAB -->
+        <div id="handoffs" class="tab-content">
+            <div class="header-actions">
+                <div class="page-title">
+                    <h1>Global Handoffs</h1>
+                    <p>Monitor requests requiring human intervention.</p>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 2rem;">
+                <div class="card-body no-padding">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tenant</th>
+                                <th>Session ID</th>
+                                <th>Last Message</th>
+                                <th>Urgency</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="handoffTableBody">
+                            <tr><td colspan="5" style="text-align: center; padding: 2rem;">No active handoffs.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN USERS TAB -->
+        <div id="users" class="tab-content">
+            <div class="header-actions">
+                <div class="page-title">
+                    <h1>Admin Management</h1>
+                    <p>Manage staff access and permissions.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openAdminModal()"><i class="fas fa-user-plus"></i> New Admin</button>
+            </div>
+            <div class="card" style="margin-top: 2rem;">
+                <div class="card-body no-padding">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Created</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody">
+                            <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading admins...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div id="settings" class="tab-content">
+            <div class="header-actions">
+                <div class="page-title">
+                    <h1>Platform Settings</h1>
+                    <p>Global configuration variables.</p>
+                </div>
+            </div>
+            <div class="content-grid" style="margin-top: 2rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Config Variables</h3>
+                        <button class="btn-icon" onclick="loadPlatformSettings()"><i class="fas fa-sync"></i></button>
+                    </div>
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="platformSettingsBody">
+                                <tr><td colspan="3" style="padding: 2rem; text-align: center;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card" style="height: fit-content;">
+                    <div class="card-header">
+                        <h3>Update Setting</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="platformSettingForm">
+                            <div class="form-group">
+                                <label>Key</label>
+                                <input type="text" name="key" class="form-control" placeholder="e.g. SMTP_HOST" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Value</label>
+                                <input type="text" name="value" class="form-control" placeholder="Value..." required>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <input type="text" name="description" class="form-control" placeholder="Optional description">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Config</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTS MANAGEMENT TAB -->
+        <div id="bots" class="tab-content">
+            <div class="header-actions">
+                <div class="page-title">
+                    <h1>Bots Management</h1>
+                    <p>View and control all bots across tenants.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openBotModal()"><i class="fas fa-plus"></i> New Bot</button>
+            </div>
+            <div class="card" style="margin-top: 2rem;">
+                <div class="card-body no-padding">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Bot Name</th>
+                                <th>Tenant</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="botTableBody">
+                            <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading bots...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- BILLING MANAGEMENT TAB -->
+        <div id="billing" class="tab-content">
+            <div class="header-actions">
+                <div class="page-title">
+                    <h1>Billing & Subscriptions</h1>
+                    <p>Manage client plans, invoices, and payments.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openBillingModal()"><i class="fas fa-plus"></i> New Billing Record</button>
+            </div>
+            <div class="card" style="margin-top: 2rem;">
+                <div class="card-body no-padding">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tenant</th>
+                                <th>Plan</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                                <th>Paid</th>
+                                <th>Due Date</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billingTableBody">
+                            <tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading billing records...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usage Tab -->
+        <div class="tab-pane" id="usageTab" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3>Usage Management</h3>
+                <button class="btn btn-primary" onclick="openUsageModal()">Add Usage</button>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tenant (Site ID)</th>
+                        <th>Bot ID</th>
+                        <th>Messages</th>
+                        <th>Period</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usageTableBody"></tbody>
+            </table>
+        </div>
+        <!-- Suspensions Tab -->
+        <div class="tab-pane" id="suspensionsTab" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3>Suspensions Management</h3>
+                <button class="btn btn-primary" onclick="openSuspensionModal()">Add Suspension</button>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tenant (Site ID)</th>
+                        <th>Bot ID</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="suspensionsTableBody"></tbody>
+            </table>
+        </div>
+        <!-- Conversations Tab -->
+        <div class="tab-pane" id="conversationsTab" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3>Conversations Management</h3>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tenant (Site ID)</th>
+                        <th>Bot ID</th>
+                        <th>User</th>
+                        <th>Started</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="conversationsTableBody"></tbody>
+            </table>
+        </div>
+        <!-- Integrations Tab -->
+        <div class="tab-pane" id="integrationsTab" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3>Integrations Management</h3>
+                <button class="btn btn-primary" onclick="openIntegrationModal()">Add Integration</button>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tenant (Site ID)</th>
+                        <th>Type</th>
+                        <th>Config</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="integrationsTableBody"></tbody>
+            </table>
+        </div>
+        <!-- Announcements Tab -->
+        <div class="tab-pane" id="announcementsTab" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3>Announcements Management</h3>
+                <button class="btn btn-primary" onclick="openAnnouncementModal()">Add Announcement</button>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tenant (Site ID)</th>
+                        <th>Title</th>
+                        <th>Message</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="announcementsTableBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="planModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Update Subscription</h2>
+                <button onclick="closeModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: var(--text-secondary);">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Select New Plan</label>
+                <select id="planDropdown" class="form-control">
+                    <option>Loading plans...</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="savePlanChange()">Update Plan</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="adminModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Add Admin User</h2>
+                <button onclick="closeAdminModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: var(--text-secondary);">&times;</button>
+            </div>
+            <form id="adminForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" name="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Temporary Password</label>
+                    <input type="text" name="password" class="form-control" required>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeAdminModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editSiteModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Edit Client Details</h2>
+                <button onclick="closeEditModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <form id="editSiteForm">
+                <input type="hidden" id="editSiteId">
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" id="editSiteName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Whitelisted Domain</label>
+                    <input type="text" id="editSiteDomain" class="form-control" placeholder="example.com">
+                </div>
+                <div class="form-group">
+                    <label>Subscription Plan</label>
+                    <select id="editSitePlan" class="form-control"></select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bot Modal -->
+    <div class="modal-overlay" id="botModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Add/Edit Bot</h2>
+                <button onclick="closeBotModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <form id="botForm">
+                <input type="hidden" id="botId">
+                <div class="form-group">
+                    <label>Bot Name</label>
+                    <input type="text" id="botName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Tenant (Site ID)</label>
+                    <input type="number" id="botSiteId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="botStatus" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeBotModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Bot</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Billing Modal -->
+    <div class="modal-overlay" id="billingModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Add/Edit Billing</h2>
+                <button onclick="closeBillingModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <form id="billingForm">
+                <input type="hidden" id="billingId">
+                <div class="form-group">
+                    <label>Tenant (Site ID)</label>
+                    <input type="number" id="billingSiteId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Plan ID</label>
+                    <input type="number" id="billingPlanId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="billingStatus" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="billingAmount" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Paid</label>
+                    <select id="billingPaid" class="form-control">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="billingDueDate" class="form-control">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeBillingModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Billing</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Usage Modal -->
+    <div class="modal-overlay" id="usageModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Add/Edit Usage</h2>
+                <button onclick="closeUsageModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <form id="usageForm">
+                <input type="hidden" id="usageId">
+                <div class="form-group">
+                    <label>Tenant (Site ID)</label>
+                    <input type="number" id="usageSiteId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Bot ID</label>
+                    <input type="number" id="usageBotId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Messages</label>
+                    <input type="number" id="usageMessages" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Period</label>
+                    <input type="text" id="usagePeriod" class="form-control" placeholder="YYYY-MM or YYYY-MM-DD" required>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeUsageModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Usage</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Suspension Modal -->
+    <div class="modal-overlay" id="suspensionModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Add/Edit Suspension</h2>
+                <button onclick="closeSuspensionModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <form id="suspensionForm">
+                <input type="hidden" id="suspensionId">
+                <div class="form-group">
+                    <label>Tenant (Site ID)</label>
+                    <input type="number" id="suspensionSiteId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Bot ID</label>
+                    <input type="number" id="suspensionBotId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Reason</label>
+                    <input type="text" id="suspensionReason" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="suspensionStatus" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeSuspensionModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Suspension</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Integration Modal -->
+    <div class="modal-overlay" id="integrationModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Add/Edit Integration</h2>
+                <button onclick="closeIntegrationModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <form id="integrationForm">
+                <input type="hidden" id="integrationId">
+                <div class="form-group">
+                    <label>Tenant (Site ID)</label>
+                    <input type="number" id="integrationSiteId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <input type="text" id="integrationType" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Config</label>
+                    <input type="text" id="integrationConfig" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="integrationStatus" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeIntegrationModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Integration</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Announcement Modal -->
+    <div class="modal-overlay" id="announcementModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Add/Edit Announcement</h2>
+                <button onclick="closeAnnouncementModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <form id="announcementForm">
+                <input type="hidden" id="announcementId">
+                <div class="form-group">
+                    <label>Tenant (Site ID)</label>
+                    <input type="number" id="announcementSiteId" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="announcementTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea id="announcementMessage" class="form-control" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="announcementStatus" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeAnnouncementModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Announcement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast">
+        <i class="fas fa-check-circle" style="color: var(--primary);"></i>
+        <span id="toastMessage">Success</span>
+    </div>
+
+    <script>
+        window.loadDashboardData = async function () {
+            try {
+                const [sitesRes, statsRes] = await Promise.all([
+                    fetch('/admin/api/super/sites'),
+                    fetch('/admin/api/super/stats')
+                ]);
+
+                const siteData = await sitesRes.json();
+                const statsData = await statsRes.json();
+
+                document.getElementById('statTenants').textContent =
+                    statsData.site_count || 0;
+
+                document.getElementById('statMessages').textContent =
+                    statsData.total_chats || 0;
+
+                const tbody = document.getElementById('tenantTableBody');
+                const siteSelect = document.getElementById('siteSelect');
+                const siteSelectTemplates =
+                    document.getElementById('siteSelectTemplates');
+
+                tbody.innerHTML = '';
+                siteSelect.innerHTML = '<option value="">-- Choose Tenant --</option>';
+
+                if (siteSelectTemplates) {
+                    siteSelectTemplates.innerHTML =
+                        '<option value="">-- Choose Tenant --</option>';
+                }
+
+                if (siteData.sites && siteData.sites.length > 0) {
+
+                    siteData.sites.forEach(site => {
+
+                        const tr = document.createElement('tr');
+
+                        const statusBadge = site.is_active
+                            ? `<span class="badge active"><span class="badge-dot"></span> Active</span>`
+                            : `<span class="badge inactive"><span class="badge-dot"></span> Suspended</span>`;
+
+                        tr.innerHTML = `
+                            <td>
+                                <div style="font-weight:600">${site.name}</div>
+                                <div style="font-size:0.8rem;color:var(--text-secondary)">
+                                    ${site.domain || 'Localhost'}
+                                </div>
+                            </td>
+
+                            <td>
+                                <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">
+                                    <span>${site.plan_name}</span>
+                                    <span>${site.usage_percent}%</span>
+                                </div>
+                                <div class="usage-bar">
+                                    <div class="usage-fill"
+                                         style="width:${site.usage_percent}%"></div>
+                                </div>
+                            </td>
+
+                            <td>${statusBadge}</td>
+                            <td style="text-align:right;">-</td>
+                        `;
+
+                        tbody.appendChild(tr);
+
+                        const opt = new Option(site.name, site.id);
+                        siteSelect.appendChild(opt);
+
+                        if (siteSelectTemplates) {
+                            const opt2 = new Option(site.name, site.id);
+                            siteSelectTemplates.appendChild(opt2);
+                        }
+                    });
+
+                } else {
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" style="text-align:center;padding:2rem;">No tenants found</td></tr>';
+                }
+
+            } catch (e) {
+                console.error(e);
+                showToast("Connection Error", "error");
+            }
+        };
+        // --- Core Functions ---
         
-        list.innerHTML = '<h3>Existing Tenants</h3>';
-        select.innerHTML = '<option value="">-- Choose Site --</option>';
+window.switchTab = function(tabId, element) {
+    // Remove active classes
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    // Add active classes safely
+    var tabEl = document.getElementById(tabId);
+    if (tabEl && tabEl.classList) tabEl.classList.add('active');
+    if (element && element.classList) element.classList.add('active');
+    // Trigger Data Loads
+    if (tabId === 'dashboard') window.loadDashboardData && window.loadDashboardData();
+    if (tabId === 'templates') {
+        window.loadTemplateFiles && loadTemplateFiles();
+        window.loadDashboardData && window.loadDashboardData();
+    }
+    if (tabId === 'health') window.loadHealthData && loadHealthData();
+    if (tabId === 'logs') window.loadAuditLogs && loadAuditLogs();
+    if (tabId === 'handoffs') window.loadHandoffData && loadHandoffData();
+    if (tabId === 'users') window.loadAdminUsers && loadAdminUsers();
+    if (tabId === 'settings') window.loadPlatformSettings && loadPlatformSettings();
+}
 
-        if(data.sites) {
-            data.sites.forEach(site => {
-                // Add to list
-                const div = document.createElement('div');
-                div.className = 'site-item';
-                div.innerHTML = `<span><strong>${site.name}</strong> (ID: ${site.id})</span> <span class="badge">${site.domain || 'No Domain'}</span>`;
-                list.appendChild(div);
-
-                // Add to dropdown
-                const opt = document.createElement('option');
-                opt.value = site.id;
-                opt.textContent = `${site.name} (ID: ${site.id})`;
-                select.appendChild(opt);
-            });
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = toast.querySelector('i');
+            document.getElementById('toastMessage').textContent = msg;
+            
+            if (type === 'error') {
+                toast.style.borderLeftColor = 'var(--danger)';
+                icon.className = 'fas fa-exclamation-circle';
+                icon.style.color = 'var(--danger)';
+            } else {
+                toast.style.borderLeftColor = 'var(--primary)';
+                icon.className = 'fas fa-check-circle';
+                icon.style.color = 'var(--primary)';
+            }
+            
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
+/* ==============================
+   BLUEPRINT SYSTEM (CLEAN)
+============================== */
+
+let selectedBlueprint = null;
+
+
+/* LOAD FILE LIST */
+async function loadTemplateFiles() {
+
+    const res = await fetch('/admin/api/super/template_files');
+    const data = await res.json();
+
+    const list = document.getElementById('templateFileList');
+
+    if (!data.files || data.files.length === 0) {
+        list.innerHTML =
+            '<p style="padding:2rem;color:var(--text-secondary)">No blueprints found</p>';
+        return;
     }
 
-    // Handle Create Site
-    document.getElementById('createSiteForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+    list.innerHTML = data.files.map(file => `
+        <div class="blueprint-item"
+             onclick="selectBlueprint('${file}', this)"
+             style="padding:1rem;border-bottom:1px solid var(--border);
+                    cursor:pointer;display:flex;justify-content:space-between;
+                    align-items:center;transition:0.2s;">
+            <span><i class="fas fa-file-code" style="color:var(--primary);margin-right:8px"></i>${file}</span>
+            <i class="fas fa-chevron-right" style="color:var(--border)"></i>
+        </div>
+    `).join('');
+}
+
+
+/* SELECT BLUEPRINT */
+function selectBlueprint(name, element) {
+
+    document.querySelectorAll('.blueprint-item').forEach(el => {
+        el.style.background = 'transparent';
+        el.style.borderLeft = 'none';
+    });
+
+    element.style.background = 'var(--primary-light)';
+    element.style.borderLeft = '4px solid var(--primary)';
+
+    selectedBlueprint = name;
+    document.getElementById('selectedFileName').value = name;
+}
+
+
+/* LOAD ASSIGNED INTENTS FOR TENANT */
+async function loadAssignedIntents(siteId) {
+
+    const card = document.getElementById('intentManagementCard');
+    const tbody = document.getElementById('activeIntentsList');
+
+    if (!siteId) {
+        card.style.display = 'none';
+        return;
+    }
+
+    const res = await fetch(`/admin/api/client/intents?site_id=${siteId}`);
+    const data = await res.json();
+
+    card.style.display = 'block';
+
+    if (!data.intents || data.intents.length === 0) {
+        tbody.innerHTML =
+            '<tr><td style="padding:1.5rem;color:var(--text-secondary)">No intents assigned</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = data.intents.map(i => `
+        <tr>
+            <td style="padding:0.9rem;">
+                <div style="font-weight:600">${i.intent_name}</div>
+                <div style="font-size:0.75rem;color:var(--text-secondary)">
+                    ${i.intent_type || ''}
+                </div>
+            </td>
+
+            <td style="text-align:right;padding-right:1rem;">
+                <button class="btn-icon"
+                        style="color:var(--danger);"
+                        onclick="deleteAssignedIntent(${i.id}, ${siteId})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+
+/* DEPLOY BLUEPRINT */
+async function deployBlueprint() {
+
+    const siteId = document.getElementById('siteSelectTemplates').value;
+
+    if (!siteId || !selectedBlueprint) {
+        showToast("Select tenant and blueprint", "error");
+        return;
+    }
+
+    const res = await fetch('/admin/api/super/import_template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            site_id: siteId,
+            filename: selectedBlueprint
+        })
+    });
+
+    if (res.ok) {
+        showToast("Blueprint applied successfully");
+        loadAssignedIntents(siteId);
+    } else {
+        showToast("Deployment failed", "error");
+    }
+}
+
+
+/* DELETE ASSIGNED INTENT */
+async function deleteAssignedIntent(intentId, siteId) {
+
+    if (!confirm("Remove this intent from tenant?")) return;
+
+    const res = await fetch(
+        `/admin/api/client/intents/${intentId}?site_id=${siteId}`,
+        { method: 'DELETE' }
+    );
+
+    if (res.ok) {
+        showToast("Intent removed");
+        loadAssignedIntents(siteId);
+    }
+}
+// --- Dashboard Data ---
+// (already defined above, only keep one definition)
+
+// --- Site Actions ---
+async function createSite(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    try {
         const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        
         const res = await fetch('/admin/api/super/sites', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
+            body: JSON.stringify(Object.fromEntries(formData))
         });
-        
-        if(res.ok) {
-            alert('Site Created!');
-            e.target.reset();
-            loadSites();
-        } else {
-            alert('Error creating site');
-        }
-    });
-
-    // Handle Import
-    document.getElementById('importForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const resultDiv = document.getElementById('importResult');
-        
-        resultDiv.style.display = 'block';
-        resultDiv.style.background = '#e2e8f0';
-        resultDiv.textContent = 'Uploading...';
-
-        const res = await fetch('/admin/api/super/import_template', {
-            method: 'POST',
-            body: formData
-        });
-        
         const data = await res.json();
-        if(res.ok) {
-            resultDiv.style.background = '#d4edda';
-            resultDiv.style.color = '#155724';
-            resultDiv.textContent = '✅ ' + data.message;
+        if (res.ok) {
+            showToast('Tenant created successfully');
+            e.target.reset();
+            loadDashboardData();
         } else {
-            resultDiv.style.background = '#f8d7da';
-            resultDiv.style.color = '#721c24';
-            resultDiv.textContent = '❌ ' + (data.error || 'Upload failed');
+            showToast(data.error || 'Failed to create tenant', 'error');
         }
-    });
+    } catch(e) { showToast('Network Error', 'error'); }
+    finally { btn.innerText = 'Provision Tenant'; }
+}
 
-    loadSites();
-</script>
+async function toggleStatus(siteId) {
+    if(!confirm("Change tenant status?")) return;
+    try {
+        await fetch(`/admin/api/super/sites/${siteId}/status`, { method: 'PUT' });
+        loadDashboardData();
+        showToast('Status updated');
+    } catch(e) { showToast('Error updating status', 'error'); }
+}
+
+async function impersonate(siteId) {
+    try {
+        const res = await fetch(`/admin/api/super/sites/${siteId}/impersonate`, { method: 'POST' });
+        const data = await res.json();
+        if(res.ok) window.location.href = data.redirect;
+        else showToast(data.error, 'error');
+    } catch(e) { showToast('Login failed', 'error'); }
+}
+
+// --- Plans ---
+let currentSiteId = null;
+async function openPlanModal(siteId) {
+    currentSiteId = siteId;
+    document.getElementById('planModal').style.display = 'flex';
+    const dropdown = document.getElementById('planDropdown');
+    dropdown.innerHTML = '<option>Loading...</option>';
+    const res = await fetch('/admin/api/super/plans');
+    const data = await res.json();
+    dropdown.innerHTML = '';
+    if (data.plans && Array.isArray(data.plans)) {
+        data.plans.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.name} ($${p.price}) - ${p.max_monthly_chats} msgs`;
+            dropdown.appendChild(opt);
+        });
+    }
+}
+function closeModal() { document.getElementById('planModal').style.display = 'none'; }
+        
+        async function savePlanChange() {
+            const planId = document.getElementById('planDropdown').value;
+            await fetch(`/admin/api/super/sites/${currentSiteId}/plan`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({plan_id: planId})
+            });
+            closeModal();
+            loadDashboardData();
+            showToast('Plan updated');
+        }
+
+        // --- Health ---
+        async function loadHealthData() {
+            try {
+                const res = await fetch('/admin/api/super/health-check');
+                const data = await res.json();
+                const dbStatus = document.getElementById('dbStatus');
+                
+                if (data.database.exists && data.database.writable) {
+                    dbStatus.textContent = 'Online';
+                    dbStatus.style.color = 'var(--success)';
+                } else {
+                    dbStatus.textContent = 'Issues Detected';
+                    dbStatus.style.color = 'var(--danger)';
+                }
+                
+                document.getElementById('apiLatency').textContent = '24ms'; // Mock or real if backend supports
+            } catch(e) { console.error(e); }
+        }
+
+        // --- Logs & Handoffs (Skeleton Loaders) ---
+        async function loadAuditLogs() {
+            const res = await fetch('/admin/api/super/audit-logs');
+            const data = await res.json();
+            const tbody = document.getElementById('auditLogTableBody');
+            tbody.innerHTML = '';
+            
+            if(data.logs && data.logs.length > 0) {
+                data.logs.forEach(log => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="color: var(--text-secondary); font-family: monospace;">${new Date(log.timestamp).toLocaleString()}</td>
+                        <td style="font-weight: 500;">Admin #${log.admin_id}</td>
+                        <td>${log.action}</td>
+                        <td style="font-family: monospace;">${log.site_id || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem;">No logs found.</td></tr>';
+            }
+        }
+
+        async function loadHandoffData() {
+            const res = await fetch('/admin/api/super/handoffs');
+            const data = await res.json();
+            const tbody = document.getElementById('handoffTableBody');
+            tbody.innerHTML = '';
+            
+            if(data.handoffs && data.handoffs.length > 0) {
+                data.handoffs.forEach(h => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${h.tenant_name}</td>
+                        <td style="font-family: monospace;">${h.session_id.substring(0,8)}...</td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${h.last_message}</td>
+                        <td><span class="badge warning">High</span></td>
+                        <td style="text-align: right;"><button class="btn btn-primary btn-sm">Take Over</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No active handoff requests.</td></tr>';
+            }
+        }
+
+        // --- Admins ---
+        async function loadAdminUsers() {
+            const res = await fetch('/admin/api/super/admins'); // Assuming endpoint exists
+            // Mock logic for demo if endpoint not ready
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No data endpoint connected yet.</td></tr>'; 
+        }
+        function openAdminModal() { document.getElementById('adminModal').style.display = 'flex'; }
+        function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
+
+        // --- Settings ---
+        async function loadPlatformSettings() {
+            const res = await fetch('/admin/api/super/settings');
+            const data = await res.json();
+            const tbody = document.getElementById('platformSettingsBody');
+            tbody.innerHTML = '';
+            if(data.settings) {
+                data.settings.forEach(s => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-family: monospace; font-weight: 600;">${s.key}</td>
+                        <td>${s.value}</td>
+                        <td style="color: var(--text-secondary); font-size: 0.8rem;">${s.updated_at}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // --- Event Listeners ---
+        const createSiteForm = document.getElementById('createSiteForm');
+        if (createSiteForm) {
+            createSiteForm.addEventListener('submit', createSite);
+        }
+        
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('dashboard')) {
+                window.loadDashboardData();
+            }
+        });
+
+    </script>
 </body>
 </html>

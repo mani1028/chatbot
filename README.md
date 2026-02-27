@@ -100,7 +100,7 @@ from database import db
 from models import ClientConfig
 
 with app.app_context():
-        conf = ClientConfig.query.filter_by(client_id=1, key='consultation_price').first()
+        conf = ClientConfig.query.filter_by(site_id=1, key='consultation_price').first()
         if conf:
                 conf.value = "500"
                 db.session.commit()

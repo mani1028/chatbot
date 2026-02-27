@@ -1,0 +1,20 @@
+{
+  "sector": "business",
+  "category": "contractors",
+  "intents": [
+    {
+      "name": "CONTRACTOR_QUERY",
+      "type": "info",
+      "response": "For our 1099 partners, tax documents and payment schedules are available in the Contractor Portal. Please ensure your W-9 is up to date to avoid payment delays.",
+      "confidence_threshold": 0.75,
+      "phrases": [
+        "1099 tax form",
+        "contractor payment",
+        "independent contractor info",
+        "w9 submission",
+        "contractor portal login",
+        "when do contractors get paid"
+      ]
+    }
+  ]
+}

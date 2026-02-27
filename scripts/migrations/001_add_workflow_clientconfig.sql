@@ -1,28 +1,31 @@
 -- Migration: add new columns to intents and create workflows + client_config tables
 -- Run with sqlite3 or the provided apply_migration.py script
 
-PRAGMA foreign_keys=OFF;
-BEGIN TRANSACTION;
 
--- Add sector column to intents (if not exists). SQLite supports ADD COLUMN.
-ALTER TABLE intents ADD COLUMN sector TEXT;
-ALTER TABLE intents ADD COLUMN confidence_threshold FLOAT DEFAULT 0.7;
+-- Add sector column to intents
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'intents' AND COLUMN_NAME = 'sector')
+    ALTER TABLE intents ADD sector NVARCHAR(255);
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'intents' AND COLUMN_NAME = 'confidence_threshold')
+    ALTER TABLE intents ADD confidence_threshold FLOAT DEFAULT 0.7;
 
 -- Create workflows table
-CREATE TABLE IF NOT EXISTS workflows (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    intent_id INTEGER NOT NULL,
-    function_name TEXT NOT NULL,
-    FOREIGN KEY(intent_id) REFERENCES intents(id) ON DELETE CASCADE
-);
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'workflows')
+BEGIN
+    CREATE TABLE workflows (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        intent_id INT NOT NULL,
+        function_name NVARCHAR(255) NOT NULL,
+        FOREIGN KEY (intent_id) REFERENCES intents(id) ON DELETE CASCADE
+    );
+END;
 
 -- Create client_config table
-CREATE TABLE IF NOT EXISTS client_config (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    client_id INTEGER NOT NULL,
-    key TEXT NOT NULL,
-    value TEXT
-);
-
-COMMIT;
-PRAGMA foreign_keys=ON;
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'client_config')
+BEGIN
+    CREATE TABLE client_config (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        site_id INT NOT NULL,
+        key NVARCHAR(255) NOT NULL,
+        value NVARCHAR(MAX)
+    );
+END;
