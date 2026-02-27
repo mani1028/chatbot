@@ -12,27 +12,18 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'default-unsecure-key-change-me')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 
-# Get absolute path to database (cross-platform)
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
-os.makedirs(INSTANCE_DIR, exist_ok=True)
-DEFAULT_DB_PATH = os.path.join(INSTANCE_DIR, 'chatbot.db')
+
 
 # Prefer env DATABASE_URL, else use relative sqlite path (cross-platform)
 
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL and DATABASE_URL.startswith('sqlite:///'):
-    # Always use absolute path in instance/
-    db_file = DATABASE_URL.replace('sqlite:///', '')
-    if not os.path.isabs(db_file):
-        db_file = os.path.join(INSTANCE_DIR, os.path.basename(db_file))
-    DATABASE_URL = f"sqlite:///{db_file}"
-elif not DATABASE_URL:
-    rel_path = os.path.relpath(DEFAULT_DB_PATH, BASE_DIR)
-    DATABASE_URL = f"sqlite:///{rel_path.replace(os.sep, '/')}"
-SQLALCHEMY_DATABASE_URI = DATABASE_URL
-SQLALCHEMY_TRACK_MODIFICATIONS = False
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
+os.makedirs(INSTANCE_DIR, exist_ok=True)
 
+DB_PATH = os.path.join(INSTANCE_DIR, 'chatbot.db')
+
+SQLALCHEMY_DATABASE_URI = f"sqlite:///{DB_PATH}"
+SQLALCHEMY_TRACK_MODIFICATIONS = False
 # AI Service configuration
 # CHANGED: Lowered to 0.65 to be more friendly in the simulator
 CONFIDENCE_THRESHOLD = 0.65 
@@ -44,12 +35,18 @@ PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
 
-# Default fallback messages
-FALLBACK_MESSAGES = [
-    "I'm not sure how to answer that. Could you rephrase your question?",
-    "I don't have enough information to answer that. Please contact our support team.",
-    "That's a great question! Let me connect you with a team member who can help.",
-]
+# Default fallback messages loaded from file
+FALLBACK_MESSAGES = []
+fallback_path = os.path.join(BASE_DIR, 'fallback_messages.txt')
+if os.path.exists(fallback_path):
+    with open(fallback_path, encoding='utf-8') as f:
+        FALLBACK_MESSAGES = [line.strip() for line in f if line.strip()]
+else:
+    FALLBACK_MESSAGES = [
+        "I'm not sure how to answer that. Could you rephrase your question?",
+        "I don't have enough information to answer that. Please contact our support team.",
+        "That's a great question! Let me connect you with a team member who can help.",
+    ]
 
 # CRM WebHook Configuration
 CRM_WEBHOOK_URL = os.getenv('CRM_WEBHOOK_URL', 'http://localhost:5001/api/webhook/handoff')

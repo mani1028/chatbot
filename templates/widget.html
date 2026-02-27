@@ -55,9 +55,11 @@
     </div>
 
     <script>
+        // Inside the <script> tag, change how SITE_ID is declared:
         const API_URL = '{{ api_url }}';
-        // CRITICAL FIX: Ensure we have the site ID available in JS
-        const SITE_ID = {{ branding.site_id }};
+    
+        // FIX: Grab site_id directly, do not rely on branding.site_id
+        const SITE_ID = "{{ site_id }}";
         
         const msgInput = document.getElementById('messageInput');
         const chatBox = document.getElementById('chatMessages');

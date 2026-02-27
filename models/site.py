@@ -1,3 +1,4 @@
+import uuid
 from database import db
 from datetime import datetime
 
@@ -11,6 +12,8 @@ class Site(db.Model):
     domain_whitelist = db.Column(db.Text, nullable=True)
     theme = db.Column(db.String(50), nullable=True)
     bot_name = db.Column(db.String(255), nullable=True)
+    # Public key for secure widget authentication
+    public_key = db.Column(db.String(100), unique=True, nullable=False, default=lambda: f"pk_live_{uuid.uuid4().hex[:16]}")
     
     # Expanded Fields
     status = db.Column(db.String(20), default='active') # active, suspended, trial
@@ -34,24 +37,16 @@ class Site(db.Model):
 
     def to_dict(self):
         plan_name = self.plan.name if self.plan else 'No Plan'
-        # Handle plan limit from either Plan object or property
         plan_limit = self.plan.max_monthly_chats if self.plan else 0
-        
         return {
             'id': self.id,
             'name': self.name,
+            'public_key': self.public_key,
             'domain': self.domain,
-            'owner_email': self.owner_email,
             'status': self.status,
             'is_active': self.is_active,
-            'bot_name': self.bot_name,
-            'theme': self.theme,
-            'message_count': self.message_count,
-            'plan_id': self.plan_id,
             'plan_name': plan_name,
-            'plan_limit': plan_limit,
-            'usage_percent': int((self.message_count / plan_limit * 100)) if plan_limit > 0 else 0,
-            'created_at': self.created_at.isoformat()
+            'usage_percent': int((self.message_count / plan_limit * 100)) if plan_limit > 0 else 0
         }
     
     def is_domain_allowed(self, request_domain: str) -> bool:

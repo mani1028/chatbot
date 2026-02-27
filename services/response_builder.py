@@ -1,7 +1,7 @@
 import re
 from models import ClientConfig
 
-def build_response(template: str, client_id: int) -> str:
+def build_response(template: str, site_id: int) -> str:
     """
     Replaces placeholders like {consultation_price} with values from ClientConfig.
     Falls back to '[Not configured]' if the key is missing.
@@ -9,8 +9,8 @@ def build_response(template: str, client_id: int) -> str:
     if not template:
         return ""
 
-    # Fetch all config for this client to minimize DB hits
-    configs = ClientConfig.query.filter_by(client_id=client_id).all()
+    # Fetch all config for this site to minimize DB hits
+    configs = ClientConfig.query.filter_by(site_id=site_id).all()
     config_map = {c.key: c.value for c in configs}
 
     def replace_match(match):

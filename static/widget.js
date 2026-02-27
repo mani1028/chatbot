@@ -2,12 +2,22 @@
  * ChatbotX Enterprise Widget
  * Handles UI, WebSockets, Dark Mode, and Typing Indicators
  */
+
 (function() {
-    // 1. ENVIRONMENT SETUP
-    const SCRIPT = document.currentScript;
-    const SITE_ID = SCRIPT ? (SCRIPT.getAttribute('data-site-id') || 1) : 1;
-    // Auto-detect backend URL
-    const API_BASE = SCRIPT ? new URL(SCRIPT.src).origin : "http://localhost:5000";
+// 1. ENVIRONMENT SETUP
+    const configObj = window.ChatbotXConfig || {};
+    
+    // Fallback for legacy scripts
+    const SCRIPT = document.currentScript || document.getElementById('chatbotx-script') || document.querySelector('script[src*="widget.js"]');
+                   
+    // Use public siteKey for secure authentication
+    const SITE_KEY = configObj.siteKey;
+    const API_BASE = configObj.apiUrl || (SCRIPT ? new URL(SCRIPT.src).origin : "https://api.chatbotx.com");
+
+    if (!SITE_KEY) {
+        console.error("ChatbotX: Missing siteKey in configuration.");
+        return;
+    }
     
     let socket = null;
     let sessionId = localStorage.getItem('chat_session_id') || 'sess_' + Math.random().toString(36).substr(2, 9);
@@ -15,11 +25,10 @@
     
     let config = {
         primary_color: '#6366f1',
-        bot_name: 'ChatBot',
+        bot_name: 'AlinaX Chatbot',
         theme_mode: 'light',
-        initial_message: 'Hello! How can I help?'
+        initial_message: 'Hello! I am AlinaX How can I help?'
     };
-
     // 2. LOAD RESOURCES
     function loadResources() {
         // Load CSS
@@ -29,22 +38,20 @@
         document.head.appendChild(link);
 
         // Load Socket.IO
-        const script = document.createElement('script');
-        script.src = "https://cdn.socket.io/4.7.4/socket.io.min.js"; 
-        script.onload = init;
-        document.head.appendChild(script);
+            // No need to load socket.io anymore
+            init();
     }
 
     // 3. INITIALIZATION
     async function init() {
         // Fetch Settings
         try {
-            const res = await fetch(`${API_BASE}/api/widget-settings?site_id=${SITE_ID}`);
+            const res = await fetch(`${API_BASE}/api/widget-settings?site_key=${SITE_KEY}`);
             const data = await res.json();
             config = { ...config, ...data };
             
             buildUI();
-            connectSocket();
+                // connectSocket removed; no longer needed
         } catch (e) {
             console.error("ChatbotX: Failed to init", e);
         }
@@ -85,68 +92,76 @@
         document.body.appendChild(wrapper);
 
         // Event Listeners
-        document.getElementById('chat-launcher').onclick = toggleChat;
-        wrapper.querySelector('.widget-close').onclick = toggleChat;
-        wrapper.querySelector('.widget-send').onclick = sendMessage;
-        document.getElementById('chat-input').onkeypress = (e) => {
-            if(e.key === 'Enter') sendMessage();
-        };
+        const chatLauncher = document.getElementById('chat-launcher');
+        if (chatLauncher) chatLauncher.onclick = toggleChat;
+        const widgetClose = wrapper.querySelector('.widget-close');
+        if (widgetClose) widgetClose.onclick = toggleChat;
+        const widgetSend = wrapper.querySelector('.widget-send');
+        if (widgetSend) widgetSend.onclick = sendMessage;
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+            chatInput.onkeypress = (e) => {
+                if(e.key === 'Enter') sendMessage();
+            };
+        }
     }
 
     // 5. WEBSOCKET LOGIC
-    function connectSocket() {
-        socket = io(API_BASE, { transports: ['websocket', 'polling'] });
 
-        socket.on('connect', () => {
-            console.log("ChatbotX: Connected");
-            socket.emit('join', { site_id: SITE_ID });
-        });
 
-        // Listen for typing indicator
-        socket.on('typing', () => {
-            showTyping();
-        });
 
-        // Listen for responses
-        socket.on('bot_response', (data) => {
-            hideTyping();
-            appendMessage(data.reply, 'bot');
-        });
-    }
+
 
     // 6. ACTIONS
     function toggleChat() {
         const widget = document.getElementById('chat-widget');
         const launcher = document.getElementById('chat-launcher');
-        
-        widget.classList.toggle('open');
-        launcher.classList.toggle('hidden');
-        
-        if(widget.classList.contains('open')) {
-            document.getElementById('chat-input').focus();
+        if (widget && launcher) {
+            widget.classList.toggle('open');
+            launcher.classList.toggle('hidden');
+            if(widget.classList.contains('open')) {
+                const chatInput = document.getElementById('chat-input');
+                if (chatInput) chatInput.focus();
+            }
         }
     }
 
-    function sendMessage() {
+    async function sendMessage() {
         const input = document.getElementById('chat-input');
+        if (!input) return;
         const text = input.value.trim();
         if(!text) return;
 
         appendMessage(text, 'user');
         input.value = '';
 
-        // Emit to server (app.py handles this via socketio)
-        if(socket) {
-            socket.emit('client_message', {
-                site_id: SITE_ID,
-                message: text,
-                session_id: sessionId
+        // Use REST API to send message
+        try {
+            const res = await fetch(`${API_BASE}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    site_id: SITE_ID,
+                    message: text,
+                    session_id: sessionId
+                })
             });
+
+            const data = await res.json();
+            if (data.error) {
+                appendMessage("⚠️ Error: " + data.error, 'bot');
+            } else {
+                appendMessage(data.reply, 'bot');
+            }
+        } catch (e) {
+            console.error("ChatbotX Error:", e);
+            appendMessage("⚠️ Connection error. Please try again.", 'bot');
         }
     }
 
     function appendMessage(text, sender) {
         const body = document.getElementById('chat-body');
+        if (!body) return;
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
         div.innerText = text; // Safe text insertion
@@ -156,7 +171,7 @@
 
     function showTyping() {
         const body = document.getElementById('chat-body');
-        if(document.querySelector('.typing-indicator')) return;
+        if (!body || document.querySelector('.typing-indicator')) return;
 
         const div = document.createElement('div');
         div.className = 'typing-indicator';

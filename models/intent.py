@@ -33,11 +33,23 @@ class Intent(db.Model):
             'confidence': self.confidence,
             'response': self.response,
             'phrases': [p.phrase for p in self.phrases]
+            ,'config_required': self.config_required
         }
 
     def __repr__(self):
         return f'<Intent {self.intent_name} ({self.id})>'
 
+    @property
+    def config_required(self):
+        # This dictionary MUST match the names in your intent_templates/*.json files
+        mapping = {
+            'CHECK_PRICE': ['consultation_price'],
+            'VISITING_HOURS': ['open_time', 'close_time'],
+            'BUSINESS_HOURS': ['open_time', 'close_time'],
+            'CLIENT_INQUIRY': ['lead_name', 'lead_email', 'lead_phone'],
+            # Add new industry-specific keys here as you add new intent_templates
+        }
+        return mapping.get(self.intent_name, [])
 
 class IntentPhrase(db.Model):
     """Phrase examples used to detect intent"""
