@@ -1,0 +1,22 @@
+{
+  "sector": "intelligence",
+  "category": "information",
+  "intents": [
+    {
+      "name": "NEWS_QUERY",
+      "type": "info",
+      "response": "Fetching the latest headlines and breaking news for you. Is there a specific topic or region you are interested in?",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "what is the news today",
+        "latest headlines",
+        "breaking news",
+        "what's happening in the world",
+        "current events",
+        "news update",
+        "tell me the news"
+      ],
+      "workflow": "fetch_live_news"
+    }
+  ]
+}

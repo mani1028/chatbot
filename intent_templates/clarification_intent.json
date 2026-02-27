@@ -1,0 +1,21 @@
+{
+  "sector": "intelligence",
+  "category": "conversation_flow",
+  "intents": [
+    {
+      "name": "CLARIFICATION_REQUEST",
+      "type": "info",
+      "response": "I'm not quite sure I follow. Could you please provide a bit more detail or rephrase your request so I can assist you better?",
+      "confidence_threshold": 0.6,
+      "phrases": [
+        "what do you mean",
+        "i don't understand",
+        "can you clarify",
+        "rephrase that",
+        "more details please",
+        "i'm confused",
+        "explain again"
+      ]
+    }
+  ]
+}

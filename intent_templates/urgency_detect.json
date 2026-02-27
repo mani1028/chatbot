@@ -1,0 +1,24 @@
+{
+  "sector": "intelligence",
+  "category": "metadata",
+  "intents": [
+    {
+      "name": "URGENCY_DETECT",
+      "type": "action",
+      "response": "I've detected that this is a time-sensitive matter. I am prioritizing your request now.",
+      "confidence_threshold": 0.8,
+      "phrases": [
+        "as soon as possible",
+        "urgent",
+        "emergency",
+        "right now",
+        "immediate attention",
+        "critical timing",
+        "fast",
+        "hurry up",
+        "it's an emergency"
+      ],
+      "workflow": "prioritize_request"
+    }
+  ]
+}

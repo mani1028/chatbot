@@ -1,0 +1,22 @@
+{
+  "sector": "business",
+  "category": "hr",
+  "intents": [
+    {
+      "name": "PAYROLL_QUERY",
+      "type": "action",
+      "response": "To access your payroll details, please log in to the employee dashboard. If you need a copy of your latest pay stub or have questions about deductions, I can open a ticket with the finance department for you.",
+      "confidence_threshold": 0.8,
+      "phrases": [
+        "check my payroll",
+        "when is payday",
+        "view my paystub",
+        "salary information",
+        "payroll schedule",
+        "payment history",
+        "why was my pay different"
+      ],
+      "workflow": "get_payroll_details"
+    }
+  ]
+}

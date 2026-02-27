@@ -1,6 +1,8 @@
+"""
+Intent models for the chatbot.
+"""
 from database import db
 from datetime import datetime
-
 
 class Intent(db.Model):
     """Intent definition for a given site (tenant)"""
@@ -9,17 +11,18 @@ class Intent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     site_id = db.Column(db.Integer, db.ForeignKey('sites.id'), nullable=False)
     intent_name = db.Column(db.String(255), nullable=False)
-    # intent_type: 'action' or 'info' (or 'LEAD'/'HUMAN' for handoff semantics)
     intent_type = db.Column(db.String(20), nullable=False, default='info')
-    # sector for reuse across industries (e.g., hospital, travel, ecommerce)
     sector = db.Column(db.String(50), nullable=True)
-    # configurable confidence threshold for this intent
     confidence = db.Column(db.Float, default=0.8)
     confidence_threshold = db.Column(db.Float, default=0.7)
     response = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Relationships
     phrases = db.relationship('IntentPhrase', backref='intent', lazy='dynamic', cascade='all, delete-orphan')
+    # Workflows relationship is defined in Workflow model or can be backref here
+    # We will let Workflow define the backref or define it here if needed.
+    # workflows = db.relationship('Workflow', backref='intent', lazy='dynamic')
 
     def to_dict(self):
         return {
@@ -30,11 +33,23 @@ class Intent(db.Model):
             'confidence': self.confidence,
             'response': self.response,
             'phrases': [p.phrase for p in self.phrases]
+            ,'config_required': self.config_required
         }
 
     def __repr__(self):
         return f'<Intent {self.intent_name} ({self.id})>'
 
+    @property
+    def config_required(self):
+        # This dictionary MUST match the names in your intent_templates/*.json files
+        mapping = {
+            'CHECK_PRICE': ['consultation_price'],
+            'VISITING_HOURS': ['open_time', 'close_time'],
+            'BUSINESS_HOURS': ['open_time', 'close_time'],
+            'CLIENT_INQUIRY': ['lead_name', 'lead_email', 'lead_phone'],
+            # Add new industry-specific keys here as you add new intent_templates
+        }
+        return mapping.get(self.intent_name, [])
 
 class IntentPhrase(db.Model):
     """Phrase examples used to detect intent"""
@@ -49,7 +64,7 @@ class IntentPhrase(db.Model):
 
 
 class Workflow(db.Model):
-    """Workflows map an intent to a callable handler (function_name)"""
+    """Workflows map an intent to a callable handler"""
     __tablename__ = 'workflows'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -60,16 +75,3 @@ class Workflow(db.Model):
 
     def __repr__(self):
         return f'<Workflow {self.function_name} for intent {self.intent_id}>'
-
-
-class ClientConfig(db.Model):
-    """Simple key/value config per client/site"""
-    __tablename__ = 'client_config'
-
-    id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, nullable=False)
-    key = db.Column(db.String(255), nullable=False)
-    value = db.Column(db.Text, nullable=True)
-
-    def __repr__(self):
-        return f'<ClientConfig {self.client_id}:{self.key}>'

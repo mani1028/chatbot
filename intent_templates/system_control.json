@@ -1,0 +1,22 @@
+{
+  "sector": "intelligence",
+  "category": "administration",
+  "intents": [
+    {
+      "name": "SYSTEM_CONTROL",
+      "type": "action",
+      "response": "Accessing core system controls. Please confirm your administrative credentials to proceed with system-level changes.",
+      "confidence_threshold": 0.85,
+      "phrases": [
+        "system status check",
+        "view server logs",
+        "restart services",
+        "check database health",
+        "performance monitoring",
+        "resource allocation",
+        "system diagnostic"
+      ],
+      "workflow": "execute_system_diagnostic"
+    }
+  ]
+}

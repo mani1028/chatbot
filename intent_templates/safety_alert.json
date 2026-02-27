@@ -1,0 +1,22 @@
+{
+  "sector": "safety",
+  "category": "alert",
+  "intents": [
+    {
+      "name": "SAFETY_ALERT",
+      "type": "HUMAN",
+      "response": "Safety Alert Detected. I am notifying the security team and marking this conversation as high priority.",
+      "confidence_threshold": 0.8,
+      "phrases": [
+        "safety alert",
+        "something is wrong",
+        "danger detected",
+        "threat alert",
+        "security issue",
+        "i don't feel safe",
+        "hazardous situation"
+      ],
+      "workflow": "log_safety_incident"
+    }
+  ]
+}

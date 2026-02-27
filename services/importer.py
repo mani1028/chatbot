@@ -59,9 +59,9 @@ def import_sector_template(site_id, json_data):
 
             # 4. Register Config Keys
             for key in it.get('config_required', []):
-                exists = ClientConfig.query.filter_by(client_id=site_id, key=key).first()
+                exists = ClientConfig.query.filter_by(site_id=site_id, key=key).first()
                 if not exists:
-                    db.session.add(ClientConfig(client_id=site_id, key=key, value=''))
+                    db.session.add(ClientConfig(site_id=site_id, key=key, value=''))
 
         db.session.commit()
         return {"success": True, "message": f"Successfully processed {len(intents)} intents."}

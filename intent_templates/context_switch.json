@@ -1,0 +1,21 @@
+{
+  "sector": "intelligence",
+  "category": "conversation_flow",
+  "intents": [
+    {
+      "name": "CONTEXT_SWITCH",
+      "type": "info",
+      "response": "Understood. Let's switch gears. What would you like to discuss now?",
+      "confidence_threshold": 0.7,
+      "phrases": [
+        "different topic",
+        "change the subject",
+        "actually i want to talk about",
+        "let's talk about something else",
+        "moving on",
+        "switch topic",
+        "on another note"
+      ]
+    }
+  ]
+}
