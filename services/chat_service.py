@@ -7,28 +7,52 @@ from database import db
 from datetime import datetime
 import uuid
 from services.intent_service import handle_message as intent_handle_message
-
-
-
+from models.usage import Usage
 from utils.chat_response import ChatResponse
 
 
-def process_message(site_id: int, user_message: str, session_id: str = None) -> ChatResponse:
-    """
-    Process user message for a given site.
-    
-    Flow:
-    1. Detect intent using core engine
-    2. Log the interaction
-    3. Handle intent type (AUTO -> reply, LEAD -> capture form, HUMAN -> handoff)
-    
-    Returns: ChatResponse object
-    """
-    if not session_id:
-        session_id = str(uuid.uuid4())
-    
+def process_message(site_id: int, user_message: str, session_id: str = None, page_url: str = None) -> ChatResponse:
+    from models.site import Site
+    site_obj = db.session.get(Site, site_id)
+    if not site_obj:
+        return ChatResponse(
+            intent_name='ERROR',
+            intent_type='ERROR',
+            reply='Site not found.',
+            confidence=0.0,
+            handoff=False,
+            lead_capture=False
+        )
+
+    if site_obj.status == 'suspended':
+        return ChatResponse(
+            intent_name='SUSPENDED',
+            intent_type='ERROR',
+            reply='This site is suspended due to usage limits.',
+            confidence=0.0,
+            handoff=False,
+            lead_capture=False
+        )
+
+    # Ensure db.session.commit is called only once after all updates
+    plan_limit = site_obj.plan.max_monthly_chats if site_obj and site_obj.plan else 1000
+    now = datetime.utcnow()
+    month_str = now.strftime('%Y-%m')
+    usage = Usage.query.filter_by(site_id=site_id, month=month_str).first()
+    if not usage:
+        usage = Usage(site_id=site_id, month=month_str, messages=1)
+        db.session.add(usage)
+    else:
+        usage.messages += 1
+
+    if usage.messages >= plan_limit:
+        site_obj.status = 'suspended'
+
+    db.session.commit()
+
     # Use new intent service pipeline (returns dict)
-    intent_result = intent_handle_message(user_message, site_id=site_id)
+    history = get_session_history(site_id, session_id, limit=10) if session_id else []
+    intent_result = intent_handle_message(user_message, site_id=site_id, history=history, page_url=page_url)
 
     intent_name = intent_result.get('intent_name', 'UNKNOWN')
     intent_type = intent_result.get('intent_type', 'UNKNOWN')

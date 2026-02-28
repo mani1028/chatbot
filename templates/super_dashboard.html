@@ -11,290 +11,140 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            /* Palette: Modern Enterprise */
-            --primary: #2563EB; /* Royal Blue */
+            --primary: #2563EB; 
             --primary-hover: #1D4ED8;
             --primary-light: #EFF6FF;
-            
-            --bg-body: #F3F4F6; /* Cool Gray 100 */
+            --bg-body: #F3F4F6; 
             --surface: #FFFFFF;
-            
-            --text-main: #111827; /* Cool Gray 900 */
-            --text-secondary: #6B7280; /* Cool Gray 500 */
-            --border: #E5E7EB; /* Cool Gray 200 */
-            
+            --text-main: #111827; 
+            --text-secondary: #6B7280; 
+            --border: #E5E7EB; 
             --success: #10B981;
             --success-bg: #D1FAE5;
             --warning: #F59E0B;
             --warning-bg: #FEF3C7;
             --danger: #EF4444;
             --danger-bg: #FEE2E2;
-
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            
             --radius: 12px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        
-        body { background-color: var(--bg-body); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; font-size: 0.9rem; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; font-size: 0.9rem; }
 
         /* --- Sidebar --- */
-        .sidebar { 
-            width: 260px; 
-            background: var(--surface); 
-            border-right: 1px solid var(--border); 
-            display: flex; 
-            flex-direction: column; 
-            z-index: 20;
-        }
-        
-        .sidebar-header { 
-            padding: 1.5rem; 
-            display: flex; 
-            align-items: center; 
-            gap: 0.75rem;
-            color: var(--text-main);
-            border-bottom: 1px solid var(--border);
-        }
-        
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 20; position: relative; }
+        .sidebar-header { padding: 1.5rem; display: flex; align-items: center; gap: 0.75rem; color: var(--text-main); border-bottom: 1px solid var(--border); }
         .sidebar-header i { font-size: 1.4rem; color: var(--primary); }
         .sidebar-header h2 { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.025em; }
-
         .nav-links { padding: 1.5rem 1rem; flex-grow: 1; overflow-y: auto; }
-        
-        .nav-category {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-secondary);
-            font-weight: 600;
-            margin: 1.5rem 0 0.5rem 0.75rem;
-        }
+        .nav-category { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600; margin: 1.5rem 0 0.5rem 0.75rem; }
         .nav-category:first-child { margin-top: 0; }
-
-        .nav-item { 
-            padding: 0.65rem 0.75rem; 
-            display: flex; 
-            align-items: center; 
-            gap: 0.75rem; 
-            color: var(--text-secondary); 
-            text-decoration: none; 
-            font-weight: 500; 
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            margin-bottom: 0.25rem;
-        }
-        
+        .nav-item { padding: 0.65rem 0.75rem; display: flex; align-items: center; gap: 0.75rem; color: var(--text-secondary); text-decoration: none; font-weight: 500; border-radius: 8px; transition: all 0.2s ease; cursor: pointer; margin-bottom: 0.25rem; }
         .nav-item i { width: 20px; text-align: center; }
-        
         .nav-item:hover { background: var(--bg-body); color: var(--text-main); }
         .nav-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
-
-        .sidebar-footer { 
-            padding: 1rem; 
-            border-top: 1px solid var(--border); 
-        }
+        .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border); }
 
         /* --- Main Content --- */
-        .main-content { 
-            flex-grow: 1; 
-            overflow-y: auto; 
-            padding: 2rem; 
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
+        .main-content { max-width: 1400px; margin: 0 auto; width: 100%; padding: 2rem 3rem; position: relative; }
+        .container { max-width: 1400px; margin: 0 auto; width: 100%; }
 
-        .header-actions { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-end; 
-        }
-        
-        .page-title h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.025em; margin-bottom: 0.25rem; }
-        .page-title p { color: var(--text-secondary); }
-
-        /* --- Cards & Glassmorphism --- */
-        .stats-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-            gap: 1.5rem; 
-        }
-        
-        .stat-card { 
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            padding: 1.5rem; 
-            border-radius: var(--radius); 
-            box-shadow: var(--shadow-sm); 
-            display: flex; 
-            align-items: flex-start; 
-            justify-content: space-between;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
+        /* --- Cards --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+        .stat-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.6); padding: 1.5rem; border-radius: var(--radius); box-shadow: var(--shadow-sm); display: flex; align-items: flex-start; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s; }
         .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-
         .stat-content h3 { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
         .stat-content p { font-size: 2rem; font-weight: 700; color: var(--text-main); line-height: 1; }
-        
-        .stat-icon { 
-            width: 48px; height: 48px; 
-            border-radius: 12px; 
-            background: var(--primary-light); 
-            color: var(--primary); 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 1.25rem; 
-        }
+        .stat-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
 
-        /* --- Content Layout --- */
         .content-grid { display: grid; grid-template-columns: 2.5fr 1fr; gap: 1.5rem; }
-        @media (max-width: 1200px) { .content-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1400px) { .content-grid { grid-template-columns: 1fr; } }
 
-        .card { 
-            background: var(--surface); 
-            border-radius: var(--radius); 
-            border: 1px solid var(--border); 
-            box-shadow: var(--shadow-sm); 
-            overflow: hidden; 
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .card-header { 
-            padding: 1.25rem 1.5rem; 
-            border-bottom: 1px solid var(--border); 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            background: #FAFAFA;
-        }
-        
+        .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow: hidden; display: flex; flex-direction: column; }
+        .card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #FAFAFA; }
         .card-header h3 { font-size: 1rem; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; }
         .card-body { padding: 1.5rem; flex-grow: 1; }
         .card-body.no-padding { padding: 0; }
 
         /* --- Tables --- */
         table { width: 100%; border-collapse: collapse; }
-        
-        th { 
-            text-align: left; 
-            padding: 1rem 1.5rem; 
-            font-size: 0.75rem; 
-            text-transform: uppercase; 
-            color: var(--text-secondary); 
-            font-weight: 600; 
-            border-bottom: 1px solid var(--border); 
-            background: #F9FAFB;
-            letter-spacing: 0.05em;
-        }
-        
-        td { 
-            padding: 1rem 1.5rem; 
-            border-bottom: 1px solid var(--border); 
-            font-size: 0.9rem; 
-            vertical-align: middle; 
-            color: var(--text-main);
-        }
-        
+        th { text-align: left; padding: 1rem 1.5rem; font-size: 0.75rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border); background: #F9FAFB; letter-spacing: 0.05em; }
+        td { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; vertical-align: middle; color: var(--text-main); }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background: #F9FAFB; }
 
         /* --- UI Elements --- */
-        .badge { 
-            padding: 0.35em 0.8em; 
-            border-radius: 999px; 
-            font-size: 0.75rem; 
-            font-weight: 600; 
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
+        .badge { padding: 0.35em 0.8em; border-radius: 999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem; }
         .badge.active { background: var(--success-bg); color: #047857; }
         .badge.inactive { background: var(--danger-bg); color: #B91C1C; }
         .badge.warning { background: var(--warning-bg); color: #B45309; }
         .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
-        .btn { 
-            padding: 0.6rem 1.2rem; 
-            border-radius: 8px; 
-            font-size: 0.9rem; 
-            font-weight: 500; 
-            cursor: pointer; 
-            border: 1px solid transparent; 
-            transition: all 0.2s; 
-            display: inline-flex; 
-            align-items: center; 
-            gap: 0.5rem; 
-            text-decoration: none;
-        }
-        
-        .btn-primary { 
-            background: var(--primary); 
-            color: white; 
-            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.3);
-        }
+        .btn { padding: 0.6rem 1.2rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 1px 2px rgba(37, 99, 235, 0.3); }
         .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
-        
-        .btn-outline { 
-            background: white; 
-            border-color: var(--border); 
-            color: var(--text-main); 
-        }
+        .btn-outline { background: white; border-color: var(--border); color: var(--text-main); }
         .btn-outline:hover { border-color: var(--text-secondary); background: #F9FAFB; }
-        
-        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
-        
-        .btn-icon { 
-            width: 32px; height: 32px; 
-            border-radius: 6px; 
-            border: 1px solid transparent; 
-            background: transparent; 
-            color: var(--text-secondary); 
-            cursor: pointer; 
-            display: inline-flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: 0.2s; 
-        }
+        .btn-icon { width: 32px; height: 32px; border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; }
         .btn-icon:hover { background: var(--bg-body); color: var(--primary); }
-
+        
         .usage-bar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; margin-top: 6px; overflow: hidden; }
         .usage-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.5s ease; }
 
-        /* --- Forms --- */
         .form-group { margin-bottom: 1.25rem; }
         .form-group label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-main); }
-        .form-control { 
-            width: 100%; 
-            padding: 0.75rem 1rem; 
-            border: 1px solid var(--border); 
-            border-radius: 8px; 
-            font-size: 0.9rem; 
-            transition: all 0.2s; 
-            background: white;
-        }
+        .form-control { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; transition: all 0.2s; background: white; }
         .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
 
-        /* --- Modals & Utilities --- */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 450px; max-width: 90%; box-shadow: var(--shadow-lg); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        /* --- Modals (FIXED FOR RIGHT EDGE ALIGNMENT) --- */
+        .modal-overlay {
+            display: none;
+            position: fixed; /* Fix to viewport */
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 9999; /* Highest priority */
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+            align-items: center;
+            justify-content: center;
+        }
         
-        .toast { position: fixed; bottom: 24px; right: 24px; padding: 1rem 1.5rem; border-radius: 10px; background: white; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.75rem; transform: translateY(150%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 2000; border-left: 4px solid var(--primary); font-weight: 500; }
+        /* Class for side-panel alignment */
+        .modal-overlay.right-aligned {
+            justify-content: flex-end;
+        }
+
+        .modal-content {
+            background: white;
+            width: 500px;
+            max-width: 95%;
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        /* Stretch full height without rounded corners */
+        .modal-content.side-panel {
+            height: 100vh;
+            max-height: 100vh;
+            border-radius: 0;
+            margin: 0;
+            animation: slideInRight 0.3s ease;
+        }
+        
+        .toast { position: fixed; bottom: 24px; right: 24px; padding: 1rem 1.5rem; border-radius: 10px; background: white; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.75rem; transform: translateY(150%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 10000; border-left: 4px solid var(--primary); font-weight: 500; }
         .toast.show { transform: translateY(0); }
 
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
 
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* --- Custom Scrollbar --- */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
@@ -309,24 +159,32 @@
             <i class="fas fa-layer-group"></i>
             <h2>SaaS Control</h2>
         </div>
-        
-
         <nav class="nav-links">
             <div class="nav-category">Core</div>
             <a class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-chart-pie"></i> Platform Insights</a>
             <a class="nav-item" onclick="switchTab('templates', this)"><i class="fas fa-file-invoice"></i> Blueprints</a>
             
             <div class="nav-category">Client Management</div>
-            <a class="nav-item" onclick="switchTab('dashboard', this)"><i class="fas fa-users"></i> Active Clients</a>
             <a class="nav-item" onclick="switchTab('bots', this)"><i class="fas fa-robot"></i> Bots Management</a>
             <a class="nav-item" onclick="switchTab('billing', this)"><i class="fas fa-credit-card"></i> Billing & Plans</a>
             
-            <div class="nav-category">Monitoring</div>
+            <div class="nav-category">Monitoring & Setup</div>
             <a class="nav-item" onclick="switchTab('health', this)"><i class="fas fa-heartbeat"></i> System Health</a>
+            <a class="nav-item" onclick="switchTab('handoffs', this)"><i class="fas fa-comments"></i> Global Handoffs</a>
             <a class="nav-item" onclick="switchTab('logs', this)"><i class="fas fa-list-alt"></i> Audit Logs</a>
-            <a class="nav-item" onclick="switchTab('global-convs', this)"><i class="fas fa-comments"></i> Global Chats</a>
-        </nav>
+            <a class="nav-item" onclick="switchTab('users', this)"><i class="fas fa-users-cog"></i> Admin Users</a>
+            <a class="nav-item" onclick="switchTab('settings', this)"><i class="fas fa-cogs"></i> Platform Settings</a>
+            <a class="nav-item" onclick="switchTab('leads', this)"><i class="fas fa-address-card"></i> Leads</a>
+            <a class="nav-item" onclick="switchTab('bookings', this)"><i class="fas fa-calendar-check"></i> Bookings</a>
 
+            <!-- Extended Resource Tabs -->
+            <div class="nav-category">Extended Resources</div>
+            <a class="nav-item" onclick="switchTab('usageTab', this)"><i class="fas fa-chart-line"></i> Usage Records</a>
+            <a class="nav-item" onclick="switchTab('suspensionsTab', this)"><i class="fas fa-ban"></i> Suspensions</a>
+            <a class="nav-item" onclick="switchTab('conversationsTab', this)"><i class="fas fa-message"></i> Conversations</a>
+            <a class="nav-item" onclick="switchTab('integrationsTab', this)"><i class="fas fa-plug"></i> Integrations</a>
+            <a class="nav-item" onclick="switchTab('announcementsTab', this)"><i class="fas fa-bullhorn"></i> Announcements</a>
+        </nav>
         <div class="sidebar-footer">
             <a href="/admin/logout" class="btn btn-outline" style="width: 100%; justify-content: center; border: 1px solid var(--border);">
                 <i class="fas fa-sign-out-alt"></i> Sign Out
@@ -334,578 +192,63 @@
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        
-        <!-- DASHBOARD TAB -->
-        <div id="dashboard" class="tab-content active">
-            <div class="header-actions">
-                <div class="page-title">
-                    <h1>Platform Overview</h1>
-                    <p>Real-time metrics and tenant management.</p>
+    <!-- FIXED MODALS OUTSIDE MAIN FLOW -->
+    
+    <!-- Tenant Modal (Right Aligned Side Panel) -->
+    <div id="tenantModal" class="modal-overlay right-aligned">
+        <div class="modal-content side-panel">
+            <button onclick="closeTenantModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5rem;color:#888;cursor:pointer;">&times;</button>
+            <h2 style="margin-bottom:1.2rem;color:var(--primary);font-weight:700;">Provision Tenant</h2>
+            <form id="createSiteFormModal">
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="Acme Corp" required>
                 </div>
-                <!-- Search bar for Tenants could go here, or in the card -->
-                <button class="btn btn-primary" onclick="document.getElementById('tenantName').focus()">
-                    <i class="fas fa-plus"></i> New Tenant
+                <div class="form-group">
+                    <label>Admin Username</label>
+                    <input type="text" name="admin_username" class="form-control" placeholder="admin_acme" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="admin_password" class="form-control" placeholder="••••••••" required>
+                </div>
+                <div class="form-group">
+                    <label>Domain (Optional)</label>
+                    <input type="text" name="domain" class="form-control" placeholder="acme.com">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+                    Provision Tenant
                 </button>
-            </div>
-
-            <!-- KPI Cards -->
-            <div class="stats-grid" style="margin-top: 2rem;">
-                <div class="stat-card">
-                    <div class="stat-content">
-                        <h3>Total Tenants</h3>
-                        <p id="statTenants">--</p>
-                    </div>
-                    <div class="stat-icon"><i class="fas fa-building"></i></div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-content">
-                        <h3>Messages Processed</h3>
-                        <p id="statMessages">--</p>
-                    </div>
-                    <div class="stat-icon" style="background: #ECFDF5; color: var(--success);"><i class="fas fa-comments"></i></div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-content">
-                        <h3>System Status</h3>
-                        <p style="font-size: 1.2rem; color: var(--success);">Operational</p>
-                    </div>
-                    <div class="stat-icon" style="background: #ECFDF5; color: var(--success);"><i class="fas fa-check-circle"></i></div>
-                </div>
-            </div>
-
-            <div class="content-grid" style="margin-top: 2rem;">
-                
-                <!-- Active Clients Table -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-users" style="color: var(--primary);"></i> Active Clients</h3>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="clientSearch" placeholder="Search..." class="form-control" style="padding: 0.4rem 0.8rem; width: 200px; font-size: 0.85rem;">
-                            <button class="btn-icon" onclick="loadDashboardData()"><i class="fas fa-sync-alt"></i></button>
-                        </div>
-                    </div>
-                    <div class="card-body no-padding">
-                        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 1rem;">
-                            <label for="siteSelect" style="margin-right: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Tenant Quick Jump:</label>
-                            <select id="siteSelect" class="form-control" style="width: 220px;"></select>
-                        </div>
-                        <div style="overflow-x: auto;">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Company</th>
-                                        <th>Usage / Plan</th>
-                                        <th>Status</th>
-                                        <th style="text-align: right;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tenantTableBody">
-                                    <tr><td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-secondary);">Loading clients...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Provision Side Widget -->
-                <div class="card" style="height: fit-content;">
-                    <div class="card-header">
-                        <h3><i class="fas fa-bolt" style="color: var(--warning);"></i> Quick Provision</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="createSiteForm">
-                            <div class="form-group">
-                                <label>Company Name</label>
-                                <input type="text" id="tenantName" name="name" class="form-control" placeholder="Acme Corp" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Admin Username</label>
-                                <input type="text" name="admin_username" class="form-control" placeholder="admin_acme" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Password</label>
-                                <input type="password" name="admin_password" class="form-control" placeholder="••••••••" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Domain (Optional)</label>
-                                <input type="text" name="domain" class="form-control" placeholder="acme.com">
-                            </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
-                                Provision Tenant
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TEMPLATES TAB (REDESIGNED) -->
-<div id="templates" class="tab-content">
-
-    <div class="header-actions">
-        <div class="page-title">
-            <h1>Sector Blueprints</h1>
-            <p>Deploy and manage intent configurations for clients.</p>
+            </form>
         </div>
     </div>
 
-    <div class="content-grid" style="margin-top: 2rem;">
-
-        <!-- LEFT — AVAILABLE BLUEPRINT FILES -->
-        <div class="card">
-            <div class="card-header">
-                <h3><i class="fas fa-layer-group" style="color: var(--primary);"></i> Available Blueprints</h3>
-            </div>
-
-            <div class="card-body no-padding" id="templateFileList"
-                 style="max-height: 520px; overflow-y: auto;">
-                <p style="padding:2rem;color:var(--text-secondary);">
-                    Loading blueprint files...
-                </p>
-            </div>
-        </div>
-
-
-        <!-- RIGHT — DEPLOYMENT + MANAGEMENT -->
-        <div style="display:flex; flex-direction:column; gap:1.5rem;">
-
-            <!-- DEPLOY PANEL -->
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-paper-plane" style="color: var(--primary);"></i> Deploy Blueprint</h3>
-                </div>
-
-                <div class="card-body">
-
-                    <div class="form-group">
-                        <label>Select Target Tenant</label>
-                        <select id="siteSelectTemplates"
-                                class="form-control"
-                                onchange="loadAssignedIntents(this.value)">
-                            <option value="">-- Choose Tenant --</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Selected Blueprint</label>
-                        <input type="text"
-                               id="selectedFileName"
-                               class="form-control"
-                               readonly
-                               placeholder="Click a file from the list">
-                    </div>
-
-                    <button class="btn btn-primary"
-                            style="width:100%;justify-content:center;"
-                            onclick="deployBlueprint()">
-                        Apply Blueprint
-                    </button>
-
-                </div>
-            </div>
-
-
-            <!-- ASSIGNED INTENTS MANAGEMENT -->
-            <div class="card" id="intentManagementCard" style="display:none;">
-                <div class="card-header">
-                    <h3><i class="fas fa-tasks" style="color: var(--warning);"></i> Active Intents</h3>
-                </div>
-
-                <div class="card-body no-padding">
-                    <table>
-                        <tbody id="activeIntentsList"></tbody>
-                    </table>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-        <!-- HEALTH MONITOR TAB -->
-        <div id="health" class="tab-content">
-            <div class="header-actions">
-                <div class="page-title">
-                    <h1>System Health</h1>
-                    <p>Real-time infrastructure monitoring.</p>
-                </div>
-                <button class="btn btn-outline" onclick="loadHealthData()"><i class="fas fa-sync"></i> Refresh</button>
-            </div>
-            
-            <div class="stats-grid" style="margin-top: 2rem;">
-                <div class="stat-card">
-                    <div class="stat-content">
-                        <h3>Database</h3>
-                        <p id="dbStatus">--</p>
-                    </div>
-                    <div class="stat-icon" style="background: #DBEAFE; color: var(--primary);"><i class="fas fa-database"></i></div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-content">
-                        <h3>API Latency</h3>
-                        <p id="apiLatency">-- ms</p>
-                    </div>
-                    <div class="stat-icon" style="background: #FEF3C7; color: var(--warning);"><i class="fas fa-bolt"></i></div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-content">
-                        <h3>Storage</h3>
-                        <p id="totalStorage">OK</p>
-                    </div>
-                    <div class="stat-icon" style="background: #F3E8FF; color: #9333EA;"><i class="fas fa-hdd"></i></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- AUDIT LOGS TAB -->
-        <div id="logs" class="tab-content">
-            <div class="header-actions">
-                <div class="page-title">
-                    <h1>Audit Logs</h1>
-                    <p>Track administrative actions and security events.</p>
-                </div>
-            </div>
-            <div class="card" style="margin-top: 2rem;">
-                <div class="card-body no-padding">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Admin User</th>
-                                <th>Action</th>
-                                <th>Target ID</th>
-                            </tr>
-                        </thead>
-                        <tbody id="auditLogTableBody">
-                            <tr><td colspan="4" style="text-align: center; padding: 2rem;">Loading logs...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- HANDOFFS TAB -->
-        <div id="handoffs" class="tab-content">
-            <div class="header-actions">
-                <div class="page-title">
-                    <h1>Global Handoffs</h1>
-                    <p>Monitor requests requiring human intervention.</p>
-                </div>
-            </div>
-            <div class="card" style="margin-top: 2rem;">
-                <div class="card-body no-padding">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Tenant</th>
-                                <th>Session ID</th>
-                                <th>Last Message</th>
-                                <th>Urgency</th>
-                                <th style="text-align: right;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="handoffTableBody">
-                            <tr><td colspan="5" style="text-align: center; padding: 2rem;">No active handoffs.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ADMIN USERS TAB -->
-        <div id="users" class="tab-content">
-            <div class="header-actions">
-                <div class="page-title">
-                    <h1>Admin Management</h1>
-                    <p>Manage staff access and permissions.</p>
-                </div>
-                <button class="btn btn-primary" onclick="openAdminModal()"><i class="fas fa-user-plus"></i> New Admin</button>
-            </div>
-            <div class="card" style="margin-top: 2rem;">
-                <div class="card-body no-padding">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Created</th>
-                                <th style="text-align: right;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminTableBody">
-                            <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading admins...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- SETTINGS TAB -->
-        <div id="settings" class="tab-content">
-            <div class="header-actions">
-                <div class="page-title">
-                    <h1>Platform Settings</h1>
-                    <p>Global configuration variables.</p>
-                </div>
-            </div>
-            <div class="content-grid" style="margin-top: 2rem;">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Config Variables</h3>
-                        <button class="btn-icon" onclick="loadPlatformSettings()"><i class="fas fa-sync"></i></button>
-                    </div>
-                    <div class="card-body no-padding">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Key</th>
-                                    <th>Value</th>
-                                    <th>Last Updated</th>
-                                </tr>
-                            </thead>
-                            <tbody id="platformSettingsBody">
-                                <tr><td colspan="3" style="padding: 2rem; text-align: center;">Loading...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="card" style="height: fit-content;">
-                    <div class="card-header">
-                        <h3>Update Setting</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="platformSettingForm">
-                            <div class="form-group">
-                                <label>Key</label>
-                                <input type="text" name="key" class="form-control" placeholder="e.g. SMTP_HOST" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Value</label>
-                                <input type="text" name="value" class="form-control" placeholder="Value..." required>
-                            </div>
-                            <div class="form-group">
-                                <label>Description</label>
-                                <input type="text" name="description" class="form-control" placeholder="Optional description">
-                            </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Config</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- BOTS MANAGEMENT TAB -->
-        <div id="bots" class="tab-content">
-            <div class="header-actions">
-                <div class="page-title">
-                    <h1>Bots Management</h1>
-                    <p>View and control all bots across tenants.</p>
-                </div>
-                <button class="btn btn-primary" onclick="openBotModal()"><i class="fas fa-plus"></i> New Bot</button>
-            </div>
-            <div class="card" style="margin-top: 2rem;">
-                <div class="card-body no-padding">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Bot Name</th>
-                                <th>Tenant</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th style="text-align: right;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="botTableBody">
-                            <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading bots...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- BILLING MANAGEMENT TAB -->
-        <div id="billing" class="tab-content">
-            <div class="header-actions">
-                <div class="page-title">
-                    <h1>Billing & Subscriptions</h1>
-                    <p>Manage client plans, invoices, and payments.</p>
-                </div>
-                <button class="btn btn-primary" onclick="openBillingModal()"><i class="fas fa-plus"></i> New Billing Record</button>
-            </div>
-            <div class="card" style="margin-top: 2rem;">
-                <div class="card-body no-padding">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Tenant</th>
-                                <th>Plan</th>
-                                <th>Status</th>
-                                <th>Amount</th>
-                                <th>Paid</th>
-                                <th>Due Date</th>
-                                <th style="text-align: right;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="billingTableBody">
-                            <tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading billing records...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Usage Tab -->
-        <div class="tab-pane" id="usageTab" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                <h3>Usage Management</h3>
-                <button class="btn btn-primary" onclick="openUsageModal()">Add Usage</button>
-            </div>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tenant (Site ID)</th>
-                        <th>Bot ID</th>
-                        <th>Messages</th>
-                        <th>Period</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="usageTableBody"></tbody>
-            </table>
-        </div>
-        <!-- Suspensions Tab -->
-        <div class="tab-pane" id="suspensionsTab" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                <h3>Suspensions Management</h3>
-                <button class="btn btn-primary" onclick="openSuspensionModal()">Add Suspension</button>
-            </div>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tenant (Site ID)</th>
-                        <th>Bot ID</th>
-                        <th>Reason</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="suspensionsTableBody"></tbody>
-            </table>
-        </div>
-        <!-- Conversations Tab -->
-        <div class="tab-pane" id="conversationsTab" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                <h3>Conversations Management</h3>
-            </div>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tenant (Site ID)</th>
-                        <th>Bot ID</th>
-                        <th>User</th>
-                        <th>Started</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="conversationsTableBody"></tbody>
-            </table>
-        </div>
-        <!-- Integrations Tab -->
-        <div class="tab-pane" id="integrationsTab" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                <h3>Integrations Management</h3>
-                <button class="btn btn-primary" onclick="openIntegrationModal()">Add Integration</button>
-            </div>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tenant (Site ID)</th>
-                        <th>Type</th>
-                        <th>Config</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="integrationsTableBody"></tbody>
-            </table>
-        </div>
-        <!-- Announcements Tab -->
-        <div class="tab-pane" id="announcementsTab" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                <h3>Announcements Management</h3>
-                <button class="btn btn-primary" onclick="openAnnouncementModal()">Add Announcement</button>
-            </div>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tenant (Site ID)</th>
-                        <th>Title</th>
-                        <th>Message</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="announcementsTableBody"></tbody>
-            </table>
-        </div>
-    </main>
-
-    <!-- Modals -->
-    <div class="modal-overlay" id="planModal">
+    <!-- Edit Admin Modal -->
+    <div class="modal-overlay" id="editAdminModal">
         <div class="modal-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="font-size: 1.25rem; font-weight: 600;">Update Subscription</h2>
-                <button onclick="closeModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: var(--text-secondary);">&times;</button>
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Edit Admin User</h2>
+                <button onclick="closeEditAdminModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: var(--text-secondary);">&times;</button>
             </div>
-            <div class="form-group">
-                <label>Select New Plan</label>
-                <select id="planDropdown" class="form-control">
-                    <option>Loading plans...</option>
-                </select>
-            </div>
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
-                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="savePlanChange()">Update Plan</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="adminModal">
-        <div class="modal-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="font-size: 1.25rem; font-weight: 600;">Add Admin User</h2>
-                <button onclick="closeAdminModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: var(--text-secondary);">&times;</button>
-            </div>
-            <form id="adminForm">
+            <form id="editAdminForm">
+                <input type="hidden" name="admin_id" id="editAdminId">
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" name="username" class="form-control" required>
+                    <input type="text" name="username" id="editAdminUsername" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" name="email" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Temporary Password</label>
-                    <input type="text" name="password" class="form-control" required>
+                    <label>New Password <small style="color:var(--text-secondary);">(Leave blank to keep unchanged)</small></label>
+                    <input type="password" name="password" id="editAdminPassword" class="form-control">
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
-                    <button type="button" class="btn btn-outline" onclick="closeAdminModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create User</button>
+                    <button type="button" class="btn btn-outline" onclick="closeEditAdminModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Edit Site Modal -->
     <div class="modal-overlay" id="editSiteModal">
         <div class="modal-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -1014,6 +357,26 @@
         </div>
     </div>
 
+    <!-- Plan Modal -->
+    <div class="modal-overlay" id="planModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Update Subscription</h2>
+                <button onclick="closePlanModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: var(--text-secondary);">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Select New Plan</label>
+                <select id="planDropdown" class="form-control">
+                    <option>Loading plans...</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                <button class="btn btn-outline" onclick="closePlanModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="savePlanChange()">Update Plan</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Usage Modal -->
     <div class="modal-overlay" id="usageModal">
         <div class="modal-content">
@@ -1037,7 +400,7 @@
                 </div>
                 <div class="form-group">
                     <label>Period</label>
-                    <input type="text" id="usagePeriod" class="form-control" placeholder="YYYY-MM or YYYY-MM-DD" required>
+                    <input type="text" id="usagePeriod" class="form-control" placeholder="YYYY-MM" required>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
                     <button type="button" class="btn btn-outline" onclick="closeUsageModal()">Cancel</button>
@@ -1046,6 +409,7 @@
             </form>
         </div>
     </div>
+
     <!-- Suspension Modal -->
     <div class="modal-overlay" id="suspensionModal">
         <div class="modal-content">
@@ -1082,6 +446,7 @@
             </form>
         </div>
     </div>
+
     <!-- Integration Modal -->
     <div class="modal-overlay" id="integrationModal">
         <div class="modal-content">
@@ -1117,6 +482,7 @@
             </form>
         </div>
     </div>
+
     <!-- Announcement Modal -->
     <div class="modal-overlay" id="announcementModal">
         <div class="modal-content">
@@ -1153,119 +519,532 @@
         </div>
     </div>
 
-    <!-- Toast -->
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            
+            <!-- DASHBOARD TAB -->
+            <div id="dashboard" class="tab-content active">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Platform Overview</h1>
+                        <p style="color:var(--text-secondary);">Real-time metrics and tenant management.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openTenantModal()">
+                        <i class="fas fa-plus"></i> New Tenant
+                    </button>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="stats-grid" style="margin-top: 2rem;">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Total Tenants</h3>
+                            <p id="statTenants">--</p>
+                        </div>
+                        <div class="stat-icon"><i class="fas fa-building"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Messages Processed</h3>
+                            <p id="statMessages">--</p>
+                        </div>
+                        <div class="stat-icon" style="background: #ECFDF5; color: var(--success);"><i class="fas fa-comments"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>System Status</h3>
+                            <p style="font-size: 1.2rem; color: var(--success);">Operational</p>
+                        </div>
+                        <div class="stat-icon" style="background: #ECFDF5; color: var(--success);"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                </div>
+
+                <div class="content-grid" style="margin-top: 2rem;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-users" style="color: var(--primary);"></i> Active Clients</h3>
+                            <button class="btn-icon" onclick="window.loadDashboardData()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                        <div class="card-body no-padding">
+                            <div style="overflow-x: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Company</th>
+                                            <th>Usage / Plan</th>
+                                            <th>Status</th>
+                                            <th style="text-align: right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tenantTableBody">
+                                        <tr><td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-secondary);">Loading clients...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEADS TAB -->
+            <div id="leads" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Leads</h1>
+                        <p style="color:var(--text-secondary);">All captured leads from the bots.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="exportLeadsCSV()"><i class="fas fa-download"></i> Export CSV</button>
+                </div>
+                <div class="card" style="margin-top:2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Question</th>
+                                    <th>Session</th>
+                                    <th>Captured At</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <tr><td colspan="6" style="text-align:center;padding:2rem;">Loading leads...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOOKINGS TAB -->
+            <div id="bookings" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Bookings</h1>
+                        <p style="color:var(--text-secondary);">All booking requests submitted by users.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="exportBookingsCSV()"><i class="fas fa-download"></i> Export CSV</button>
+                </div>
+                <div class="card" style="margin-top:2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Message</th>
+                                    <th>Created At</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookingsTableBody">
+                                <tr><td colspan="7" style="text-align:center;padding:2rem;">Loading bookings...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TEMPLATES TAB -->
+            <div id="templates" class="tab-content">
+                <div class="header-actions">
+                    <div class="page-title">
+                        <h1>Sector Blueprints</h1>
+                        <p style="color:var(--text-secondary);">Deploy and manage intent configurations for clients.</p>
+                    </div>
+                </div>
+                <div class="content-grid" style="margin-top: 2rem;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-layer-group" style="color: var(--primary);"></i> Available Blueprints</h3>
+                        </div>
+                        <div class="card-body no-padding" id="templateFileList" style="max-height: 520px; overflow-y: auto;">
+                            <p style="padding:2rem;color:var(--text-secondary);">Loading blueprint files...</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-paper-plane" style="color: var(--primary);"></i> Deploy Blueprint</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label>Select Target Tenant</label>
+                                    <select id="siteSelectTemplates" class="form-control" onchange="loadAssignedIntents(this.value)">
+                                        <option value="">-- Choose Tenant --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Selected Blueprint</label>
+                                    <input type="text" id="selectedFileName" class="form-control" readonly placeholder="Click a file from the list">
+                                </div>
+                                <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="deployBlueprint()">Apply Blueprint</button>
+                            </div>
+                        </div>
+                        <div class="card" id="intentManagementCard" style="display:none;">
+                            <div class="card-header">
+                                <h3><i class="fas fa-tasks" style="color: var(--warning);"></i> Active Intents</h3>
+                            </div>
+                            <div class="card-body no-padding">
+                                <table>
+                                    <tbody id="activeIntentsList"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTS MANAGEMENT TAB -->
+            <div id="bots" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Bots Management</h1>
+                        <p style="color:var(--text-secondary);">View and control all bots across tenants.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openBotModal()"><i class="fas fa-plus"></i> Add Bot</button>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Bot Name</th>
+                                    <th>Tenant</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="botTableBody">
+                                <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading bots...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BILLING MANAGEMENT TAB -->
+            <div id="billing" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Billing & Subscriptions</h1>
+                        <p style="color:var(--text-secondary);">Manage client plans and invoices.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openBillingModal()"><i class="fas fa-plus"></i> Add Billing</button>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tenant</th>
+                                    <th>Plan</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                    <th>Paid</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="billingTableBody">
+                                <tr><td colspan="6" style="text-align: center; padding: 2rem;">Loading billing records...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMIN USERS TAB -->
+            <div id="users" class="tab-content">
+                <div class="header-actions">
+                    <div class="page-title">
+                        <h1>Admin Management</h1>
+                        <p style="color:var(--text-secondary);">Manage staff access and permissions.</p>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableBody">
+                                <tr><td colspan="4" style="text-align: center; padding: 2rem;">Loading admins...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HEALTH TAB -->
+            <div id="health" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>System Health</h1>
+                        <p style="color:var(--text-secondary);">Real-time infrastructure monitoring.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="window.loadHealthData()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+                <div class="stats-grid" style="margin-top: 2rem;">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Database</h3>
+                            <p id="dbStatus">--</p>
+                        </div>
+                        <div class="stat-icon" style="background: #DBEAFE; color: var(--primary);"><i class="fas fa-database"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LOGS TAB -->
+            <div id="logs" class="tab-content">
+                <div class="header-actions">
+                    <div class="page-title">
+                        <h1>Audit Logs</h1>
+                        <p style="color:var(--text-secondary);">Track administrative actions.</p>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Admin</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditLogTableBody">
+                                <tr><td colspan="3" style="text-align: center; padding: 2rem;">Loading logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HANDOFFS TAB -->
+            <div id="handoffs" class="tab-content">
+                <div class="header-actions">
+                    <div class="page-title">
+                        <h1>Global Handoffs</h1>
+                        <p style="color:var(--text-secondary);">Monitor requests requiring human intervention.</p>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tenant</th>
+                                    <th>Session ID</th>
+                                    <th>Message</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="handoffTableBody">
+                                <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading handoffs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SETTINGS TAB -->
+            <div id="settings" class="tab-content">
+                <div class="header-actions">
+                    <div class="page-title">
+                        <h1>Platform Settings</h1>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody id="platformSettingsBody">
+                                <tr><td colspan="2" style="text-align: center; padding: 2rem;">Loading settings...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Tab -->
+            <div class="tab-content" id="usageTab">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Usage Management</h1>
+                        <p style="color:var(--text-secondary);">Manage message limits and usage per tenant.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openUsageModal()"><i class="fas fa-plus"></i> Add Usage</button>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tenant (Site ID)</th>
+                                    <th>Bot ID</th>
+                                    <th>Messages</th>
+                                    <th>Period</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usageTableBody">
+                                <tr><td colspan="6" style="text-align: center; padding: 2rem;">Loading usage...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suspensions Tab -->
+            <div class="tab-content" id="suspensionsTab">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Suspensions Management</h1>
+                        <p style="color:var(--text-secondary);">Manage account blockades and suspensions.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openSuspensionModal()"><i class="fas fa-plus"></i> Add Suspension</button>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tenant (Site ID)</th>
+                                    <th>Bot ID</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suspensionsTableBody">
+                                <tr><td colspan="6" style="text-align: center; padding: 2rem;">Loading suspensions...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversations Tab -->
+            <div class="tab-content" id="conversationsTab">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Conversations Management</h1>
+                        <p style="color:var(--text-secondary);">Global logs of conversations across all bots.</p>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tenant (Site ID)</th>
+                                    <th>Bot ID</th>
+                                    <th>User</th>
+                                    <th>Started</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="conversationsTableBody">
+                                <tr><td colspan="7" style="text-align: center; padding: 2rem;">Loading conversations...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integrations Tab -->
+            <div class="tab-content" id="integrationsTab">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Integrations Management</h1>
+                        <p style="color:var(--text-secondary);">Third-party APIs and webhooks.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openIntegrationModal()"><i class="fas fa-plus"></i> Add Integration</button>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tenant (Site ID)</th>
+                                    <th>Type</th>
+                                    <th>Config</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="integrationsTableBody">
+                                <tr><td colspan="6" style="text-align: center; padding: 2rem;">Loading integrations...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Announcements Tab -->
+            <div class="tab-content" id="announcementsTab">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Announcements Management</h1>
+                        <p style="color:var(--text-secondary);">Broadcast messages to clients.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openAnnouncementModal()"><i class="fas fa-plus"></i> Add Announcement</button>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tenant (Site ID)</th>
+                                    <th>Title</th>
+                                    <th>Message</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="announcementsTableBody">
+                                <tr><td colspan="6" style="text-align: center; padding: 2rem;">Loading announcements...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
     <div id="toast" class="toast">
         <i class="fas fa-check-circle" style="color: var(--primary);"></i>
         <span id="toastMessage">Success</span>
     </div>
 
+    <!-- JAVASCRIPT LOGIC -->
     <script>
-        window.loadDashboardData = async function () {
-            try {
-                const [sitesRes, statsRes] = await Promise.all([
-                    fetch('/admin/api/super/sites'),
-                    fetch('/admin/api/super/stats')
-                ]);
-
-                const siteData = await sitesRes.json();
-                const statsData = await statsRes.json();
-
-                document.getElementById('statTenants').textContent =
-                    statsData.site_count || 0;
-
-                document.getElementById('statMessages').textContent =
-                    statsData.total_chats || 0;
-
-                const tbody = document.getElementById('tenantTableBody');
-                const siteSelect = document.getElementById('siteSelect');
-                const siteSelectTemplates =
-                    document.getElementById('siteSelectTemplates');
-
-                tbody.innerHTML = '';
-                siteSelect.innerHTML = '<option value="">-- Choose Tenant --</option>';
-
-                if (siteSelectTemplates) {
-                    siteSelectTemplates.innerHTML =
-                        '<option value="">-- Choose Tenant --</option>';
-                }
-
-                if (siteData.sites && siteData.sites.length > 0) {
-
-                    siteData.sites.forEach(site => {
-
-                        const tr = document.createElement('tr');
-
-                        const statusBadge = site.is_active
-                            ? `<span class="badge active"><span class="badge-dot"></span> Active</span>`
-                            : `<span class="badge inactive"><span class="badge-dot"></span> Suspended</span>`;
-
-                        tr.innerHTML = `
-                            <td>
-                                <div style="font-weight:600">${site.name}</div>
-                                <div style="font-size:0.8rem;color:var(--text-secondary)">
-                                    ${site.domain || 'Localhost'}
-                                </div>
-                            </td>
-
-                            <td>
-                                <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">
-                                    <span>${site.plan_name}</span>
-                                    <span>${site.usage_percent}%</span>
-                                </div>
-                                <div class="usage-bar">
-                                    <div class="usage-fill"
-                                         style="width:${site.usage_percent}%"></div>
-                                </div>
-                            </td>
-
-                            <td>${statusBadge}</td>
-                            <td style="text-align:right;">-</td>
-                        `;
-
-                        tbody.appendChild(tr);
-
-                        const opt = new Option(site.name, site.id);
-                        siteSelect.appendChild(opt);
-
-                        if (siteSelectTemplates) {
-                            const opt2 = new Option(site.name, site.id);
-                            siteSelectTemplates.appendChild(opt2);
-                        }
-                    });
-
-                } else {
-                    tbody.innerHTML =
-                        '<tr><td colspan="4" style="text-align:center;padding:2rem;">No tenants found</td></tr>';
-                }
-
-            } catch (e) {
-                console.error(e);
-                showToast("Connection Error", "error");
-            }
-        };
-        // --- Core Functions ---
-        
-window.switchTab = function(tabId, element) {
-    // Remove active classes
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    // Add active classes safely
-    var tabEl = document.getElementById(tabId);
-    if (tabEl && tabEl.classList) tabEl.classList.add('active');
-    if (element && element.classList) element.classList.add('active');
-    // Trigger Data Loads
-    if (tabId === 'dashboard') window.loadDashboardData && window.loadDashboardData();
-    if (tabId === 'templates') {
-        window.loadTemplateFiles && loadTemplateFiles();
-        window.loadDashboardData && window.loadDashboardData();
-    }
-    if (tabId === 'health') window.loadHealthData && loadHealthData();
-    if (tabId === 'logs') window.loadAuditLogs && loadAuditLogs();
-    if (tabId === 'handoffs') window.loadHandoffData && loadHandoffData();
-    if (tabId === 'users') window.loadAdminUsers && loadAdminUsers();
-    if (tabId === 'settings') window.loadPlatformSettings && loadPlatformSettings();
-}
-
+        // Utilities
         function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast');
             const icon = toast.querySelector('i');
@@ -1284,327 +1063,802 @@ window.switchTab = function(tabId, element) {
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
-/* ==============================
-   BLUEPRINT SYSTEM (CLEAN)
-============================== */
 
-let selectedBlueprint = null;
+        // Tab Switching
+        window.switchTab = function(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            const tabEl = document.getElementById(tabId);
+            if (tabEl) tabEl.classList.add('active');
+            if (element) element.classList.add('active');
 
+            // Trigger corresponding data loaders
+            if (tabId === 'dashboard') window.loadDashboardData && window.loadDashboardData();
+            if (tabId === 'bots') window.loadBotsData && window.loadBotsData();
+            if (tabId === 'billing') window.loadBillingData && window.loadBillingData();
+            if (tabId === 'leads') window.loadLeadsData && window.loadLeadsData();
+            if (tabId === 'bookings') window.loadBookingsData && window.loadBookingsData();
+            if (tabId === 'templates') window.loadTemplateFiles && window.loadTemplateFiles();
+            if (tabId === 'users') window.loadAdminUsers && window.loadAdminUsers();
+            if (tabId === 'health') window.loadHealthData && window.loadHealthData();
+            if (tabId === 'logs') window.loadAuditLogs && window.loadAuditLogs();
+            if (tabId === 'handoffs') window.loadHandoffData && window.loadHandoffData();
+            if (tabId === 'settings') window.loadPlatformSettings && window.loadPlatformSettings();
+            
+            // Extended Resource Tabs
+            if (tabId === 'usageTab') window.loadUsageData && window.loadUsageData();
+            if (tabId === 'suspensionsTab') window.loadSuspensionsData && window.loadSuspensionsData();
+            if (tabId === 'conversationsTab') window.loadConversationsData && window.loadConversationsData();
+            if (tabId === 'integrationsTab') window.loadIntegrationsData && window.loadIntegrationsData();
+            if (tabId === 'announcementsTab') window.loadAnnouncementsData && window.loadAnnouncementsData();
+        };
 
-/* LOAD FILE LIST */
-async function loadTemplateFiles() {
-
-    const res = await fetch('/admin/api/super/template_files');
-    const data = await res.json();
-
-    const list = document.getElementById('templateFileList');
-
-    if (!data.files || data.files.length === 0) {
-        list.innerHTML =
-            '<p style="padding:2rem;color:var(--text-secondary)">No blueprints found</p>';
-        return;
-    }
-
-    list.innerHTML = data.files.map(file => `
-        <div class="blueprint-item"
-             onclick="selectBlueprint('${file}', this)"
-             style="padding:1rem;border-bottom:1px solid var(--border);
-                    cursor:pointer;display:flex;justify-content:space-between;
-                    align-items:center;transition:0.2s;">
-            <span><i class="fas fa-file-code" style="color:var(--primary);margin-right:8px"></i>${file}</span>
-            <i class="fas fa-chevron-right" style="color:var(--border)"></i>
-        </div>
-    `).join('');
-}
-
-
-/* SELECT BLUEPRINT */
-function selectBlueprint(name, element) {
-
-    document.querySelectorAll('.blueprint-item').forEach(el => {
-        el.style.background = 'transparent';
-        el.style.borderLeft = 'none';
-    });
-
-    element.style.background = 'var(--primary-light)';
-    element.style.borderLeft = '4px solid var(--primary)';
-
-    selectedBlueprint = name;
-    document.getElementById('selectedFileName').value = name;
-}
-
-
-/* LOAD ASSIGNED INTENTS FOR TENANT */
-async function loadAssignedIntents(siteId) {
-
-    const card = document.getElementById('intentManagementCard');
-    const tbody = document.getElementById('activeIntentsList');
-
-    if (!siteId) {
-        card.style.display = 'none';
-        return;
-    }
-
-    const res = await fetch(`/admin/api/client/intents?site_id=${siteId}`);
-    const data = await res.json();
-
-    card.style.display = 'block';
-
-    if (!data.intents || data.intents.length === 0) {
-        tbody.innerHTML =
-            '<tr><td style="padding:1.5rem;color:var(--text-secondary)">No intents assigned</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = data.intents.map(i => `
-        <tr>
-            <td style="padding:0.9rem;">
-                <div style="font-weight:600">${i.intent_name}</div>
-                <div style="font-size:0.75rem;color:var(--text-secondary)">
-                    ${i.intent_type || ''}
-                </div>
-            </td>
-
-            <td style="text-align:right;padding-right:1rem;">
-                <button class="btn-icon"
-                        style="color:var(--danger);"
-                        onclick="deleteAssignedIntent(${i.id}, ${siteId})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
-}
-
-
-/* DEPLOY BLUEPRINT */
-async function deployBlueprint() {
-
-    const siteId = document.getElementById('siteSelectTemplates').value;
-
-    if (!siteId || !selectedBlueprint) {
-        showToast("Select tenant and blueprint", "error");
-        return;
-    }
-
-    const res = await fetch('/admin/api/super/import_template', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            site_id: siteId,
-            filename: selectedBlueprint
-        })
-    });
-
-    if (res.ok) {
-        showToast("Blueprint applied successfully");
-        loadAssignedIntents(siteId);
-    } else {
-        showToast("Deployment failed", "error");
-    }
-}
-
-
-/* DELETE ASSIGNED INTENT */
-async function deleteAssignedIntent(intentId, siteId) {
-
-    if (!confirm("Remove this intent from tenant?")) return;
-
-    const res = await fetch(
-        `/admin/api/client/intents/${intentId}?site_id=${siteId}`,
-        { method: 'DELETE' }
-    );
-
-    if (res.ok) {
-        showToast("Intent removed");
-        loadAssignedIntents(siteId);
-    }
-}
-// --- Dashboard Data ---
-// (already defined above, only keep one definition)
-
-// --- Site Actions ---
-async function createSite(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('button');
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    try {
-        const formData = new FormData(e.target);
-        const res = await fetch('/admin/api/super/sites', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(Object.fromEntries(formData))
-        });
-        const data = await res.json();
-        if (res.ok) {
-            showToast('Tenant created successfully');
-            e.target.reset();
-            loadDashboardData();
-        } else {
-            showToast(data.error || 'Failed to create tenant', 'error');
-        }
-    } catch(e) { showToast('Network Error', 'error'); }
-    finally { btn.innerText = 'Provision Tenant'; }
-}
-
-async function toggleStatus(siteId) {
-    if(!confirm("Change tenant status?")) return;
-    try {
-        await fetch(`/admin/api/super/sites/${siteId}/status`, { method: 'PUT' });
-        loadDashboardData();
-        showToast('Status updated');
-    } catch(e) { showToast('Error updating status', 'error'); }
-}
-
-async function impersonate(siteId) {
-    try {
-        const res = await fetch(`/admin/api/super/sites/${siteId}/impersonate`, { method: 'POST' });
-        const data = await res.json();
-        if(res.ok) window.location.href = data.redirect;
-        else showToast(data.error, 'error');
-    } catch(e) { showToast('Login failed', 'error'); }
-}
-
-// --- Plans ---
-let currentSiteId = null;
-async function openPlanModal(siteId) {
-    currentSiteId = siteId;
-    document.getElementById('planModal').style.display = 'flex';
-    const dropdown = document.getElementById('planDropdown');
-    dropdown.innerHTML = '<option>Loading...</option>';
-    const res = await fetch('/admin/api/super/plans');
-    const data = await res.json();
-    dropdown.innerHTML = '';
-    if (data.plans && Array.isArray(data.plans)) {
-        data.plans.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = `${p.name} ($${p.price}) - ${p.max_monthly_chats} msgs`;
-            dropdown.appendChild(opt);
-        });
-    }
-}
-function closeModal() { document.getElementById('planModal').style.display = 'none'; }
+        // --- Modals ---
+        function openTenantModal() { document.getElementById('tenantModal').style.display = 'flex'; }
+        function closeTenantModal() { document.getElementById('tenantModal').style.display = 'none'; }
         
-        async function savePlanChange() {
-            const planId = document.getElementById('planDropdown').value;
-            await fetch(`/admin/api/super/sites/${currentSiteId}/plan`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({plan_id: planId})
-            });
-            closeModal();
-            loadDashboardData();
-            showToast('Plan updated');
+        function openEditAdminModal(id, username) {
+            document.getElementById('editAdminId').value = id;
+            document.getElementById('editAdminUsername').value = username;
+            document.getElementById('editAdminPassword').value = '';
+            document.getElementById('editAdminModal').style.display = 'flex';
         }
+        function closeEditAdminModal() { document.getElementById('editAdminModal').style.display = 'none'; }
 
-        // --- Health ---
-        async function loadHealthData() {
-            try {
-                const res = await fetch('/admin/api/super/health-check');
-                const data = await res.json();
-                const dbStatus = document.getElementById('dbStatus');
-                
-                if (data.database.exists && data.database.writable) {
-                    dbStatus.textContent = 'Online';
-                    dbStatus.style.color = 'var(--success)';
-                } else {
-                    dbStatus.textContent = 'Issues Detected';
-                    dbStatus.style.color = 'var(--danger)';
-                }
-                
-                document.getElementById('apiLatency').textContent = '24ms'; // Mock or real if backend supports
-            } catch(e) { console.error(e); }
-        }
+        function openEditModal() { document.getElementById('editSiteModal').style.display = 'flex'; }
+        function closeEditModal() { document.getElementById('editSiteModal').style.display = 'none'; }
 
-        // --- Logs & Handoffs (Skeleton Loaders) ---
-        async function loadAuditLogs() {
-            const res = await fetch('/admin/api/super/audit-logs');
-            const data = await res.json();
-            const tbody = document.getElementById('auditLogTableBody');
-            tbody.innerHTML = '';
-            
-            if(data.logs && data.logs.length > 0) {
-                data.logs.forEach(log => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td style="color: var(--text-secondary); font-family: monospace;">${new Date(log.timestamp).toLocaleString()}</td>
-                        <td style="font-weight: 500;">Admin #${log.admin_id}</td>
-                        <td>${log.action}</td>
-                        <td style="font-family: monospace;">${log.site_id || '-'}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem;">No logs found.</td></tr>';
-            }
-        }
+        function openBotModal() { document.getElementById('botModal').style.display = 'flex'; }
+        function closeBotModal() { document.getElementById('botModal').style.display = 'none'; }
 
-        async function loadHandoffData() {
-            const res = await fetch('/admin/api/super/handoffs');
-            const data = await res.json();
-            const tbody = document.getElementById('handoffTableBody');
-            tbody.innerHTML = '';
-            
-            if(data.handoffs && data.handoffs.length > 0) {
-                data.handoffs.forEach(h => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${h.tenant_name}</td>
-                        <td style="font-family: monospace;">${h.session_id.substring(0,8)}...</td>
-                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${h.last_message}</td>
-                        <td><span class="badge warning">High</span></td>
-                        <td style="text-align: right;"><button class="btn btn-primary btn-sm">Take Over</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No active handoff requests.</td></tr>';
-            }
-        }
+        function openBillingModal() { document.getElementById('billingModal').style.display = 'flex'; }
+        function closeBillingModal() { document.getElementById('billingModal').style.display = 'none'; }
 
-        // --- Admins ---
-        async function loadAdminUsers() {
-            const res = await fetch('/admin/api/super/admins'); // Assuming endpoint exists
-            // Mock logic for demo if endpoint not ready
-            const tbody = document.getElementById('adminTableBody');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No data endpoint connected yet.</td></tr>'; 
-        }
-        function openAdminModal() { document.getElementById('adminModal').style.display = 'flex'; }
-        function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
+        function openPlanModal() { document.getElementById('planModal').style.display = 'flex'; }
+        function closePlanModal() { document.getElementById('planModal').style.display = 'none'; }
 
-        // --- Settings ---
-        async function loadPlatformSettings() {
-            const res = await fetch('/admin/api/super/settings');
-            const data = await res.json();
-            const tbody = document.getElementById('platformSettingsBody');
-            tbody.innerHTML = '';
-            if(data.settings) {
-                data.settings.forEach(s => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td style="font-family: monospace; font-weight: 600;">${s.key}</td>
-                        <td>${s.value}</td>
-                        <td style="color: var(--text-secondary); font-size: 0.8rem;">${s.updated_at}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
+        function openUsageModal() { document.getElementById('usageModal').style.display = 'flex'; }
+        function closeUsageModal() { document.getElementById('usageModal').style.display = 'none'; }
+
+        function openSuspensionModal() { document.getElementById('suspensionModal').style.display = 'flex'; }
+        function closeSuspensionModal() { document.getElementById('suspensionModal').style.display = 'none'; }
+
+        function openIntegrationModal() { document.getElementById('integrationModal').style.display = 'flex'; }
+        function closeIntegrationModal() { document.getElementById('integrationModal').style.display = 'none'; }
+
+        function openAnnouncementModal() { document.getElementById('announcementModal').style.display = 'flex'; }
+        function closeAnnouncementModal() { document.getElementById('announcementModal').style.display = 'none'; }
 
         // --- Event Listeners ---
-        const createSiteForm = document.getElementById('createSiteForm');
-        if (createSiteForm) {
-            createSiteForm.addEventListener('submit', createSite);
-        }
-        
-        // --- Init ---
-        document.addEventListener('DOMContentLoaded', () => {
-            if (document.getElementById('dashboard')) {
+        document.addEventListener('DOMContentLoaded', function() {
+            // Dashboard initial load
+            if (document.getElementById('dashboard').classList.contains('active')) {
                 window.loadDashboardData();
+            }
+
+            // Tenant Provisioning AJAX
+            const tenantForm = document.getElementById('createSiteFormModal');
+            if (tenantForm) {
+                tenantForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const btn = this.querySelector('button[type="submit"]');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Provisioning...';
+
+                    try {
+                        const formData = new FormData(this);
+                        const payload = Object.fromEntries(formData.entries());
+
+                        const res = await fetch('/admin/api/super/sites', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const resp = await res.json();
+
+                        if (res.ok && resp.success) {
+                            showToast('Tenant provisioned successfully!');
+                            this.reset();
+                            closeTenantModal();
+                            window.loadDashboardData && window.loadDashboardData();
+                        } else {
+                            showToast(resp.error || 'Provisioning failed', 'error');
+                        }
+                    } catch (err) {
+                        showToast('Network error: ' + err, 'error');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = 'Provision Tenant';
+                    }
+                };
+            }
+
+            // Admin Edit AJAX
+            const editAdminForm = document.getElementById('editAdminForm');
+            if (editAdminForm) {
+                editAdminForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('editAdminId').value;
+                    const username = document.getElementById('editAdminUsername').value;
+                    const password = document.getElementById('editAdminPassword').value;
+                    
+                    const btn = this.querySelector('button[type="submit"]');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                    
+                    try {
+                        const res = await fetch(`/admin/api/super/admins/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, password })
+                        });
+                        const resp = await res.json();
+                        if (res.ok && resp.success) {
+                            showToast('Admin updated successfully!');
+                            closeEditAdminModal();
+                            window.loadAdminUsers && window.loadAdminUsers();
+                        } else {
+                            showToast(resp.error || 'Update failed', 'error');
+                        }
+                    } catch (err) {
+                        showToast('Network error: ' + err, 'error');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = 'Save Changes';
+                    }
+                };
             }
         });
 
+        // --- Data Fetchers ---
+        window.loadDashboardData = async function () {
+            try {
+                const [sitesRes, statsRes] = await Promise.all([
+                    fetch('/admin/api/super/sites'),
+                    fetch('/admin/api/super/stats')
+                ]);
+                const siteData = await sitesRes.json();
+                const statsData = await statsRes.json();
+                
+                document.getElementById('statTenants').textContent = statsData.site_count || 0;
+                document.getElementById('statMessages').textContent = statsData.total_chats || 0;
+                
+                const tbody = document.getElementById('tenantTableBody');
+                const siteSelectTemplates = document.getElementById('siteSelectTemplates');
+                tbody.innerHTML = '';
+                if (siteSelectTemplates) siteSelectTemplates.innerHTML = '<option value="">-- Choose Tenant --</option>';
+
+                if (siteData.sites && siteData.sites.length > 0) {
+                    siteData.sites.forEach(site => {
+                        const statusBadge = site.is_active
+                            ? `<span class="badge active"><span class="badge-dot"></span> Active</span>`
+                            : `<span class="badge inactive"><span class="badge-dot"></span> Suspended</span>`;
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>
+                                <div style="font-weight:600">${site.name}</div>
+                                <div style="font-size:0.8rem;color:var(--text-secondary)">${site.domain || 'Localhost'}</div>
+                            </td>
+                            <td>
+                                <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;">
+                                    <span>${site.plan_name}</span>
+                                    <span>${site.usage_percent}%</span>
+                                </div>
+                                <div class="usage-bar"><div class="usage-fill" style="width:${site.usage_percent}%"></div></div>
+                            </td>
+                            <td>${statusBadge}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-icon" onclick="toggleStatus(${site.id})" title="Toggle Status"><i class="fas fa-toggle-on"></i></button>
+                                <button class="btn-icon" onclick="openEditSiteModal(${site.id}, '${(site.name||'').replace(/'/g,"\\'")}', '${(site.domain||'').replace(/'/g,"\\'")}')}" title="Edit Client"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon" onclick="openPlanModalForSite(${site.id})" title="Change Plan"><i class="fas fa-box"></i></button>
+                                <button class="btn-icon" onclick="impersonate(${site.id})" title="Login as Client"><i class="fas fa-user-secret"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                        if (siteSelectTemplates) siteSelectTemplates.appendChild(new Option(site.name, site.id));
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;">No tenants found</td></tr>';
+                }
+            } catch (e) { showToast("Connection Error", "error"); }
+        };
+
+        window.loadAdminUsers = async function() {
+            try {
+                const res = await fetch('/admin/api/super/admins');
+                const data = await res.json();
+                const tbody = document.getElementById('adminTableBody');
+                tbody.innerHTML = '';
+                if (data.admins && data.admins.length > 0) {
+                    data.admins.forEach(admin => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${admin.username}</strong></td>
+                            <td>${admin.is_super ? '<span class="badge active">Super Admin</span>' : `<span class="badge warning">Client Admin (ID: ${admin.site_id})</span>`}</td>
+                            <td>Active</td>
+                            <td style="text-align: right;">
+                                <button class="btn-icon" onclick="openEditAdminModal(${admin.id}, '${admin.username}')"><i class="fas fa-edit"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch(e) { console.error(e); }
+        };
+
+        window.loadBotsData = async function() {
+            try {
+                const res = await fetch('/admin/api/super/bots');
+                const data = await res.json();
+                const tbody = document.getElementById('botTableBody');
+                tbody.innerHTML = '';
+                if (data.bots && data.bots.length > 0) {
+                    data.bots.forEach(bot => {
+                        const badge = bot.status === 'active' ? `<span class="badge active">Active</span>` : `<span class="badge inactive">Suspended</span>`;
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${bot.name}</strong></td>
+                            <td>Tenant ID: ${bot.site_id}</td>
+                            <td>${badge}</td>
+                            <td>${bot.created_at || 'Just now'}</td>
+                            <td style="text-align: right;">
+                                <button class="btn-icon" style="color:var(--danger);" onclick="deleteBot(${bot.id})"><i class="fas fa-trash"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">No bots found.</td></tr>'; }
+            } catch(e) {}
+        };
+
+        window.loadBillingData = async function() {
+            try {
+                const res = await fetch('/admin/api/super/billing');
+                const data = await res.json();
+                const tbody = document.getElementById('billingTableBody');
+                tbody.innerHTML = '';
+                if (data.billing && data.billing.length > 0) {
+                    data.billing.forEach(b => {
+                        const badge = b.status === 'active' ? `<span class="badge active">Active</span>` : `<span class="badge warning">${b.status}</span>`;
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>Tenant ID: ${b.site_id}</td>
+                            <td>Plan ID: ${b.plan_id}</td>
+                            <td>${badge}</td>
+                            <td>$${b.amount}</td>
+                            <td>${b.paid ? 'Yes' : 'No'}</td>
+                            <td style="text-align: right;">
+                                <button class="btn-icon" style="color:var(--danger);" onclick="deleteBilling(${b.id})"><i class="fas fa-trash"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No billing records.</td></tr>'; }
+            } catch(e) {}
+        };
+
+        window.loadLeadsData = async function() {
+            try {
+                const res = await fetch('/admin/api/super/leads');
+                const data = await res.json();
+                const tbody = document.getElementById('leadsTableBody');
+                tbody.innerHTML = '';
+                if (data.leads && data.leads.length > 0) {
+                    data.leads.forEach(lead => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${lead.name}</td><td>${lead.email}</td><td>${lead.phone || '-'}</td><td>${lead.question || '-'}</td><td>${lead.session_id.substring(0,8)}...</td><td>${lead.captured_at}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No leads found.</td></tr>'; }
+            } catch(e) {}
+        };
+
+        window.loadBookingsData = async function() {
+            try {
+                const res = await fetch('/admin/api/super/bookings');
+                const data = await res.json();
+                const tbody = document.getElementById('bookingsTableBody');
+                tbody.innerHTML = '';
+                if (data.bookings && data.bookings.length > 0) {
+                    data.bookings.forEach(b => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${b.name}</td><td>${b.email}</td><td>${b.phone || '-'}</td><td>${b.date}</td><td>${b.time}</td><td>${b.message || '-'}</td><td>${b.created_at}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">No bookings found.</td></tr>'; }
+            } catch(e) {}
+        };
+
+        window.loadHandoffData = async function() {
+            try {
+                const res = await fetch('/admin/api/super/handoffs');
+                const data = await res.json();
+                const tbody = document.getElementById('handoffTableBody');
+                tbody.innerHTML = '';
+                if (data.handoffs && data.handoffs.length > 0) {
+                    data.handoffs.forEach(h => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${h.tenant_name}</td>
+                            <td style="font-family: monospace;">${h.session_id.substring(0,8)}...</td>
+                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${h.last_message}</td>
+                            <td><span class="badge warning">High</span></td>
+                            <td style="text-align: right;"><button class="btn btn-primary btn-sm">Take Over</button></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">No active handoff requests.</td></tr>'; }
+            } catch(e) {}
+        };
+
+        // Actions
+        async function toggleStatus(siteId) {
+            if(!confirm("Toggle tenant status?")) return;
+            await fetch(`/admin/api/super/sites/${siteId}/status`, { method: 'PUT' });
+            window.loadDashboardData();
+            showToast('Status updated');
+        }
+        
+        async function impersonate(siteId) {
+            try {
+                const res = await fetch(`/admin/api/super/sites/${siteId}/impersonate`, { method: 'POST' });
+                const data = await res.json();
+                if(res.ok) window.location.href = data.redirect;
+                else showToast(data.error, 'error');
+            } catch(e) { showToast('Login failed', 'error'); }
+        }
+
+        async function deleteBot(id) {
+            if(!confirm("Delete this bot?")) return;
+            await fetch(`/admin/api/super/bots/${id}`, { method: 'DELETE' });
+            window.loadBotsData();
+            showToast('Bot deleted');
+        }
+
+        async function deleteBilling(id) {
+            if(!confirm("Delete billing record?")) return;
+            await fetch(`/admin/api/super/billing/${id}`, { method: 'DELETE' });
+            window.loadBillingData();
+            showToast('Billing deleted');
+        }
+        
+        function exportLeadsCSV() { window.open('/admin/api/super/leads/export', '_blank'); }
+        function exportBookingsCSV() { window.open('/admin/api/super/bookings/export', '_blank'); }
+        
+        // Mock loaders for structure
+        window.loadHealthData = async function() {
+            try {
+                const res = await fetch('/admin/api/super/health');
+                const data = await res.json();
+                document.getElementById('dbStatus').textContent = data.db_status || "Online";
+                document.getElementById('dbStatus').style.color = "var(--success)";
+            } catch(e) {
+                document.getElementById('dbStatus').textContent = "Unknown";
+            }
+        };
+        window.loadAuditLogs = async function() {
+            try {
+                const res = await fetch('/admin/api/super/audit_logs');
+                const data = await res.json();
+                const tbody = document.getElementById('auditLogTableBody');
+                tbody.innerHTML = '';
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(log => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${log.created_at || log.timestamp || '-'}</td><td>${log.admin_username || log.admin || '-'}</td><td>${log.action || '-'}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;">No audit logs found.</td></tr>';
+                }
+            } catch(e) { document.getElementById('auditLogTableBody').innerHTML = '<tr><td colspan="3" style="text-align:center;padding:2rem;">Error loading logs.</td></tr>'; }
+        };
+        window.loadPlatformSettings = async function() {
+            try {
+                const res = await fetch('/admin/api/super/settings');
+                const data = await res.json();
+                const tbody = document.getElementById('platformSettingsBody');
+                tbody.innerHTML = '';
+                const settings = data.settings || data;
+                if (Array.isArray(settings) && settings.length > 0) {
+                    settings.forEach(s => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><strong>${s.key}</strong></td><td>${s.value}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else if (typeof settings === 'object') {
+                    Object.entries(settings).forEach(([k, v]) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><strong>${k}</strong></td><td>${v}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;padding:2rem;">No settings found.</td></tr>';
+                }
+            } catch(e) { document.getElementById('platformSettingsBody').innerHTML = '<tr><td colspan="2" style="text-align:center;padding:2rem;">Error loading settings.</td></tr>'; }
+        };
+
+        // --- Extended Tab Loaders ---
+        window.loadUsageData = async function() {
+            const tbody = document.getElementById('usageTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/super/usage');
+                const data = await res.json();
+                tbody.innerHTML = '';
+                if (data.usage && data.usage.length > 0) {
+                    data.usage.forEach(u => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${u.id}</td><td>${u.site_id}</td><td>${u.bot_id}</td>
+                            <td>${u.messages}</td><td>${u.period}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-icon" onclick="openEditUsageModal(${u.id}, ${u.site_id}, ${u.bot_id}, ${u.messages}, '${u.period}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon" style="color:var(--danger);" onclick="deleteUsage(${u.id})"><i class="fas fa-trash"></i></button>
+                            </td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No usage records found.</td></tr>'; }
+            } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Error loading usage.</td></tr>'; }
+        };
+
+        window.loadSuspensionsData = async function() {
+            const tbody = document.getElementById('suspensionsTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/super/suspensions');
+                const data = await res.json();
+                tbody.innerHTML = '';
+                if (data.suspensions && data.suspensions.length > 0) {
+                    data.suspensions.forEach(s => {
+                        const badge = s.status === 'resolved' ? `<span class="badge active">Resolved</span>` : `<span class="badge inactive">Active</span>`;
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${s.id}</td><td>${s.site_id}</td><td>${s.bot_id}</td>
+                            <td>${s.reason}</td><td>${badge}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-icon" onclick="openEditSuspensionModal(${s.id}, ${s.site_id}, ${s.bot_id}, '${s.reason}', '${s.status}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon" style="color:var(--danger);" onclick="deleteSuspension(${s.id})"><i class="fas fa-trash"></i></button>
+                            </td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No suspensions found.</td></tr>'; }
+            } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Error loading suspensions.</td></tr>'; }
+        };
+
+        window.loadConversationsData = async function() {
+            const tbody = document.getElementById('conversationsTableBody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/super/conversations');
+                const data = await res.json();
+                tbody.innerHTML = '';
+                if (data.conversations && data.conversations.length > 0) {
+                    data.conversations.forEach(c => {
+                        const badge = c.status === 'active' ? `<span class="badge active">Active</span>` : `<span class="badge inactive">${c.status}</span>`;
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${c.id}</td><td>${c.site_id}</td><td>${c.bot_id}</td>
+                            <td>${c.user_identifier || c.user || '-'}</td>
+                            <td>${c.started_at || c.created_at || '-'}</td>
+                            <td>${badge}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-icon" style="color:var(--danger);" onclick="deleteConversation(${c.id})"><i class="fas fa-trash"></i></button>
+                            </td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">No conversations found.</td></tr>'; }
+            } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">Error loading conversations.</td></tr>'; }
+        };
+
+        window.loadIntegrationsData = async function() {
+            const tbody = document.getElementById('integrationsTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/super/integrations');
+                const data = await res.json();
+                tbody.innerHTML = '';
+                if (data.integrations && data.integrations.length > 0) {
+                    data.integrations.forEach(i => {
+                        const badge = i.status === 'active' ? `<span class="badge active">Active</span>` : `<span class="badge inactive">Inactive</span>`;
+                        const configStr = typeof i.config === 'object' ? JSON.stringify(i.config) : i.config;
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${i.id}</td><td>${i.site_id}</td><td>${i.type}</td>
+                            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${configStr}</td>
+                            <td>${badge}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-icon" onclick="openEditIntegrationModal(${i.id}, ${i.site_id}, '${i.type}', '${configStr}', '${i.status}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon" style="color:var(--danger);" onclick="deleteIntegration(${i.id})"><i class="fas fa-trash"></i></button>
+                            </td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No integrations found.</td></tr>'; }
+            } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Error loading integrations.</td></tr>'; }
+        };
+
+        window.loadAnnouncementsData = async function() {
+            const tbody = document.getElementById('announcementsTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/super/announcements');
+                const data = await res.json();
+                tbody.innerHTML = '';
+                if (data.announcements && data.announcements.length > 0) {
+                    data.announcements.forEach(a => {
+                        const badge = a.status === 'active' ? `<span class="badge active">Active</span>` : `<span class="badge inactive">Inactive</span>`;
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${a.id}</td><td>${a.site_id}</td><td>${a.title}</td>
+                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.message}</td>
+                            <td>${badge}</td>
+                            <td style="text-align:right;">
+                                <button class="btn-icon" onclick="openEditAnnouncementModal(${a.id}, ${a.site_id}, '${a.title}', '${a.message}', '${a.status}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon" style="color:var(--danger);" onclick="deleteAnnouncement(${a.id})"><i class="fas fa-trash"></i></button>
+                            </td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No announcements found.</td></tr>'; }
+            } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Error loading announcements.</td></tr>'; }
+        };
+        
+
+        // --- Edit Site Modal ---
+        window.openEditSiteModal = async function(siteId, name, domain) {
+            document.getElementById('editSiteId').value = siteId;
+            document.getElementById('editSiteName').value = name;
+            document.getElementById('editSiteDomain').value = domain || '';
+            const planSel = document.getElementById('editSitePlan');
+            planSel.innerHTML = '<option>Loading...</option>';
+            try {
+                const res = await fetch('/admin/api/super/plans');
+                const data = await res.json();
+                planSel.innerHTML = '';
+                (data.plans || []).forEach(p => planSel.appendChild(new Option(p.name, p.id)));
+            } catch(e) { planSel.innerHTML = '<option value="">N/A</option>'; }
+            openEditModal();
+        };
+
+        // Edit site form submit
+        document.addEventListener('DOMContentLoaded', function() {
+            const editSiteForm = document.getElementById('editSiteForm');
+            if (editSiteForm && !editSiteForm._bound) {
+                editSiteForm._bound = true;
+                editSiteForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('editSiteId').value;
+                    const btn = this.querySelector('button[type=\"submit\"]');
+                    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const res = await fetch('/admin/api/super/sites/' + id, {
+                            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: document.getElementById('editSiteName').value, domain: document.getElementById('editSiteDomain').value, plan_id: document.getElementById('editSitePlan').value })
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success) { showToast('Client updated!'); closeEditModal(); window.loadDashboardData(); }
+                        else showToast(data.error || 'Update failed', 'error');
+                    } catch(e2) { showToast('Network error', 'error'); }
+                    finally { btn.disabled = false; btn.innerText = 'Save Changes'; }
+                };
+            }
+
+            // Bot Form
+            const botForm = document.getElementById('botForm');
+            if (botForm && !botForm._bound) {
+                botForm._bound = true;
+                botForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('botId').value;
+                    const payload = { name: document.getElementById('botName').value, site_id: document.getElementById('botSiteId').value, status: document.getElementById('botStatus').value };
+                    const btn = this.querySelector('button[type=\"submit\"]');
+                    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const url = id ? '/admin/api/super/bots/' + id : '/admin/api/super/bots';
+                        const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const data = await res.json();
+                        if (res.ok && (data.success || data.id)) { showToast(id ? 'Bot updated!' : 'Bot created!'); closeBotModal(); window.loadBotsData(); }
+                        else showToast(data.error || 'Save failed', 'error');
+                    } catch(e2) { showToast('Network error', 'error'); }
+                    finally { btn.disabled = false; btn.innerText = 'Save Bot'; }
+                };
+            }
+
+            // Billing Form
+            const billingForm = document.getElementById('billingForm');
+            if (billingForm && !billingForm._bound) {
+                billingForm._bound = true;
+                billingForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('billingId').value;
+                    const payload = { site_id: document.getElementById('billingSiteId').value, plan_id: document.getElementById('billingPlanId').value, status: document.getElementById('billingStatus').value, amount: document.getElementById('billingAmount').value, paid: document.getElementById('billingPaid').value === 'true', due_date: document.getElementById('billingDueDate').value };
+                    const btn = this.querySelector('button[type=\"submit\"]');
+                    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const url = id ? '/admin/api/super/billing/' + id : '/admin/api/super/billing';
+                        const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const data = await res.json();
+                        if (res.ok && (data.success || data.id)) { showToast(id ? 'Billing updated!' : 'Billing created!'); closeBillingModal(); window.loadBillingData(); }
+                        else showToast(data.error || 'Save failed', 'error');
+                    } catch(e2) { showToast('Network error', 'error'); }
+                    finally { btn.disabled = false; btn.innerText = 'Save Billing'; }
+                };
+            }
+
+            // Usage Form
+            const usageForm = document.getElementById('usageForm');
+            if (usageForm && !usageForm._bound) {
+                usageForm._bound = true;
+                usageForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('usageId').value;
+                    const payload = { site_id: document.getElementById('usageSiteId').value, bot_id: document.getElementById('usageBotId').value, messages: document.getElementById('usageMessages').value, period: document.getElementById('usagePeriod').value };
+                    const btn = this.querySelector('button[type=\"submit\"]');
+                    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const url = id ? '/admin/api/super/usage/' + id : '/admin/api/super/usage';
+                        const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const data = await res.json();
+                        if (res.ok && (data.success || data.id)) { showToast(id ? 'Usage updated!' : 'Usage created!'); closeUsageModal(); window.loadUsageData(); }
+                        else showToast(data.error || 'Save failed', 'error');
+                    } catch(e2) { showToast('Network error', 'error'); }
+                    finally { btn.disabled = false; btn.innerText = 'Save Usage'; }
+                };
+            }
+
+            // Suspension Form
+            const suspensionForm = document.getElementById('suspensionForm');
+            if (suspensionForm && !suspensionForm._bound) {
+                suspensionForm._bound = true;
+                suspensionForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('suspensionId').value;
+                    const payload = { site_id: document.getElementById('suspensionSiteId').value, bot_id: document.getElementById('suspensionBotId').value, reason: document.getElementById('suspensionReason').value, status: document.getElementById('suspensionStatus').value };
+                    const btn = this.querySelector('button[type=\"submit\"]');
+                    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const url = id ? '/admin/api/super/suspensions/' + id : '/admin/api/super/suspensions';
+                        const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const data = await res.json();
+                        if (res.ok && (data.success || data.id)) { showToast(id ? 'Suspension updated!' : 'Suspension created!'); closeSuspensionModal(); window.loadSuspensionsData(); }
+                        else showToast(data.error || 'Save failed', 'error');
+                    } catch(e2) { showToast('Network error', 'error'); }
+                    finally { btn.disabled = false; btn.innerText = 'Save Suspension'; }
+                };
+            }
+
+            // Integration Form
+            const integrationForm = document.getElementById('integrationForm');
+            if (integrationForm && !integrationForm._bound) {
+                integrationForm._bound = true;
+                integrationForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('integrationId').value;
+                    const payload = { site_id: document.getElementById('integrationSiteId').value, type: document.getElementById('integrationType').value, config: document.getElementById('integrationConfig').value, status: document.getElementById('integrationStatus').value };
+                    const btn = this.querySelector('button[type=\"submit\"]');
+                    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const url = id ? '/admin/api/super/integrations/' + id : '/admin/api/super/integrations';
+                        const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const data = await res.json();
+                        if (res.ok && (data.success || data.id)) { showToast(id ? 'Integration updated!' : 'Integration created!'); closeIntegrationModal(); window.loadIntegrationsData(); }
+                        else showToast(data.error || 'Save failed', 'error');
+                    } catch(e2) { showToast('Network error', 'error'); }
+                    finally { btn.disabled = false; btn.innerText = 'Save Integration'; }
+                };
+            }
+
+            // Announcement Form
+            const announcementForm = document.getElementById('announcementForm');
+            if (announcementForm && !announcementForm._bound) {
+                announcementForm._bound = true;
+                announcementForm.onsubmit = async function(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('announcementId').value;
+                    const payload = { site_id: document.getElementById('announcementSiteId').value, title: document.getElementById('announcementTitle').value, message: document.getElementById('announcementMessage').value, status: document.getElementById('announcementStatus').value };
+                    const btn = this.querySelector('button[type=\"submit\"]');
+                    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    try {
+                        const url = id ? '/admin/api/super/announcements/' + id : '/admin/api/super/announcements';
+                        const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        const data = await res.json();
+                        if (res.ok && (data.success || data.id)) { showToast(id ? 'Announcement updated!' : 'Announcement created!'); closeAnnouncementModal(); window.loadAnnouncementsData(); }
+                        else showToast(data.error || 'Save failed', 'error');
+                    } catch(e2) { showToast('Network error', 'error'); }
+                    finally { btn.disabled = false; btn.innerText = 'Save Announcement'; }
+                };
+            }
+        });
+
+        // Edit modal openers for extended tabs
+        function openEditUsageModal(id, site_id, bot_id, messages, period) { document.getElementById('usageId').value=id; document.getElementById('usageSiteId').value=site_id; document.getElementById('usageBotId').value=bot_id; document.getElementById('usageMessages').value=messages; document.getElementById('usagePeriod').value=period; document.getElementById('usageModal').style.display='flex'; }
+        function openEditSuspensionModal(id, site_id, bot_id, reason, status) { document.getElementById('suspensionId').value=id; document.getElementById('suspensionSiteId').value=site_id; document.getElementById('suspensionBotId').value=bot_id; document.getElementById('suspensionReason').value=reason; document.getElementById('suspensionStatus').value=status; document.getElementById('suspensionModal').style.display='flex'; }
+        function openEditIntegrationModal(id, site_id, type, config, status) { document.getElementById('integrationId').value=id; document.getElementById('integrationSiteId').value=site_id; document.getElementById('integrationType').value=type; document.getElementById('integrationConfig').value=config; document.getElementById('integrationStatus').value=status; document.getElementById('integrationModal').style.display='flex'; }
+        function openEditAnnouncementModal(id, site_id, title, message, status) { document.getElementById('announcementId').value=id; document.getElementById('announcementSiteId').value=site_id; document.getElementById('announcementTitle').value=title; document.getElementById('announcementMessage').value=message; document.getElementById('announcementStatus').value=status; document.getElementById('announcementModal').style.display='flex'; }
+
+        // Clear ID on "Add New" modal opens
+        const _origOpenBotModal = openBotModal; openBotModal = function() { document.getElementById('botId').value=''; document.getElementById('botForm').reset(); _origOpenBotModal(); };
+        const _origOpenBillingModal = openBillingModal; openBillingModal = function() { document.getElementById('billingId').value=''; document.getElementById('billingForm').reset(); _origOpenBillingModal(); };
+        const _origOpenUsageModal = openUsageModal; openUsageModal = function() { document.getElementById('usageId').value=''; document.getElementById('usageForm').reset(); _origOpenUsageModal(); };
+        const _origOpenSuspensionModal = openSuspensionModal; openSuspensionModal = function() { document.getElementById('suspensionId').value=''; document.getElementById('suspensionForm').reset(); _origOpenSuspensionModal(); };
+        const _origOpenIntegrationModal = openIntegrationModal; openIntegrationModal = function() { document.getElementById('integrationId').value=''; document.getElementById('integrationForm').reset(); _origOpenIntegrationModal(); };
+        const _origOpenAnnouncementModal = openAnnouncementModal; openAnnouncementModal = function() { document.getElementById('announcementId').value=''; document.getElementById('announcementForm').reset(); _origOpenAnnouncementModal(); };
+
+        // Delete helpers
+        async function deleteUsage(id) { if(!confirm('Delete this usage record?')) return; await fetch('/admin/api/super/usage/'+id,{method:'DELETE'}); showToast('Usage deleted'); window.loadUsageData(); }
+        async function deleteSuspension(id) { if(!confirm('Delete this suspension?')) return; await fetch('/admin/api/super/suspensions/'+id,{method:'DELETE'}); showToast('Suspension deleted'); window.loadSuspensionsData(); }
+        async function deleteConversation(id) { if(!confirm('Delete this conversation?')) return; await fetch('/admin/api/super/conversations/'+id,{method:'DELETE'}); showToast('Conversation deleted'); window.loadConversationsData(); }
+        async function deleteIntegration(id) { if(!confirm('Delete this integration?')) return; await fetch('/admin/api/super/integrations/'+id,{method:'DELETE'}); showToast('Integration deleted'); window.loadIntegrationsData(); }
+        async function deleteAnnouncement(id) { if(!confirm('Delete this announcement?')) return; await fetch('/admin/api/super/announcements/'+id,{method:'DELETE'}); showToast('Announcement deleted'); window.loadAnnouncementsData(); }
+
+        // Plan Modal logic
+        let _planTargetSiteId = null;
+        window.openPlanModalForSite = async function(siteId) {
+            _planTargetSiteId = siteId;
+            const dropdown = document.getElementById('planDropdown');
+            dropdown.innerHTML = '<option>Loading plans...</option>';
+            openPlanModal();
+            try {
+                const res = await fetch('/admin/api/super/plans');
+                const data = await res.json();
+                dropdown.innerHTML = '';
+                (data.plans || []).forEach(p => dropdown.appendChild(new Option(p.name, p.id)));
+            } catch(e) { dropdown.innerHTML = '<option value="">Error loading</option>'; }
+        };
+        window.savePlanChange = async function() {
+            const planId = document.getElementById('planDropdown').value;
+            if (!_planTargetSiteId || !planId) { showToast('No site or plan selected','error'); return; }
+            try {
+                const res = await fetch('/admin/api/super/sites/'+_planTargetSiteId, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({plan_id:planId}) });
+                const data = await res.json();
+                if (res.ok && data.success) { showToast('Plan updated!'); closePlanModal(); window.loadDashboardData(); }
+                else showToast(data.error||'Update failed','error');
+            } catch(e) { showToast('Network error','error'); }
+        };
+
+        // Blueprints logic
+        let selectedBlueprint = null;
+        window.loadTemplateFiles = async function() {
+            const res = await fetch('/admin/api/super/template_files');
+            const data = await res.json();
+            const list = document.getElementById('templateFileList');
+            if (!data.files || data.files.length === 0) { list.innerHTML = '<p style="padding:2rem;color:var(--text-secondary)">No blueprints found</p>'; return; }
+            list.innerHTML = data.files.map(file => `
+                <div class="blueprint-item" onclick="selectBlueprint('${file.filename}', this)" style="padding:1rem; border-bottom:1px solid var(--border); cursor:pointer;">
+                    <div style="font-weight:600;"><i class="fas fa-file-code" style="color:var(--primary); margin-right:6px"></i> ${file.template_name}</div>
+                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">${file.intent_count} Intents mapped</div>
+                </div>`).join('');
+        };
+        
+        window.selectBlueprint = function(name, element) {
+            document.querySelectorAll('.blueprint-item').forEach(el => el.style.background = 'transparent');
+            element.style.background = 'var(--primary-light)';
+            selectedBlueprint = name;
+            document.getElementById('selectedFileName').value = name;
+        };
+
+        window.deployBlueprint = async function() {
+            const siteId = document.getElementById('siteSelectTemplates').value;
+            if (!siteId || !selectedBlueprint) { showToast("Select tenant and blueprint", "error"); return; }
+            const res = await fetch('/admin/api/super/import_template', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ site_id: siteId, filename: selectedBlueprint })
+            });
+            if (res.ok) { showToast("Blueprint applied!"); loadAssignedIntents(siteId); } 
+            else { showToast("Deployment failed", "error"); }
+        };
+
+        window.loadAssignedIntents = async function(siteId) {
+            const card = document.getElementById('intentManagementCard');
+            const tbody = document.getElementById('activeIntentsList');
+            if (!siteId) { card.style.display = 'none'; return; }
+            const res = await fetch(`/admin/api/client/intents?site_id=${siteId}`);
+            const data = await res.json();
+            card.style.display = 'block';
+            if (!data.intents || data.intents.length === 0) { tbody.innerHTML = '<tr><td style="padding:1rem;color:var(--text-secondary)">No intents assigned</td></tr>'; return; }
+            tbody.innerHTML = data.intents.map(i => `<tr><td style="padding:0.9rem;"><strong>${i.intent_name}</strong></td></tr>`).join('');
+        };
     </script>
 </body>
 </html>

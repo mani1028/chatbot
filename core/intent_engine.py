@@ -5,6 +5,8 @@ import logging
 from datetime import datetime
 from sqlalchemy import or_
 from collections import defaultdict
+import aiohttp
+import asyncio
 
 # Core imports
 from database import db
@@ -56,20 +58,54 @@ class IntentEngine:
             return 0.6
         return 1.0
 
-    def detect_intent(self, message: str, site_id: int) -> dict:
+    async def send_crm_webhook(self, payload, headers):
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(CRM_WEBHOOK_URL, json=payload, headers=headers, timeout=2) as response:
+                    if response.status != 200:
+                        self.logger.error(f"CRM Webhook failed with status {response.status}")
+            except Exception as e:
+                self.logger.error(f"CRM Webhook failed: {e}")
+
+    async def _handle_handoffs(self, intent_obj, message, site_id):
+        """Triggers external webhooks for human/lead intents."""
+        intent_type = (intent_obj.intent_type or 'AUTO').upper()
+        if intent_type == 'HUMAN':
+            payload = {
+                'intent': intent_obj.intent_name,
+                'message': message,
+                'site_id': site_id
+            }
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': CRM_WEBHOOK_KEY
+            }
+            await self.send_crm_webhook(payload, headers)
+
+    def detect_intent(self, message: str, site_id: int, history: list = None) -> dict:
         """
         Detect intent for a given site_id and message.
         """
+
         # Basic guards
         if not message or (not str(site_id).isdigit() and not isinstance(site_id, int)):
             return self._fallback_response(0.0)
 
-        tokens = tokenize(message)
+        # Combine history with the current message for context-aware tokenization
+        full_context = ' '.join([h['message'] for h in history]) + ' ' + message if history else message
+        tokens = tokenize(full_context)
         if not tokens:
             return self._fallback_response(0.0)
 
         # Load intents for specific site and global intents (site_id = 0)
         intents = Intent.query.filter(or_(Intent.site_id == 0, Intent.site_id == site_id)).all()
+
+        # Handle medium confidence responses
+        if history and history[-1].get('intent_name') == 'clarification':
+            if message.lower() in ['yes', 'yeah', 'yep']:
+                return self._execute_intent(history[-1].get('intent'))
+            elif message.lower() in ['no', 'nope']:
+                return self._fallback_response(0.0)
 
         best = {
             'intent': None,
@@ -125,7 +161,7 @@ class IntentEngine:
                             best_tok_score = score
                     
                     # Apply fuzzy threshold
-                    if best_tok_score * 100 < FUZZY_TOKEN_THRESHOLD:
+                    if round(best_tok_score * 100, 2) <= FUZZY_TOKEN_THRESHOLD:
                         best_tok_score = 0.0
                     
                     matched_weight += token_weights[idx] * best_tok_score
@@ -199,31 +235,15 @@ class IntentEngine:
             'confidence': confidence
         }
 
-    def _handle_handoffs(self, intent_obj, message, site_id):
-        """Triggers external webhooks for human/lead intents."""
-        intent_type = (intent_obj.intent_type or 'AUTO').upper()
-        if intent_type == 'HUMAN':
-            try:
-                payload = {
-                    'intent': intent_obj.intent_name,
-                    'message': message,
-                    'site_id': site_id,
-                    'timestamp': datetime.utcnow().isoformat()
-                }
-                headers = {'X-Webhook-Key': CRM_WEBHOOK_KEY}
-                requests.post(CRM_WEBHOOK_URL, json=payload, headers=headers, timeout=2)
-            except Exception as e:
-                self.logger.error(f"CRM Webhook failed: {e}")
-
-    def _log_unanswered(self, message):
+    def _log_unanswered(self, message, site_id):
         """Persists queries that the bot couldn't answer for future training."""
         try:
-            q = UnansweredQuestion.query.filter_by(question=message).first()
+            q = UnansweredQuestion.query.filter_by(question=message, site_id=site_id).first()
             if q:
                 q.times_asked = (q.times_asked or 1) + 1
                 q.last_asked = datetime.utcnow()
             else:
-                q = UnansweredQuestion(question=message, times_asked=1, last_asked=datetime.utcnow())
+                q = UnansweredQuestion(question=message, site_id=site_id, times_asked=1, last_asked=datetime.utcnow())
                 db.session.add(q)
             db.session.commit()
         except Exception as e:
@@ -232,5 +252,5 @@ class IntentEngine:
 
 # Global instance for easy import
 _engine = IntentEngine()
-def detect_intent(message: str, site_id: int) -> dict:
-    return _engine.detect_intent(message, site_id)
+def detect_intent(message: str, site_id: int, history: list = None) -> dict:
+    return _engine.detect_intent(message, site_id, history)

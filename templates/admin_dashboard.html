@@ -192,6 +192,17 @@
                             <div><b>Success Rate:</b> <span id="analyticsSuccess">-</span>%</div>
                         </div>
                     </div>
+                    <div class="card" style="max-width: 700px;">
+                        <div class="card-body">
+                            <h3>Trending Questions</h3>
+                            <canvas id="trendingChart" height="180"></canvas>
+                            <ul id="trendingQuestions"></ul>
+                            <h3 style="margin-top:2em;">Frequent Failure Points</h3>
+                            <canvas id="failureChart" height="180"></canvas>
+                            <ul id="failurePoints"></ul>
+                        </div>
+                    </div>
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                 </div>
 
                 <!-- Leads Tab -->
@@ -282,8 +293,16 @@
                                 async function loadAnalytics() {
                                     const totalSpan = document.getElementById('analyticsTotal');
                                     const successSpan = document.getElementById('analyticsSuccess');
+                                    const trendingList = document.getElementById('trendingQuestions');
+                                    const failureList = document.getElementById('failurePoints');
+                                    const trendingChart = document.getElementById('trendingChart');
+                                    const failureChart = document.getElementById('failureChart');
                                     totalSpan.textContent = '-';
                                     successSpan.textContent = '-';
+                                    trendingList.innerHTML = '<li>Loading...</li>';
+                                    failureList.innerHTML = '<li>Loading...</li>';
+                                    if(window.trendingChartObj) { window.trendingChartObj.destroy(); }
+                                    if(window.failureChartObj) { window.failureChartObj.destroy(); }
                                     try {
                                         const url = new URL('/admin/api/client/analytics', window.location.origin);
                                         const siteId = new URLSearchParams(window.location.search).get('site_id');
@@ -293,8 +312,55 @@
                                         if(res.ok) {
                                             totalSpan.textContent = data.total_messages;
                                             successSpan.textContent = data.success_rate;
+                                            trendingList.innerHTML = '';
+                                            let trendLabels = [];
+                                            let trendCounts = [];
+                                            (data.trending_questions || []).forEach(q => {
+                                                trendingList.innerHTML += `<li>${q.question} <span style='color:#888'>(x${q.count})</span></li>`;
+                                                trendLabels.push(q.question);
+                                                trendCounts.push(q.count);
+                                            });
+                                            if (!data.trending_questions || data.trending_questions.length === 0) trendingList.innerHTML = '<li>No trending questions.</li>';
+                                            window.trendingChartObj = new Chart(trendingChart, {
+                                                type: 'bar',
+                                                data: {
+                                                    labels: trendLabels,
+                                                    datasets: [{
+                                                        label: 'Trending Questions',
+                                                        data: trendCounts,
+                                                        backgroundColor: 'rgba(79,70,229,0.7)'
+                                                    }]
+                                                },
+                                                options: {responsive:true, plugins:{legend:{display:false}}}
+                                            });
+                                            failureList.innerHTML = '';
+                                            let failLabels = [];
+                                            let failCounts = [];
+                                            (data.failure_points || []).forEach(q => {
+                                                failureList.innerHTML += `<li>${q.question} <span style='color:#888'>(x${q.count})</span></li>`;
+                                                failLabels.push(q.question);
+                                                failCounts.push(q.count);
+                                            });
+                                            if (!data.failure_points || data.failure_points.length === 0) failureList.innerHTML = '<li>No frequent failures.</li>';
+                                            window.failureChartObj = new Chart(failureChart, {
+                                                type: 'bar',
+                                                data: {
+                                                    labels: failLabels,
+                                                    datasets: [{
+                                                        label: 'Failure Points',
+                                                        data: failCounts,
+                                                        backgroundColor: 'rgba(239,68,68,0.7)'
+                                                    }]
+                                                },
+                                                options: {responsive:true, plugins:{legend:{display:false}}}
+                                            });
                                         }
-                                    } catch(e) { totalSpan.textContent = 'Error'; successSpan.textContent = 'Error'; }
+                                    } catch(e) {
+                                        totalSpan.textContent = 'Error';
+                                        successSpan.textContent = 'Error';
+                                        trendingList.innerHTML = '<li>Error loading data.</li>';
+                                        failureList.innerHTML = '<li>Error loading data.</li>';
+                                    }
                                 }
 
                                 // --- Leads Loader ---
@@ -371,28 +437,32 @@
                             document.getElementById('adminModalTitle').textContent = 'Edit Admin';
                             document.getElementById('adminModal').style.display = 'flex';
                         }
-                        document.getElementById('adminForm').addEventListener('submit', async (e) => {
-                            e.preventDefault();
-                            const btn = e.target.querySelector('button[type="submit"]');
-                            btn.innerHTML = "Saving...";
-                            btn.disabled = true;
-                            const id = document.getElementById('adminId').value;
-                            const payload = {
-                                username: document.getElementById('adminUsername').value,
-                                password: document.getElementById('adminPassword').value
-                            };
-                            try {
-                                const res = await fetch(`/admin/api/super/admins/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                                if(res.ok) {
-                                    showToast('Admin updated successfully!');
-                                    closeAdminModal();
-                                    loadAdmins();
-                                } else {
-                                    showToast('Failed to update admin', 'error');
-                                }
-                            } catch(err) { showToast('Network error occurred', 'error'); }
-                            finally { btn.innerHTML = "Save Changes"; btn.disabled = false; }
-                        });
+                        const adminForm = document.getElementById('adminForm');
+                        if (adminForm) {
+                            adminForm.addEventListener('submit', async (e) => {
+                                e.preventDefault();
+                                const btn = e.target.querySelector('button[type="submit"]');
+                                btn.innerHTML = "Saving...";
+                                btn.disabled = true;
+                                const id = document.getElementById('adminId').value;
+                                const payload = {
+                                    username: document.getElementById('adminUsername').value,
+                                    password: document.getElementById('adminPassword').value
+                                };
+                                try {
+                                    const res = await fetch(`/admin/api/super/admins/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                                    if(res.ok) {
+                                        showToast('Admin updated successfully!');
+                                        closeAdminModal();
+                                        loadAdmins();
+                                    } else {
+                                        showToast('Failed to update admin', 'error');
+                                    }
+                                } catch(err) { showToast('Network error occurred', 'error'); }
+                                finally { btn.innerHTML = "Save Changes"; btn.disabled = false; }
+                            });
+                        }
+
                         async function impersonateAdmin(siteId) {
                             if(!confirm('Impersonate this client admin?')) return;
                             try {
@@ -407,18 +477,21 @@
                             } catch(err) { showToast('Network error occurred', 'error'); }
                         }
                         // --- Site Status Toggle ---
-                        document.getElementById('toggleStatusBtn').addEventListener('click', async () => {
-                            try {
-                                const res = await fetch(`/admin/api/super/sites/${site_id}/status`, { method: 'PUT' });
-                                const data = await res.json();
-                                if(res.ok && data.success) {
-                                    showToast('Site status updated!');
-                                    loadStats();
-                                } else {
-                                    showToast('Failed to update status', 'error');
-                                }
-                            } catch(err) { showToast('Network error occurred', 'error'); }
-                        });
+                        const toggleStatusBtn = document.getElementById('toggleStatusBtn');
+                        if (toggleStatusBtn) {
+                            toggleStatusBtn.addEventListener('click', async () => {
+                                try {
+                                    const res = await fetch(`/admin/api/super/sites/${site_id}/status`, { method: 'PUT' });
+                                    const data = await res.json();
+                                    if(res.ok && data.success) {
+                                        showToast('Site status updated!');
+                                        loadStats();
+                                    } else {
+                                        showToast('Failed to update status', 'error');
+                                    }
+                                } catch(err) { showToast('Network error occurred', 'error'); }
+                            });
+                        }
                         // --- Tab Loader ---
                         function switchTab(tabId, element) {
                             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -546,12 +619,8 @@
                     <div class="code-block">
                         <button class="btn btn-primary" onclick="copyEmbed()" style="position:absolute; top:10px; right:10px; padding: 5px 10px; font-size: 0.8rem;">Copy Code</button>
         <pre id="embedCode" style="margin:0;">&lt;script&gt;
-            window.ChatbotXConfig = {
-                siteKey: "{{ site.public_key }}", // Dynamically rendered
-                apiUrl: "{{ api_url }}" // Dynamic API URL
-            };
-        &lt;/script&gt;
-        &lt;script src="https://cdn.yourchatbot.com/widget.v1.js" defer&gt;&lt;/script&gt;</pre>
+    &lt;!-- ChatbotX Official Installation --&gt;
+    &lt;script src="{{ api_url }}/widget.js" data-site-key="{{ site.public_key }}" defer&gt;&lt;/script&gt;</pre>
                     </div>
                 </div>
             </div>
@@ -582,6 +651,14 @@
                 <div class="form-group">
                     <label>Training Phrases (comma-separated)</label>
                     <input type="text" id="intentPhrases" name="phrases" class="form-control" placeholder="e.g. what is the cost, pricing, fee" required>
+                </div>
+                <div class="form-group">
+                    <label>Intent Type</label>
+                    <select id="intentType" name="intent_type" class="form-control">
+                        <option value="INFO">Standard Text Reply</option>
+                        <option value="LEAD">Lead Capture Form</option>
+                        <option value="HUMAN">Live Agent Handoff</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>Bot Response Text</label>
@@ -813,8 +890,9 @@
 
             const payload = {
                 intent_name: document.getElementById('intentName').value,
+                intent_type: document.getElementById('intentType').value, // <-- ADD THIS LINE
                 response: document.getElementById('intentResponse').value,
-                phrases: phrasesArray  // <--- THIS IS THE MISSING PIECE
+                phrases: phrasesArray
             };
             const url = id ? `/admin/api/client/intents/${id}` : '/admin/api/client/intents';
             const method = id ? 'PUT' : 'POST';

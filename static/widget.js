@@ -6,16 +6,12 @@
 (function() {
 // 1. ENVIRONMENT SETUP
     const configObj = window.ChatbotXConfig || {};
-    
     // Fallback for legacy scripts
-    const SCRIPT = document.currentScript || document.getElementById('chatbotx-script') || document.querySelector('script[src*="widget.js"]');
-                   
-    // Use public siteKey for secure authentication
-    const SITE_KEY = configObj.siteKey;
-    const API_BASE = configObj.apiUrl || (SCRIPT ? new URL(SCRIPT.src).origin : "https://api.chatbotx.com");
-
+    const SCRIPT = document.currentScript || document.querySelector('script[data-site-key]');
+    const SITE_KEY = SCRIPT ? SCRIPT.getAttribute("data-site-key") : null;
+    const API_BASE = SCRIPT ? new URL(SCRIPT.src).origin : window.location.origin;
     if (!SITE_KEY) {
-        console.error("ChatbotX: Missing siteKey in configuration.");
+            console.error("ChatbotX: Missing data-site-key in script tag.");
         return;
     }
     
@@ -37,9 +33,14 @@
         link.href = `${API_BASE}/static/style.css`;
         document.head.appendChild(link);
 
-        // Load Socket.IO
-            // No need to load socket.io anymore
+        // FIX: Load Socket.IO client from CDN instead of Flask server
+        const script = document.createElement('script');
+        script.src = "https://cdn.socket.io/4.7.2/socket.io.min.js";
+        script.onload = () => {
             init();
+            connectSocket();
+        };
+        document.head.appendChild(script);
     }
 
     // 3. INITIALIZATION
@@ -49,12 +50,24 @@
             const res = await fetch(`${API_BASE}/api/widget-settings?site_key=${SITE_KEY}`);
             const data = await res.json();
             config = { ...config, ...data };
-            
             buildUI();
-                // connectSocket removed; no longer needed
         } catch (e) {
             console.error("ChatbotX: Failed to init", e);
         }
+    }
+
+    // 5. SOCKETIO CLIENT
+    function connectSocket() {
+        if (typeof io === 'undefined') return;
+        // Explicitly set path and transports to avoid 400 error
+        const socket = io(API_BASE, {
+            path: '/socket.io',
+            transports: ['websocket', 'polling']
+        });
+        socket.on('agent_handoff', function(data) {
+            // Show notification or update UI for agent handoff
+            appendMessage('A human agent has joined the chat.', 'bot');
+        });
     }
 
     // 4. UI CONSTRUCTION
@@ -80,8 +93,6 @@
                     <button class="widget-close">×</button>
                 </div>
                 <div class="widget-body" id="chat-body">
-                    <!-- Initial Message -->
-                    <div class="msg bot">${config.initial_message}</div>
                 </div>
                 <div class="widget-footer">
                     <input type="text" class="widget-input" id="chat-input" placeholder="Type a message...">
@@ -126,6 +137,7 @@
         }
     }
 
+
     async function sendMessage() {
         const input = document.getElementById('chat-input');
         if (!input) return;
@@ -136,27 +148,119 @@
         input.value = '';
 
         // Use REST API to send message
-        try {
-            const res = await fetch(`${API_BASE}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    site_id: SITE_ID,
-                    message: text,
-                    session_id: sessionId
-                })
-            });
-
-            const data = await res.json();
-            if (data.error) {
-                appendMessage("⚠️ Error: " + data.error, 'bot');
-            } else {
-                appendMessage(data.reply, 'bot');
+        let retryCount = 0;
+        let success = false;
+        let lastError = null;
+        while (retryCount < 2 && !success) {
+            try {
+                const res = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        site_key: SITE_KEY,
+                        message: text,
+                        session_id: sessionId,
+                        page_url: window.location.href
+                    })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    appendErrorWithRetry("⚠️ Error: " + data.error, text);
+                    lastError = data.error;
+                } else if (data.intent_type && data.intent_type.toUpperCase() === 'LEAD') {
+                    renderLeadForm();
+                    success = true;
+                } else {
+                    appendMessage(data.reply, 'bot');
+                    success = true;
+                }
+            } catch (e) {
+                lastError = e;
+                if (retryCount === 0) {
+                    appendErrorWithRetry("⚠️ Connection error. Please try again.", text);
+                }
             }
-        } catch (e) {
-            console.error("ChatbotX Error:", e);
-            appendMessage("⚠️ Connection error. Please try again.", 'bot');
+            retryCount++;
         }
+        if (!success && lastError) {
+            appendErrorWithRetry("❌ Failed to send message after retry.", text);
+        }
+        function appendErrorWithRetry(errorText, originalText) {
+            const body = document.getElementById('chat-body');
+            if (!body) return;
+            const div = document.createElement('div');
+            div.className = 'msg bot error-state';
+            div.innerHTML = `${errorText} <button class="retry-btn">Retry</button>`;
+            body.appendChild(div);
+            body.scrollTop = body.scrollHeight;
+            const btn = div.querySelector('.retry-btn');
+            if (btn) {
+                btn.onclick = () => {
+                    div.remove();
+                    document.getElementById('chat-input').value = originalText;
+                    sendMessage();
+                };
+            }
+        }
+    }
+
+    // Behavioral trigger: auto-greet on high-value pages
+    function autoGreetIfNeeded() {
+        const highValuePages = [/pricing/i, /checkout/i, /contact/i];
+        const url = window.location.href;
+        if (highValuePages.some(rx => rx.test(url))) {
+            setTimeout(() => {
+                if (!document.querySelector('.msg.bot.auto-greeted')) {
+                    appendMessage(config.initial_message, 'bot');
+                    document.querySelector('.msg.bot:last-child').classList.add('auto-greeted');
+                }
+            }, 2000);
+        }
+    }
+
+    function renderLeadForm() {
+        const body = document.getElementById('chat-body');
+        if (!body) return;
+        const formDiv = document.createElement('div');
+        formDiv.className = 'msg bot lead-form';
+        formDiv.innerHTML = `
+            <form id="lead-capture-form">
+                <label>Name:<input type="text" name="name" required></label><br>
+                <label>Email:<input type="email" name="email" required></label><br>
+                <label>Phone:<input type="tel" name="phone"></label><br>
+                <button type="submit">Submit</button>
+            </form>
+        `;
+        body.appendChild(formDiv);
+        body.scrollTop = body.scrollHeight;
+        const form = formDiv.querySelector('#lead-capture-form');
+        form.onsubmit = async function(e) {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerText = "Sending...";
+            submitBtn.disabled = true;
+            const formData = new FormData(form);
+            const payload = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                session_id: sessionId,
+                site_key: SITE_KEY,
+            };
+            try {
+                await fetch(`${API_BASE}/api/chat/lead-capture`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                appendMessage("Thank you! Our team will reach out soon.", 'bot');
+                formDiv.remove();
+            } catch (err) {
+                submitBtn.innerText = "Submit";
+                submitBtn.disabled = false;
+                appendMessage("⚠️ Could not send your details. Please try again.", 'bot error-state');
+            }
+        };
     }
 
     function appendMessage(text, sender) {
@@ -186,6 +290,11 @@
     }
 
     // Start
+
     loadResources();
+    // Show greeting after UI is ready
+    setTimeout(() => {
+        appendMessage(config.initial_message, 'bot');
+    }, 500);
 
 })();

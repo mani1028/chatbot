@@ -17,5 +17,27 @@ def get_price(site_id: int, **kwargs):
         return {'consultation_price': "Error fetching price"}
 
 def track_order(site_id: int, order_id: str = None, **kwargs):
-    """Placeholder: in a real system this would call an external API to fetch order status."""
-    return {'order_id': order_id, 'status': 'processing', 'eta': '2 days'}
+    """Integrate with ERP system to fetch order status."""
+    # Example: Replace with real ERP endpoint and authentication
+    ERP_API_URL = "https://erp.example.com/api/orders/status"
+    try:
+        payload = {
+            "site_id": site_id,
+            "order_id": order_id
+        }
+        # You may need to add authentication headers/tokens here
+        import requests
+        response = requests.post(ERP_API_URL, json=payload, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'order_id': order_id,
+                'status': data.get('status', 'unknown'),
+                'eta': data.get('eta', 'N/A'),
+                'details': data
+            }
+        else:
+            return {'order_id': order_id, 'status': 'error', 'eta': 'N/A', 'details': response.text}
+    except Exception as e:
+        print(f"ERP API error: {e}")
+        return {'order_id': order_id, 'status': 'error', 'eta': 'N/A', 'details': str(e)}

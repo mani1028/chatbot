@@ -7,14 +7,28 @@ thefuzz==0.19.0
 flask-cors==4.0.0
 flask-socketio==5.3.6
 simple-websocket==1.0.0
-eventlet==0.33.3
+gevent
 python-Levenshtein
 python-dotenv
 Flask-Migrate
 flask-limiter
 psycopg2-binary
 # Additional recommended dependencies
+# Additional recommended dependencies
+python-docx
+requests
+beautifulsoup4
+chromadb
+# Additional recommended dependencies
 itsdangerous
 gunicorn
 pytest
 pytest-flask
+
+# For LLM fallback
+openai
+aiohttp
+# For RAG (vector search)
+sentence-transformers
+PyPDF2
+gevent-websocket

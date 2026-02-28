@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // DEFAULT SITE ID for the main demo page
     const DEFAULT_SITE_ID = 1; 
+    const DEFAULT_SITE_KEY = 'pk_live_086ea639519a4733'; 
 
     function appendMessage(text, isUser) {
         if (!chatBox) return;
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: text,
-                    site_id: DEFAULT_SITE_ID
+                    site_key: DEFAULT_SITE_KEY
                 })
             });
 
