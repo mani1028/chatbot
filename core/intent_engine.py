@@ -92,7 +92,7 @@ class IntentEngine:
             return self._fallback_response(0.0)
 
         # Combine history with the current message for context-aware tokenization
-        full_context = ' '.join([h['message'] for h in history]) + ' ' + message if history else message
+        full_context = ' '.join([h['user_message'] for h in history]) + ' ' + message if history else message
         tokens = tokenize(full_context)
         if not tokens:
             return self._fallback_response(0.0)
