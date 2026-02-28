@@ -7,6 +7,7 @@ from sqlalchemy import or_
 from collections import defaultdict
 import aiohttp
 import asyncio
+import threading
 
 # Core imports
 from database import db
@@ -67,12 +68,12 @@ class IntentEngine:
             except Exception as e:
                 self.logger.error(f"CRM Webhook failed: {e}")
 
-    async def _handle_handoffs(self, intent_obj, message, site_id):
+    async def _handle_handoffs(self, intent_name, intent_type, message, site_id):
         """Triggers external webhooks for human/lead intents."""
-        intent_type = (intent_obj.intent_type or 'AUTO').upper()
-        if intent_type == 'HUMAN':
+        intent_type = (intent_type or 'AUTO').upper()
+        if intent_type in ('HUMAN', 'LEAD'):  # Also fixed to support LEAD webhooks!
             payload = {
-                'intent': intent_obj.intent_name,
+                'intent': intent_name,
                 'message': message,
                 'site_id': site_id
             }
@@ -91,11 +92,15 @@ class IntentEngine:
         if not message or (not str(site_id).isdigit() and not isinstance(site_id, int)):
             return self._fallback_response(0.0)
 
-        # Combine history with the current message for context-aware tokenization
-        full_context = ' '.join([h['user_message'] for h in history]) + ' ' + message if history else message
-        tokens = tokenize(full_context)
+        # Tokenize ONLY the current message for intent scoring
+        # (Mixing history into the raw tokens causes previous intents to trigger infinitely)
+        tokens = tokenize(message)
         if not tokens:
             return self._fallback_response(0.0)
+
+        # If you still want full context specifically for the Semantic Embeddings (LLM), 
+        # keep it isolated to a separate variable:
+        full_context = ' '.join([h['user_message'] for h in history]) + ' ' + message if history else message
 
         # Load intents for specific site and global intents (site_id = 0)
         intents = Intent.query.filter(or_(Intent.site_id == 0, Intent.site_id == site_id)).all()
@@ -103,14 +108,15 @@ class IntentEngine:
         # Handle medium confidence responses
         if history and history[-1].get('intent_name') == 'clarification':
             if message.lower() in ['yes', 'yeah', 'yep']:
-                return self._execute_intent(history[-1].get('intent'))
+                return self._fallback_response(0.0)
             elif message.lower() in ['no', 'nope']:
                 return self._fallback_response(0.0)
 
         best = {
             'intent': None,
             'phrase': None,
-            'score': 0.0
+            'score': 0.0,
+            'weight': 0.0    # Add weight tracker to resolve ties
         }
 
         # Handle Semantic Embeddings
@@ -188,8 +194,10 @@ class IntentEngine:
                     # Semantic weight: 75% embedding, 25% token overlap
                     combined_score = max(phrase_score, round(0.75 * embedding_score + 0.25 * phrase_score, 3))
 
-                if combined_score > best['score']:
+                # If the score is higher OR if it's a tie but this phrase matched more words
+                if combined_score > best['score'] or (combined_score == best['score'] and total_weight > best['weight']):
                     best['score'] = combined_score
+                    best['weight'] = total_weight
                     best['intent'] = intent
                     best['phrase'] = phrase_obj
 
@@ -200,7 +208,16 @@ class IntentEngine:
 
             # High Confidence: Direct Answer + Action Hooks
             if final_confidence >= HIGH_CONFIDENCE:
-                self._handle_handoffs(best['intent'], message, site_id)
+                # RUN IN BACKGROUND THREAD TO PREVENT 2-SECOND BLOCKING
+                threading.Thread(
+                    target=lambda: asyncio.run(self._handle_handoffs(
+                        best['intent'].intent_name, 
+                        best['intent'].intent_type, 
+                        message, 
+                        site_id
+                    ))
+                ).start()
+                
                 return {
                     'intent_name': best['intent'].intent_name,
                     'intent_type': best['intent'].intent_type,
@@ -211,20 +228,23 @@ class IntentEngine:
 
             # Medium Confidence: Suggestion
             if final_confidence >= CONFIDENCE_THRESHOLD:
+                # Clean up the snake_case name for the user
+                clean_name = best['intent'].intent_name.replace('_', ' ').title()
+                
                 return {
                     'intent_name': best['intent'].intent_name,
                     'intent_type': best['intent'].intent_type,
-                    'response': f"I think you're asking about {best['intent'].intent_name}. Is that right?",
+                    'response': f"I think you're asking about {clean_name}. Is that right?",
                     'handoff': None,
                     'confidence': final_confidence
                 }
 
             # Log unanswered if below threshold
-            self._log_unanswered(message)
+            self._log_unanswered(message, site_id)
             return self._fallback_response(final_confidence)
 
         # No intent found at all
-        self._log_unanswered(message)
+        self._log_unanswered(message, site_id)
         return self._fallback_response(0.0)
 
     def _fallback_response(self, confidence):

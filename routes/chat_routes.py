@@ -8,6 +8,7 @@ from datetime import datetime
 from models import LeadCapture
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from models.chat_log import ChatLog
 
 # Define Blueprint (ONLY ONCE)
 chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
@@ -28,14 +29,30 @@ def lead_capture():
     site = Site.query.filter_by(public_key=public_key).first()
     if not site:
         return jsonify({'error': 'Invalid Site Key'}), 403
-    lead = LeadCapture(
-        site_id=site.id,
-        user_name=name,
-        user_email=email,
-        user_phone=phone,
-        session_id=session_id,
-        question_context=user_message
-    )
+    
+    # Safely map database columns dynamically based on what exists
+    kwargs = {'site_id': site.id}
+    
+    if hasattr(LeadCapture, 'user_name'):
+        kwargs['user_name'] = name
+        kwargs['user_email'] = email
+        kwargs['user_phone'] = phone
+    else:
+        kwargs['name'] = name
+        kwargs['email'] = email
+        kwargs['phone'] = phone
+        
+    if hasattr(LeadCapture, 'session_id'):
+        kwargs['session_id'] = session_id
+        
+    if hasattr(LeadCapture, 'question_context'):
+        kwargs['question_context'] = user_message
+    elif hasattr(LeadCapture, 'message'):
+        kwargs['message'] = user_message
+    elif hasattr(LeadCapture, 'context'):
+        kwargs['context'] = user_message
+
+    lead = LeadCapture(**kwargs)
     db.session.add(lead)
     db.session.commit()
     return jsonify({'ok': True})
@@ -77,14 +94,12 @@ def send_message():
     now = datetime.utcnow()
     month_str = now.strftime('%Y-%m')
     usage = Usage.query.filter_by(site_id=site.id, month=month_str).first()
-    if usage and usage.messages >= usage_limit:
-        if site.status != 'suspended':
-            site.status = 'suspended'
-            db.session.commit()
-        return jsonify({'error': 'Usage limit exceeded. Site suspended.'}), 403
-
-    if not site.is_active:
-        return jsonify({'error': 'This site is currently suspended.'}), 403
+    if not usage:
+        usage = Usage(site_id=site.id, month=month_str, messages=1)
+        db.session.add(usage)
+    else:
+        usage.messages += 1
+    db.session.commit()
 
     # Use the helper function to extract the domain correctly
     request_domain = get_request_domain()
@@ -123,3 +138,27 @@ def send_message():
     except Exception as e:
         print(f"Error processing message: {e}")
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@chat_bp.route('/history', methods=['GET'])
+def get_chat_history():
+    session_id = request.args.get('session_id')
+    if not session_id:
+        return jsonify([])
+
+    # Fetch the last 50 messages for this session, ordered chronologically
+    logs = ChatLog.query.filter_by(session_id=session_id).order_by(ChatLog.created_at.asc()).limit(50).all()
+
+    history = []
+    for log in logs:
+        # Format for the frontend
+        history.append({
+            'text': log.user_message,
+            'sender': 'user'
+        })
+        if log.bot_response:
+            history.append({
+                'text': log.bot_response,
+                'sender': 'bot'
+            })
+
+    return jsonify(history), 200

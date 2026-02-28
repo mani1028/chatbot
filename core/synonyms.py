@@ -1,5 +1,30 @@
 # Synonym dictionary mapping variations to a single canonical "root" word
 SYNONYM_MAP = {
+    # Time & Hours additions
+    "timings": "hours",
+    "timing": "hours",
+    "opening": "open",
+    "schedule": "hours",
+    
+    # Pricing-related synonyms
+    "fees": "pricing",
+    "cost": "pricing",
+    "charges": "pricing",
+    "rates": "pricing",
+    
+    # Location-related synonyms
+    "directions": "location",
+    "place": "location",
+    "address": "location",
+    
+    # Greetings-related synonyms
+    "hiya": "hi",
+    "howdy": "hi",
+    
+    # Farewell-related synonyms
+    "farewell": "goodbye",
+    "take care": "goodbye",
+    
     # Observability & Monitoring
     "monitoring": "observability",
     "telemetry": "observability",

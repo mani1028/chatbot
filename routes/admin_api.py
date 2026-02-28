@@ -427,7 +427,7 @@ def client_branding():
         
     if branding:
         return jsonify({"branding": branding.to_dict()})
-    return jsonify({"branding": {"bot_name": "AI Assistant", "initial_message": "Hello!", "primary_color": "#6366f1", "theme_mode": "light", "position": "bottom-right"}})
+    return jsonify({"branding": {"bot_name": "Friday", "initial_message": "Hello!", "primary_color": "#6366f1", "theme_mode": "light", "position": "bottom-right"}})
 
 @admin_api.route("/client/conversations", methods=["GET"])
 def client_conversations():

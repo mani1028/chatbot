@@ -21,9 +21,13 @@ def llm_fallback(message: str, site_id: int) -> str:
     api_key = get_openai_api_key()
     if not api_key:
         return "I'm not sure how to help with that right now."
-    openai.api_key = api_key
+
+    # Updated syntax for OpenAI 1.0.0+
+    from openai import OpenAI
+    client = OpenAI(api_key=api_key)
+
     try:
-        completion = openai.ChatCompletion.create(
+        completion = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful AI assistant for a business chatbot. Answer concisely and professionally."},
@@ -32,8 +36,9 @@ def llm_fallback(message: str, site_id: int) -> str:
             max_tokens=200,
             temperature=0.7
         )
-        return completion.choices[0].message["content"].strip()
+        return completion.choices[0].message.content.strip()
     except Exception as e:
+        logging.error(f"OpenAI fallback error: {e}")
         return "I'm not sure how to help with that right now."
 
 
@@ -81,21 +86,55 @@ def handle_message(message: str, site_id: int, history: list = None, _site_id: i
         logging.debug(f"Fetched intent: {intent}")
 
         if not intent:
-            return {'text': result.get('response'), 'confidence': confidence, 'intent_name': intent_name}
+            return {
+                'text': result.get('response'), 
+                'confidence': confidence, 
+                'intent_name': intent_name,
+                'intent_type': result.get('intent_type'),
+                'handoff': result.get('handoff')
+            }
 
         # 3. Check Confidence
         threshold = getattr(intent, 'confidence_threshold', CONFIDENCE_THRESHOLD)
         itype = (intent.intent_type or 'info').lower()
         if confidence < 0.3 or intent_name == 'UNKNOWN':
+            # Rely on your LLM fallback for low confidence queries
+            llm_reply = llm_fallback(message, site_id)
             return {
-                'text': "I'm not quite sure, but I can connect you with a human.",
+                'text': llm_reply,
                 'confidence': confidence,
-                'intent_name': intent_name,
-                'handoff': 'HUMAN'
+                'intent_name': 'LLM_FALLBACK',
+                'handoff': None
             }
 
         # 4. Handle Intent Types
         itype = (intent.intent_type or 'info').lower()
+
+        # --- NEW: LIVE AGENT FALLBACK LOGIC ---
+        if itype == 'human' or result.get('handoff') == 'HUMAN':
+            from models.client_config import ClientConfig
+            # Check if this specific client has live agents enabled
+            live_agent_config = ClientConfig.query.filter_by(site_id=site_id, key='live_agents_enabled').first()
+
+            if not live_agent_config or live_agent_config.value != 'true':
+                # Force override to a Lead form!
+                return {
+                    'text': "Our live support team is currently offline, but we'd love to help! Please describe your issue below and we will contact you shortly:",
+                    'confidence': confidence,
+                    'intent_name': intent_name,
+                    'intent_type': 'LEAD',
+                    'handoff': 'LEAD'
+                }
+            else:
+                # Proceed with standard human handoff
+                return {
+                    'text': intent.response or "Connecting you to a human agent...",
+                    'confidence': confidence,
+                    'intent_name': intent_name,
+                    'intent_type': 'HUMAN',
+                    'handoff': 'HUMAN'
+                }
+        # ---------------------------------------
 
         if itype == 'action':
             wf = intent.workflows.first()
@@ -118,17 +157,27 @@ def handle_message(message: str, site_id: int, history: list = None, _site_id: i
                         else:
                             data = func(site_id=site_id, message=message)
                         text = build_response(intent.response, site_id) if intent.response else str(data)
-                        return {'text': text, 'confidence': confidence, 'intent_name': intent_name, 'data': data}
+                        return {
+                            'text': text, 
+                            'confidence': confidence, 
+                            'intent_name': intent_name, 
+                            'data': data,
+                            'intent_type': itype.upper()
+                        }
                     except Exception as e:
                         logging.error(f"Workflow error in {func_name}: {e}")
                         return {'text': 'Sorry, something went wrong while processing your request.', 'confidence': 0.0, 'intent_name': intent_name}
-                return {'text': intent.response or 'Action intent configured but no workflow found.', 'confidence': confidence, 'intent_name': intent_name}
+            return {'text': intent.response or 'Action intent configured but no workflow found.', 'confidence': confidence, 'intent_name': intent_name}
         else:
-            # Info Intent Logic
-            if intent.response:
-                text = build_response(intent.response, site_id)
-                return {'text': text, 'confidence': confidence, 'intent_name': intent_name}
-            return {'text': result.get('response'), 'confidence': confidence, 'intent_name': intent_name}
+            # Info Intent Logic (and LEAD forms)
+            text = build_response(intent.response, site_id) if intent.response else result.get('response')
+            return {
+                'text': text, 
+                'confidence': confidence, 
+                'intent_name': intent_name,
+                'intent_type': itype.upper(),
+                'handoff': result.get('handoff') or (itype.upper() if itype.upper() in ['LEAD', 'HUMAN'] else None)
+            }
 
     except Exception as e:
         logging.error(f"Error in handle_message: {e}")

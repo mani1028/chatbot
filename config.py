@@ -22,7 +22,7 @@ os.makedirs(INSTANCE_DIR, exist_ok=True)
 
 DB_PATH = os.path.join(INSTANCE_DIR, 'chatbot.db')
 
-SQLALCHEMY_DATABASE_URI = f"sqlite:///{DB_PATH}"
+SQLALCHEMY_DATABASE_URI = "sqlite:///chatbot.db"
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 # AI Service configuration
 # CHANGED: Lowered to 0.65 to be more friendly in the simulator

@@ -4,14 +4,15 @@
  */
 
 (function() {
-// 1. ENVIRONMENT SETUP
+    // 1. ENVIRONMENT SETUP
     const configObj = window.ChatbotXConfig || {};
     // Fallback for legacy scripts
     const SCRIPT = document.currentScript || document.querySelector('script[data-site-key]');
     const SITE_KEY = SCRIPT ? SCRIPT.getAttribute("data-site-key") : null;
     const API_BASE = SCRIPT ? new URL(SCRIPT.src).origin : window.location.origin;
+    
     if (!SITE_KEY) {
-            console.error("ChatbotX: Missing data-site-key in script tag.");
+        console.error("ChatbotX: Missing data-site-key in script tag.");
         return;
     }
     
@@ -25,6 +26,7 @@
         theme_mode: 'light',
         initial_message: 'Hello! I am AlinaX How can I help?'
     };
+
     // 2. LOAD RESOURCES
     function loadResources() {
         // Load CSS
@@ -33,7 +35,7 @@
         link.href = `${API_BASE}/static/style.css`;
         document.head.appendChild(link);
 
-        // FIX: Load Socket.IO client from CDN instead of Flask server
+        // Load Socket.IO client from CDN
         const script = document.createElement('script');
         script.src = "https://cdn.socket.io/4.7.2/socket.io.min.js";
         script.onload = () => {
@@ -51,33 +53,62 @@
             const data = await res.json();
             config = { ...config, ...data };
             buildUI();
+            await loadChatHistory(); // Load chat history after UI is built
         } catch (e) {
             console.error("ChatbotX: Failed to init", e);
         }
     }
 
-    // 5. SOCKETIO CLIENT
+    // Fetch and render chat history
+    async function loadChatHistory() {
+        try {
+            const res = await fetch(`${API_BASE}/api/chat/history?session_id=${sessionId}`);
+            const history = await res.json();
+            history.forEach(msg => {
+                appendMessage(msg.text, msg.sender === 'user' ? 'user' : 'bot');
+            });
+        } catch (e) {
+            console.error('Failed to load chat history', e);
+        }
+    }
+
+    // 4. SOCKETIO CLIENT
     function connectSocket() {
-        if (typeof io === 'undefined') return;
-        // Explicitly set path and transports to avoid 400 error
-        const socket = io(API_BASE, {
+        if (typeof io === 'undefined') {
+            console.error("Socket.IO library is not loaded.");
+            return;
+        }
+
+        socket = io(API_BASE, {
             path: '/socket.io',
             transports: ['websocket', 'polling']
         });
-        socket.on('agent_handoff', function(data) {
-            // Show notification or update UI for agent handoff
-            appendMessage('A human agent has joined the chat.', 'bot');
+
+        socket.on('connect', () => {
+            console.log("Socket connected successfully.");
+
+            // Listeners for live agent handoff
+            socket.on('agent_handoff', function(data) {
+                appendMessage('A human agent has joined the chat.', 'bot');
+            });
+
+            // Safely isolated inside the connect block
+            socket.on('agent_message', function(data) {
+                appendMessage(data.message, 'bot agent-message');
+            });
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error("Socket connection error:", error);
         });
     }
 
-    // 4. UI CONSTRUCTION
+    // 5. UI CONSTRUCTION
     function buildUI() {
         if (document.getElementById('chat-widget-wrapper')) return;
 
         const wrapper = document.createElement('div');
         wrapper.id = 'chat-widget-wrapper';
-        
-        // CSS Variables for branding
         wrapper.style.setProperty('--primary', config.primary_color);
 
         wrapper.innerHTML = `
@@ -117,13 +148,7 @@
         }
     }
 
-    // 5. WEBSOCKET LOGIC
-
-
-
-
-
-    // 6. ACTIONS
+    // 6. ACTIONS & LOGIC
     function toggleChat() {
         const widget = document.getElementById('chat-widget');
         const launcher = document.getElementById('chat-launcher');
@@ -137,70 +162,78 @@
         }
     }
 
-
     async function sendMessage() {
         const input = document.getElementById('chat-input');
         if (!input) return;
         const text = input.value.trim();
-        if(!text) return;
+        if (!text) return;
 
         appendMessage(text, 'user');
         input.value = '';
+        showTyping(); 
 
-        // Use REST API to send message
-        let retryCount = 0;
-        let success = false;
-        let lastError = null;
-        while (retryCount < 2 && !success) {
-            try {
-                const res = await fetch(`${API_BASE}/api/chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        site_key: SITE_KEY,
-                        message: text,
-                        session_id: sessionId,
-                        page_url: window.location.href
-                    })
-                });
-                const data = await res.json();
-                if (data.error) {
-                    appendErrorWithRetry("⚠️ Error: " + data.error, text);
-                    lastError = data.error;
-                } else if (data.intent_type && data.intent_type.toUpperCase() === 'LEAD') {
-                    renderLeadForm();
-                    success = true;
-                } else {
-                    appendMessage(data.reply, 'bot');
-                    success = true;
-                }
-            } catch (e) {
-                lastError = e;
-                if (retryCount === 0) {
-                    appendErrorWithRetry("⚠️ Connection error. Please try again.", text);
-                }
+        try {
+            const res = await fetch(`${API_BASE}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    site_key: SITE_KEY,
+                    session_id: sessionId,
+                    message: text
+                })
+            });
+            
+            // Check for HTTP errors (like 429 Rate Limit or 500 Server Error)
+            if (!res.ok) {
+                let errorMsg = "Server Error";
+                try {
+                    const errData = await res.json();
+                    errorMsg = errData.error || errorMsg;
+                } catch(e) {}
+                throw new Error(errorMsg);
             }
-            retryCount++;
-        }
-        if (!success && lastError) {
-            appendErrorWithRetry("❌ Failed to send message after retry.", text);
-        }
-        function appendErrorWithRetry(errorText, originalText) {
-            const body = document.getElementById('chat-body');
-            if (!body) return;
-            const div = document.createElement('div');
-            div.className = 'msg bot error-state';
-            div.innerHTML = `${errorText} <button class="retry-btn">Retry</button>`;
-            body.appendChild(div);
-            body.scrollTop = body.scrollHeight;
-            const btn = div.querySelector('.retry-btn');
-            if (btn) {
-                btn.onclick = () => {
-                    div.remove();
-                    document.getElementById('chat-input').value = originalText;
-                    sendMessage();
-                };
+            
+            const data = await res.json();
+            hideTyping();
+
+            // Intercept API JSON errors
+            if (data.error) {
+                appendMessage("⚠️ " + data.error, 'bot error-state');
+                return;
             }
+
+            let rendered = false;
+
+            // FIX: Print the bot's conversational response looking for reply, text, or response keys
+            const botMessageText = data.reply || data.text || data.response;
+            if (botMessageText) {
+                appendMessage(botMessageText, 'bot');
+                rendered = true;
+            }
+
+            // Render rich UI components based on intent
+            if (data.data && data.intent_name === 'track_order') {
+                renderOrderStatusCard(data.data); 
+                rendered = true;
+            } 
+            else if (data.intent_type === 'LEAD' || data.handoff === 'LEAD') {
+                renderLeadForm(); 
+                rendered = true;
+            }
+            else if (data.intent_name === 'book_appointment' || data.intent_name === 'booking') {
+                renderBookingForm();
+                rendered = true;
+            }
+
+            // Fallback safety if the bot returned absolutely nothing
+            if (!rendered) {
+                appendMessage("⚠️ Received empty response from server.", 'bot error-state');
+            }
+
+        } catch (e) {
+            console.error('Failed to send message', e);
+            hideTyping();
+            appendMessage("⚠️ " + (e.message || "Connection error. Please try again."), 'bot error-state');
         }
     }
 
@@ -218,6 +251,52 @@
         }
     }
 
+    // 7. UI RENDERERS
+    function renderOrderStatusCard(data) {
+        const chatBody = document.getElementById('chat-body');
+        if (!chatBody) return;
+
+        const card = document.createElement('div');
+        card.className = 'order-status-card';
+        card.innerHTML = `
+            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-top: 10px; background: #fff; color: #333;">
+                <h4 style="margin: 0 0 5px 0;">Order Status</h4>
+                <p style="margin: 0; font-size: 13px;">Order ID: <strong>${data.order_id}</strong></p>
+                <p style="margin: 5px 0; font-size: 13px;">Status: <strong>${data.status}</strong></p>
+                <div style="background: #eee; border-radius: 4px; height: 8px; width: 100%; margin-top: 8px;">
+                    <div style="background: ${config.primary_color}; border-radius: 4px; height: 100%; width: ${data.progress}%;"></div>
+                </div>
+            </div>
+        `;
+        chatBody.appendChild(card);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    function renderBookingForm() {
+        const chatBody = document.getElementById('chat-body');
+        if (!chatBody) return;
+
+        const form = document.createElement('form');
+        form.className = 'booking-form msg bot';
+        form.innerHTML = `
+            <h4 style="margin: 0 0 10px 0;">Book an Appointment</h4>
+            <label style="display:block; font-size:12px; margin-bottom: 4px;">Date:</label>
+            <input type="date" id="date" required style="width:100%; margin-bottom: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+            <label style="display:block; font-size:12px; margin-bottom: 4px;">Time:</label>
+            <input type="time" id="time" required style="width:100%; margin-bottom: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+            <button type="submit" style="background: ${config.primary_color}; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; width: 100%;">Confirm</button>
+        `;
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const date = form.querySelector('#date').value;
+            const time = form.querySelector('#time').value;
+            appendMessage(`Booking confirmed for ${date} at ${time}`, 'bot');
+            form.remove();
+        };
+        chatBody.appendChild(form);
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
     function renderLeadForm() {
         const body = document.getElementById('chat-body');
         if (!body) return;
@@ -225,28 +304,36 @@
         formDiv.className = 'msg bot lead-form';
         formDiv.innerHTML = `
             <form id="lead-capture-form">
-                <label>Name:<input type="text" name="name" required></label><br>
-                <label>Email:<input type="email" name="email" required></label><br>
-                <label>Phone:<input type="tel" name="phone"></label><br>
-                <button type="submit">Submit</button>
+                <label style="font-size: 12px;">Name:<input type="text" name="name" required style="width:100%; margin: 4px 0 8px; padding: 5px; border:1px solid #ccc; border-radius:4px;"></label>
+                <label style="font-size: 12px;">Email:<input type="email" name="email" required style="width:100%; margin: 4px 0 8px; padding: 5px; border:1px solid #ccc; border-radius:4px;"></label>
+                <label style="font-size: 12px;">Phone:<input type="tel" name="phone" style="width:100%; margin: 4px 0 8px; padding: 5px; border:1px solid #ccc; border-radius:4px;"></label>
+                <label style="font-size: 12px;">How can we help?
+                    <textarea name="issue" rows="3" required style="width: 100%; margin: 4px 0 8px; border-radius: 4px; border: 1px solid #ccc; padding: 5px;"></textarea>
+                </label>
+                <button type="submit" style="background: ${config.primary_color}; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; width: 100%;">Submit</button>
             </form>
         `;
         body.appendChild(formDiv);
         body.scrollTop = body.scrollHeight;
+        
         const form = formDiv.querySelector('#lead-capture-form');
         form.onsubmit = async function(e) {
             e.preventDefault();
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.innerText = "Sending...";
             submitBtn.disabled = true;
+
             const formData = new FormData(form);
+
             const payload = {
                 name: formData.get('name'),
                 email: formData.get('email'),
                 phone: formData.get('phone'),
+                user_message: formData.get('issue'), 
                 session_id: sessionId,
                 site_key: SITE_KEY,
             };
+
             try {
                 await fetch(`${API_BASE}/api/chat/lead-capture`, {
                     method: 'POST',
@@ -263,12 +350,13 @@
         };
     }
 
+    // 8. HELPERS
     function appendMessage(text, sender) {
         const body = document.getElementById('chat-body');
         if (!body) return;
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
-        div.innerText = text; // Safe text insertion
+        div.innerText = text; 
         body.appendChild(div);
         body.scrollTop = body.scrollHeight;
     }
@@ -289,12 +377,16 @@
         if(el) el.remove();
     }
 
-    // Start
-
+    // 9. EXECUTE
     loadResources();
+    
     // Show greeting after UI is ready
     setTimeout(() => {
-        appendMessage(config.initial_message, 'bot');
+        // Only show if history didn't already load a greeting
+        if (document.getElementById('chat-body') && document.getElementById('chat-body').children.length === 0) {
+            appendMessage(config.initial_message, 'bot');
+        }
+        autoGreetIfNeeded();
     }, 500);
 
 })();

@@ -7,14 +7,14 @@
       "name": "greetings",
       "type": "INFO",
       "confidence_threshold": 0.85,
-      "phrases": ["hi", "hello", "hey", "good morning", "good afternoon", "greetings", "start", "yo", "hi there"],
+      "phrases": ["hi", "hello", "hey", "good morning", "good afternoon", "greetings", "start", "yo", "hi there", "howdy", "hiya"],
       "response": "Hello! How can I help you today?"
     },
     {
       "name": "goodbye",
       "type": "INFO",
       "confidence_threshold": 0.85,
-      "phrases": ["bye", "goodbye", "thank you", "thanks", "have a good day", "that is all", "see you later", "cya"],
+      "phrases": ["bye", "goodbye", "thank you", "thanks", "have a good day", "that is all", "see you later", "cya", "farewell", "take care"],
       "response": "You're very welcome! Have a wonderful day. Feel free to reach out if you need anything else."
     },
     {
@@ -56,33 +56,33 @@
       "name": "business_hours",
       "type": "INFO",
       "confidence_threshold": 0.85,
-      "phrases": ["when are you open", "business hours", "what time do you close", "are you open today", "working hours"],
-        "response": "Our standard working hours are from {open_time} to {close_time}. We look forward to assisting you!",
-        "config_required": ["open_time", "close_time"]
+      "phrases": ["when are you open", "business hours", "what time do you close", "are you open today", "working hours", "timings","hours","opening","schedule", "opening hours"],
+      "response": "Our standard working hours are from {open_time} to {close_time}. We look forward to assisting you!",
+      "config_required": ["open_time", "close_time"]
     },
     {
       "name": "pricing_general",
       "type": "INFO",
       "confidence_threshold": 0.85,
-      "phrases": ["how much does it cost", "what is the price", "pricing", "fees", "cost", "how much is it"],
-        "response": "Our standard consultation or starting fee is {consultation_price}. For a customized quote, I can connect you with our sales team!",
-        "config_required": ["consultation_price"]
+      "phrases": ["how much does it cost", "what is the price", "pricing", "fees", "cost", "how much is it", "charges", "rates"],
+      "response": "Our standard consultation or starting fee is {consultation_price}. For a customized quote, I can connect you with our sales team!",
+      "config_required": ["consultation_price"]
     },
     {
       "name": "location_address",
       "type": "INFO",
       "confidence_threshold": 0.85,
-      "phrases": ["where are you located", "what is your address", "how do i get there", "location", "office address"],
-        "response": "You can visit us at {office_address}. Let us know if you need directions!",
-        "config_required": ["office_address"]
+      "phrases": ["where are you located", "what is your address", "how do i get there", "location", "office address", "directions", "place"],
+      "response": "You can visit us at {office_address}. Let us know if you need directions!",
+      "config_required": ["office_address"]
     },
     {
       "name": "contact_info",
       "type": "INFO",
       "confidence_threshold": 0.85,
       "phrases": ["what is your phone number", "how do i call you", "what is your email", "contact info", "support email"],
-        "response": "You can reach our support team directly at {support_email} or call us at {support_phone}.",
-        "config_required": ["support_email", "support_phone"]
+      "response": "You can reach our support team directly at {support_email} or call us at {support_phone}.",
+      "config_required": ["support_email", "support_phone"]
     },
     {
       "name": "affirmation",
