@@ -156,34 +156,40 @@
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <i class="fas fa-layer-group"></i>
-            <h2>SaaS Control</h2>
+            <h2><i class="fas fa-user-shield"></i> Super Admin Panel</h2>
         </div>
         <nav class="nav-links">
-            <div class="nav-category">Core</div>
-            <a class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-chart-pie"></i> Platform Insights</a>
-            <a class="nav-item" onclick="switchTab('templates', this)"><i class="fas fa-file-invoice"></i> Blueprints</a>
-            
-            <div class="nav-category">Client Management</div>
-            <a class="nav-item" onclick="switchTab('bots', this)"><i class="fas fa-robot"></i> Bots Management</a>
-            <a class="nav-item" onclick="switchTab('billing', this)"><i class="fas fa-credit-card"></i> Billing & Plans</a>
-            
-            <div class="nav-category">Monitoring & Setup</div>
-            <a class="nav-item" onclick="switchTab('health', this)"><i class="fas fa-heartbeat"></i> System Health</a>
-            <a class="nav-item" onclick="switchTab('handoffs', this)"><i class="fas fa-comments"></i> Global Handoffs</a>
-            <a class="nav-item" onclick="switchTab('logs', this)"><i class="fas fa-list-alt"></i> Audit Logs</a>
-            <a class="nav-item" onclick="switchTab('users', this)"><i class="fas fa-users-cog"></i> Admin Users</a>
-            <a class="nav-item" onclick="switchTab('settings', this)"><i class="fas fa-cogs"></i> Platform Settings</a>
-            <a class="nav-item" onclick="switchTab('leads', this)"><i class="fas fa-address-card"></i> Leads</a>
-            <a class="nav-item" onclick="switchTab('bookings', this)"><i class="fas fa-calendar-check"></i> Bookings</a>
-
-            <!-- Extended Resource Tabs -->
-            <div class="nav-category">Extended Resources</div>
-            <a class="nav-item" onclick="switchTab('usageTab', this)"><i class="fas fa-chart-line"></i> Usage Records</a>
-            <a class="nav-item" onclick="switchTab('suspensionsTab', this)"><i class="fas fa-ban"></i> Suspensions</a>
-            <a class="nav-item" onclick="switchTab('conversationsTab', this)"><i class="fas fa-message"></i> Conversations</a>
-            <a class="nav-item" onclick="switchTab('integrationsTab', this)"><i class="fas fa-plug"></i> Integrations</a>
-            <a class="nav-item" onclick="switchTab('announcementsTab', this)"><i class="fas fa-bullhorn"></i> Announcements</a>
+            <div class="nav-category">Super Admin Panel</div>
+            <a class="nav-item" onclick="switchTab('clients', this)">
+                <i class="fas fa-users"></i> Clients
+            </a>
+            <a class="nav-item" onclick="switchTab('plans', this)">
+                <i class="fas fa-file-invoice-dollar"></i> Plans & Billing
+            </a>
+            <a class="nav-item" onclick="switchTab('integrations', this)">
+                <i class="fas fa-plug"></i> Integrations (Global APIs)
+            </a>
+            <a class="nav-item" onclick="switchTab('analytics', this)">
+                <i class="fas fa-chart-line"></i> Platform Analytics
+            </a>
+            <a class="nav-item" onclick="switchTab('usage', this)">
+                <i class="fas fa-chart-pie"></i> Usage Monitoring
+            </a>
+            <a class="nav-item" onclick="switchTab('health', this)">
+                <i class="fas fa-heartbeat"></i> System Health
+            </a>
+            <a class="nav-item" onclick="switchTab('logs', this)">
+                <i class="fas fa-clipboard-list"></i> Audit Logs
+            </a>
+            <a class="nav-item" onclick="switchTab('users', this)">
+                <i class="fas fa-user-cog"></i> Admin Users
+            </a>
+            <a class="nav-item" onclick="switchTab('announcements', this)">
+                <i class="fas fa-bullhorn"></i> Announcements
+            </a>
+            <a class="nav-item" onclick="switchTab('settings', this)">
+                <i class="fas fa-cogs"></i> Settings
+            </a>
         </nav>
         <div class="sidebar-footer">
             <a href="/admin/logout" class="btn btn-outline" style="width: 100%; justify-content: center; border: 1px solid var(--border);">
@@ -1628,7 +1634,7 @@
                 editSiteForm.onsubmit = async function(e) {
                     e.preventDefault();
                     const id = document.getElementById('editSiteId').value;
-                    const btn = this.querySelector('button[type=\"submit\"]');
+                    const btn = this.querySelector('button[type="submit"]');
                     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     try {
                         const res = await fetch('/admin/api/super/sites/' + id, {
@@ -1651,7 +1657,7 @@
                     e.preventDefault();
                     const id = document.getElementById('botId').value;
                     const payload = { name: document.getElementById('botName').value, site_id: document.getElementById('botSiteId').value, status: document.getElementById('botStatus').value };
-                    const btn = this.querySelector('button[type=\"submit\"]');
+                    const btn = this.querySelector('button[type="submit"]');
                     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     try {
                         const url = id ? '/admin/api/super/bots/' + id : '/admin/api/super/bots';
@@ -1672,7 +1678,7 @@
                     e.preventDefault();
                     const id = document.getElementById('billingId').value;
                     const payload = { site_id: document.getElementById('billingSiteId').value, plan_id: document.getElementById('billingPlanId').value, status: document.getElementById('billingStatus').value, amount: document.getElementById('billingAmount').value, paid: document.getElementById('billingPaid').value === 'true', due_date: document.getElementById('billingDueDate').value };
-                    const btn = this.querySelector('button[type=\"submit\"]');
+                    const btn = this.querySelector('button[type="submit"]');
                     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     try {
                         const url = id ? '/admin/api/super/billing/' + id : '/admin/api/super/billing';
@@ -1693,7 +1699,7 @@
                     e.preventDefault();
                     const id = document.getElementById('usageId').value;
                     const payload = { site_id: document.getElementById('usageSiteId').value, bot_id: document.getElementById('usageBotId').value, messages: document.getElementById('usageMessages').value, period: document.getElementById('usagePeriod').value };
-                    const btn = this.querySelector('button[type=\"submit\"]');
+                    const btn = this.querySelector('button[type="submit"]');
                     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     try {
                         const url = id ? '/admin/api/super/usage/' + id : '/admin/api/super/usage';
@@ -1714,7 +1720,7 @@
                     e.preventDefault();
                     const id = document.getElementById('suspensionId').value;
                     const payload = { site_id: document.getElementById('suspensionSiteId').value, bot_id: document.getElementById('suspensionBotId').value, reason: document.getElementById('suspensionReason').value, status: document.getElementById('suspensionStatus').value };
-                    const btn = this.querySelector('button[type=\"submit\"]');
+                    const btn = this.querySelector('button[type="submit"]');
                     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     try {
                         const url = id ? '/admin/api/super/suspensions/' + id : '/admin/api/super/suspensions';
@@ -1735,7 +1741,7 @@
                     e.preventDefault();
                     const id = document.getElementById('integrationId').value;
                     const payload = { site_id: document.getElementById('integrationSiteId').value, type: document.getElementById('integrationType').value, config: document.getElementById('integrationConfig').value, status: document.getElementById('integrationStatus').value };
-                    const btn = this.querySelector('button[type=\"submit\"]');
+                    const btn = this.querySelector('button[type="submit"]');
                     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     try {
                         const url = id ? '/admin/api/super/integrations/' + id : '/admin/api/super/integrations';
@@ -1756,7 +1762,7 @@
                     e.preventDefault();
                     const id = document.getElementById('announcementId').value;
                     const payload = { site_id: document.getElementById('announcementSiteId').value, title: document.getElementById('announcementTitle').value, message: document.getElementById('announcementMessage').value, status: document.getElementById('announcementStatus').value };
-                    const btn = this.querySelector('button[type=\"submit\"]');
+                    const btn = this.querySelector('button[type="submit"]');
                     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                     try {
                         const url = id ? '/admin/api/super/announcements/' + id : '/admin/api/super/announcements';

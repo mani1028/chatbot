@@ -13,6 +13,8 @@ from models import (
     Admin, Site, Plan, ClientConfig, BrandingSettings, Intent, IntentPhrase,
     ChatLog, UnansweredQuestion, Usage, Billing, Bot, Announcement, Integration
 )
+from models.client import Client
+from models.end_user import EndUser
 from models.platform_settings import AuditLog
 
 # ---------------------------------------------------
@@ -38,6 +40,34 @@ def super_admin_required(func):
         admin = db.session.get(Admin, user_id)
         if not admin or not getattr(admin, "is_super", False):
             return jsonify({"error": "Super admin required"}), 403
+
+        return func(*args, **kwargs)
+    return wrapper
+
+def client_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        user_id = session.get("client_id")
+        if not user_id:
+            return jsonify({"error": "Authentication required"}), 401
+
+        client = db.session.get(Client, user_id)
+        if not client:
+            return jsonify({"error": "Client access required"}), 403
+
+        return func(*args, **kwargs)
+    return wrapper
+
+def end_user_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Authentication required"}), 401
+
+        user = db.session.get(EndUser, user_id)
+        if not user:
+            return jsonify({"error": "End user access required"}), 403
 
         return func(*args, **kwargs)
     return wrapper

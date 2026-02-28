@@ -63,12 +63,24 @@
     async function loadChatHistory() {
         try {
             const res = await fetch(`${API_BASE}/api/chat/history?session_id=${sessionId}`);
+            if (!res.ok) {
+                console.error('Failed to fetch chat history: HTTP error', res.status);
+                appendMessage('⚠️ Unable to load chat history.', 'bot error-state');
+                return;
+            }
+
             const history = await res.json();
+            if (!Array.isArray(history) || history.length === 0) {
+                appendMessage('No previous messages found.', 'bot info-state');
+                return;
+            }
+
             history.forEach(msg => {
                 appendMessage(msg.text, msg.sender === 'user' ? 'user' : 'bot');
             });
         } catch (e) {
             console.error('Failed to load chat history', e);
+            appendMessage('⚠️ Error loading chat history. Please try again.', 'bot error-state');
         }
     }
 
@@ -389,4 +401,25 @@
         autoGreetIfNeeded();
     }, 500);
 
+    // Function to handle tab switching
+    function switchTab(tabName, element) {
+        // Remove active class from all nav items
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => item.classList.remove('active'));
+
+        // Add active class to the clicked nav item
+        element.classList.add('active');
+
+        // Hide all tab content sections
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => content.style.display = 'none');
+
+        // Show the selected tab content
+        const activeTab = document.getElementById(tabName);
+        if (activeTab) {
+            activeTab.style.display = 'block';
+        } else {
+            console.error(`Tab content for '${tabName}' not found.`);
+        }
+    }
 })();

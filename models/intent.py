@@ -74,4 +74,4 @@ class Workflow(db.Model):
     intent = db.relationship('Intent', backref=db.backref('workflows', lazy='dynamic'))
 
     def __repr__(self):
-        return f'<Workflow {self.function_name} for intent {self.intent_id}>'
+        return f"<Workflow {self.function_name} for intent {self.intent_id}>"

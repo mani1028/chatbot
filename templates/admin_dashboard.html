@@ -19,7 +19,7 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-        body { background-color: var(--bg-base); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        body { background-color: var(--bg-base); color: var(--text-main); display: flex; min-height: 100vh; overflow-y: auto; }
 
         /* Sidebar */
         .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
@@ -89,68 +89,61 @@
             <h2><i class="fas fa-robot"></i> Client Panel</h2>
         </div>
         <nav class="nav-links">
-            <a class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-chart-bar"></i> Overview</a>
-            <a class="nav-item" onclick="switchTab('intents', this)"><i class="fas fa-brain"></i> Knowledge Base</a>
-            <a class="nav-item" onclick="switchTab('branding', this)"><i class="fas fa-paint-brush"></i> Branding</a>
-            <a class="nav-item" onclick="switchTab('conversations', this)"><i class="fas fa-comments"></i> Conversations</a>
-            <a class="nav-item" onclick="switchTab('analytics', this)"><i class="fas fa-chart-line"></i> Analytics</a>
-            <a class="nav-item" onclick="switchTab('leads', this)"><i class="fas fa-user-plus"></i> Leads</a>
-            <a class="nav-item" onclick="switchTab('install', this)"><i class="fas fa-code"></i> Installation</a>
-            <a class="nav-item" onclick="switchTab('simulator', this)"><i class="fas fa-mobile-alt"></i> Simulator</a>
-            <a class="nav-item" onclick="switchTab('config', this)"><i class="fas fa-cogs"></i> Business Rules</a>
-            {% if is_super %}
-            <a class="nav-item" onclick="switchTab('admins', this)"><i class="fas fa-users-cog"></i> Admin Users</a>
-            {% endif %}
+            <a class="nav-item active" onclick="switchTab('dashboard', this)">
+                <i class="fas fa-home"></i> Overview
+            </a>
+            <a class="nav-item" onclick="switchTab('conversations', this)">
+                <i class="fas fa-inbox"></i> Inbox
+            </a>
+            <a class="nav-item" onclick="switchTab('intents', this)">
+                <i class="fas fa-book"></i> Knowledge Base
+            </a>
+            <a class="nav-item" onclick="switchTab('config', this)">
+                <i class="fas fa-gavel"></i> Business Rules
+            </a>
+            
+            <a class="nav-item" onclick="switchTab('ai-settings', this)">
+                <i class="fas fa-robot"></i> AI Settings
+            </a>
+            <a class="nav-item" onclick="switchTab('channels', this)">
+                <i class="fas fa-share-alt"></i> Channels
+            </a>
+            
+            <a class="nav-item" onclick="switchTab('leads', this)">
+                <i class="fas fa-user-plus"></i> Leads
+            </a>
+            <a class="nav-item" onclick="switchTab('analytics', this)">
+                <i class="fas fa-chart-bar"></i> Analytics
+            </a>
+            
+            <a class="nav-item" onclick="switchTab('usage', this)">
+                <i class="fas fa-chart-pie"></i> Usage
+            </a>
+            <a class="nav-item" onclick="switchTab('branding', this)">
+                <i class="fas fa-paint-brush"></i> Branding
+            </a>
+            <a class="nav-item" onclick="switchTab('install', this)">
+                <i class="fas fa-code"></i> Installation (Widget Code)
+            </a>
+            <a class="nav-item" onclick="switchTab('simulator', this)">
+                <i class="fas fa-vr-cardboard"></i> Simulator
+            </a>
         </nav>
-                {% if is_super %}
-                <!-- Admin Users Tab -->
-                <div id="admins" class="tab-content">
-                    <div class="header-actions">
-                        <div>
-                            <h1 style="font-size: 1.5rem;">Admin Users</h1>
-                            <p style="color: var(--text-muted);">Manage client and super admin accounts. You can edit usernames, reset passwords, or impersonate a client admin.</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-body" style="overflow-x:auto;">
-                            <table style="width:100%">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Username</th>
-                                        <th>Site ID</th>
-                                        <th>Super Admin</th>
-                                        <th>Created</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="adminTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <!-- Edit Admin Modal -->
-                    <div class="modal-overlay" id="adminModal">
-                        <div class="modal-content">
-                            <div class="modal-header" id="adminModalTitle">Edit Admin</div>
-                            <form id="adminForm">
-                                <input type="hidden" id="adminId" name="id">
-                                <div class="form-group">
-                                    <label>Username</label>
-                                    <input type="text" id="adminUsername" name="username" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>New Password <span style="color:var(--text-muted); font-size:0.8em;">(leave blank to keep unchanged)</span></label>
-                                    <input type="password" id="adminPassword" name="password" class="form-control" autocomplete="new-password">
-                                </div>
-                                <div class="modal-actions">
-                                    <button type="button" class="btn btn-outline" onclick="closeAdminModal()">Cancel</button>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+
+        {% if is_super %}
+        <!-- Super Admin Specific Tabs -->
+        <div id="platform" class="tab-content">
+            <div class="header-actions">
+                <h1>Platform Settings</h1>
+                <p>Manage global platform configurations, API keys, and integrations.</p>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <p>Platform settings content goes here...</p>
                 </div>
-                {% endif %}
+            </div>
+        </div>
+        {% endif %}
         <div class="sidebar-footer">
             <span style="font-size: 0.85rem; color: var(--text-muted); text-align: center;">Site ID: <b>{{ site_id }}</b></span>
             <a href="/admin/logout" class="btn btn-outline" style="width: 100%; justify-content: center;"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -267,6 +260,10 @@
                                     try {
                                         const url = new URL('/admin/api/client/conversations', window.location.origin);
                                         const siteId = new URLSearchParams(window.location.search).get('site_id');
+                                        if (!siteId) {
+                                            alert('Site ID is missing. Please include ?site_id= in the URL.');
+                                            return;
+                                        }
                                         if (siteId) url.searchParams.append('site_id', siteId);
                                         const res = await fetch(url);
                                         const data = await res.json();
@@ -501,7 +498,9 @@
                             if (tabId === 'dashboard') loadStats();
                             if (tabId === 'intents') loadIntents();
                             if (tabId === 'config') loadDynamicConfig();
-                            if (tabId === 'admins') loadAdmins();
+                            if (tabId === 'conversations') loadConversations();
+                            if (tabId === 'analytics') loadAnalytics();
+                            if (tabId === 'leads') loadLeads();
                             if(tabId === 'simulator') {
                                 const iframe = document.getElementById('sim-frame');
                                 if(iframe) iframe.src = iframe.src;
@@ -707,6 +706,10 @@
             // Ensure site_id is passed if available
             const url = new URL('/admin/api/client/config', window.location.origin);
             const siteId = new URLSearchParams(window.location.search).get('site_id');
+            if (!siteId) {
+                alert('Site ID is missing. Please include ?site_id= in the URL.');
+                return;
+            }
             if (siteId) url.searchParams.append('site_id', siteId);
             try {
                 const res = await fetch(url);

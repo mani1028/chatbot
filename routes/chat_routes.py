@@ -161,4 +161,5 @@ def get_chat_history():
                 'sender': 'bot'
             })
 
-    return jsonify(history), 200
+    # Ensure the response is always an array
+    return jsonify(history if history else []), 200

@@ -22,6 +22,7 @@ from models import Admin, BrandingSettings, Site, ClientConfig
 # Blueprints
 from routes.chat_routes import chat_bp
 from routes.admin_api import admin_api
+from routes.super_admin_api import super_admin_api
 
 def create_app():
     app = Flask(__name__)
@@ -42,6 +43,7 @@ def create_app():
     # Register Blueprints
     app.register_blueprint(chat_bp)
     app.register_blueprint(admin_api, url_prefix="/admin/api")
+    app.register_blueprint(super_admin_api, url_prefix='/api/super')
 
     return app
 
