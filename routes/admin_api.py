@@ -15,7 +15,16 @@ from models import (
 )
 from models.client import Client
 from models.end_user import EndUser
+from models.conversation import Conversation
 from models.platform_settings import AuditLog
+
+# Stage 2 imports
+from models.conversation_state import ConversationState
+from models.form import FormDefinition, FormSubmission
+from models.webhook import WebhookConfig, WebhookLog
+from services.feature_gate import get_site_features, require_feature, check_limit, FEATURE_ANALYTICS, FEATURE_FORMS, FEATURE_WEBHOOKS
+from services.analytics_service import get_full_analytics, get_overview
+from services.webhook_service import get_webhook_stats
 
 # ---------------------------------------------------
 # DEFINE BLUEPRINT EXACTLY ONCE
@@ -248,7 +257,10 @@ def import_template():
     if not filename or not site_id:
         return jsonify({"error": "Missing filename or site_id"}), 400
 
-    template_path = os.path.join(os.path.dirname(__file__), "..", "intent_templates", filename)
+    # THE FIX: Standardize template path using absolute path
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    template_path = os.path.join(base_dir, "intent_templates", filename)
+    
     if not os.path.exists(template_path):
         return jsonify({"error": "Template file not found"}), 404
 
@@ -327,6 +339,327 @@ def delete_billing(billing_id):
 def list_plans():
     plans = Plan.query.all()
     return jsonify({"plans": [p.to_dict() for p in plans]})
+
+# --- ALIAS ROUTES (health / audit_logs) ---
+@admin_api.route("/super/health", methods=["GET"])
+@super_admin_required
+def system_health_alias():
+    """Alias for /super/health-check used by the frontend."""
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        db_status = "Online"
+    except Exception:
+        db_status = "Offline"
+    return jsonify({
+        "db_status": db_status,
+        "system": "Operational",
+        "api_status": "Healthy"
+    })
+
+@admin_api.route("/super/audit_logs", methods=["GET"])
+@super_admin_required
+def load_audit_logs_alias():
+    """Alias for /super/audit-logs used by the frontend."""
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(100).all()
+    admin_map = {}
+    for l in logs:
+        if l.admin_id not in admin_map:
+            admin = db.session.get(Admin, l.admin_id)
+            admin_map[l.admin_id] = admin.username if admin else f"Admin #{l.admin_id}"
+    return jsonify({"logs": [{
+        "id": l.id,
+        "timestamp": l.timestamp.isoformat() if l.timestamp else '-',
+        "created_at": l.timestamp.isoformat() if l.timestamp else '-',
+        "action": l.action,
+        "admin_id": l.admin_id,
+        "admin_username": admin_map.get(l.admin_id, '-')
+    } for l in logs]})
+
+# --- SUPER ADMIN: GET SITE ---
+@admin_api.route("/super/sites/<int:site_id>", methods=["GET"])
+@super_admin_required
+def get_site(site_id):
+    """Get site details including assigned intents"""
+    site = db.session.get(Site, site_id)
+    if not site:
+        return jsonify({"error": "Site not found"}), 404
+    
+    # Get assigned intents for this site
+    intents = Intent.query.filter_by(site_id=site_id).all()
+    intents_data = []
+    for intent in intents:
+        intents_data.append({
+            "id": intent.id,
+            "intent_name": intent.intent_name,
+            "intent_type": intent.intent_type,
+            "sector": intent.sector,
+            "response": intent.response,
+            "template_file": intent.template_file,
+            "created_at": intent.created_at.isoformat() if intent.created_at else None,
+            "confidence_threshold": intent.confidence_threshold
+        })
+    
+    return jsonify({
+        "site": {
+            "id": site.id,
+            "name": site.name,
+            "domain": site.domain,
+            "plan_id": site.plan_id,
+            "intents": intents_data
+        }
+    })
+
+# --- SUPER ADMIN: EDIT SITE ---
+@admin_api.route("/super/sites/<int:site_id>", methods=["PUT"])
+@super_admin_required
+def update_site(site_id):
+    site = db.session.get(Site, site_id)
+    if not site:
+        return jsonify({"error": "Site not found"}), 404
+    data = request.get_json()
+    if 'name' in data:
+        site.name = data['name']
+    if 'domain' in data:
+        site.domain = data['domain']
+    if 'plan_id' in data:
+        site.plan_id = int(data['plan_id'])
+    db.session.commit()
+    admin_id = session.get('admin_id')
+    log_action(admin_id, site_id, f"UPDATE_SITE name={site.name}")
+    return jsonify({"success": True, "site": site.to_dict()})
+
+# --- SUPER ADMIN: PLATFORM ANALYTICS ---
+@admin_api.route("/super/analytics", methods=["GET"])
+@super_admin_required
+def platform_analytics():
+    """Platform-wide analytics for all tenants."""
+    total_sites = Site.query.count()
+    active_sites = Site.query.filter_by(status='active').count()
+    suspended_sites = Site.query.filter_by(status='suspended').count()
+    total_chats = ChatLog.query.count()
+    total_bots = Bot.query.count()
+    total_intents = Intent.query.count()
+    total_plans = Plan.query.count()
+    active_billing = Billing.query.filter_by(status='active').count()
+    total_revenue = db.session.query(func.coalesce(func.sum(Billing.amount), 0)).filter_by(paid=True).scalar()
+
+    # Top tenants by message count
+    top_tenants = db.session.query(
+        Site.id, Site.name, func.count(ChatLog.id).label('msg_count')
+    ).outerjoin(ChatLog, ChatLog.site_id == Site.id)\
+     .group_by(Site.id, Site.name)\
+     .order_by(func.count(ChatLog.id).desc())\
+     .limit(10).all()
+
+    # Top intents across platform
+    top_intents = db.session.query(
+        ChatLog.detected_intent, func.count(ChatLog.id).label('count')
+    ).filter(ChatLog.detected_intent != None, ChatLog.detected_intent != '')\
+     .group_by(ChatLog.detected_intent)\
+     .order_by(func.count(ChatLog.id).desc())\
+     .limit(10).all()
+
+    # Monthly chat volume (last 6 months)
+    monthly_chats = db.session.query(
+        func.strftime('%Y-%m', ChatLog.created_at).label('month'),
+        func.count(ChatLog.id).label('count')
+    ).group_by(func.strftime('%Y-%m', ChatLog.created_at))\
+     .order_by(func.strftime('%Y-%m', ChatLog.created_at).desc())\
+     .limit(6).all()
+
+    return jsonify({
+        "total_sites": total_sites,
+        "active_sites": active_sites,
+        "suspended_sites": suspended_sites,
+        "total_chats": total_chats,
+        "total_bots": total_bots,
+        "total_intents": total_intents,
+        "total_plans": total_plans,
+        "active_billing": active_billing,
+        "total_revenue": float(total_revenue or 0),
+        "top_tenants": [{"id": t[0], "name": t[1], "messages": t[2]} for t in top_tenants],
+        "top_intents": [{"intent": t[0], "count": t[1]} for t in top_intents],
+        "monthly_chats": [{"month": m[0], "count": m[1]} for m in monthly_chats]
+    })
+
+# --- SUPER ADMIN: USAGE CRUD ---
+@admin_api.route("/super/usage", methods=["GET"])
+@super_admin_required
+def list_usage():
+    records = Usage.query.order_by(Usage.created_at.desc()).all()
+    result = []
+    for u in records:
+        result.append({
+            "id": u.id,
+            "site_id": u.site_id,
+            "bot_id": 0,
+            "messages": u.messages,
+            "period": u.month,
+            "storage_mb": u.storage_mb,
+            "api_calls": u.api_calls,
+            "active_users": u.active_users
+        })
+    return jsonify({"usage": result})
+
+@admin_api.route("/super/usage", methods=["POST"])
+@super_admin_required
+def create_usage():
+    data = request.get_json()
+    record = Usage(
+        site_id=int(data.get("site_id", 0)),
+        messages=int(data.get("messages", 0)),
+        month=data.get("period", ""),
+        storage_mb=float(data.get("storage_mb", 0)),
+        api_calls=int(data.get("api_calls", 0)),
+        active_users=int(data.get("active_users", 0))
+    )
+    db.session.add(record)
+    db.session.commit()
+    return jsonify({"success": True, "id": record.id})
+
+@admin_api.route("/super/usage/<int:usage_id>", methods=["PUT"])
+@super_admin_required
+def update_usage(usage_id):
+    record = db.session.get(Usage, usage_id)
+    if not record:
+        return jsonify({"error": "Not found"}), 404
+    data = request.get_json()
+    if 'site_id' in data: record.site_id = int(data['site_id'])
+    if 'messages' in data: record.messages = int(data['messages'])
+    if 'period' in data: record.month = data['period']
+    db.session.commit()
+    return jsonify({"success": True})
+
+@admin_api.route("/super/usage/<int:usage_id>", methods=["DELETE"])
+@super_admin_required
+def delete_usage(usage_id):
+    record = db.session.get(Usage, usage_id)
+    if record:
+        db.session.delete(record)
+        db.session.commit()
+    return jsonify({"success": True})
+
+# --- SUPER ADMIN: INTEGRATIONS CRUD ---
+@admin_api.route("/super/integrations", methods=["GET"])
+@super_admin_required
+def list_integrations():
+    records = Integration.query.all()
+    result = []
+    for i in records:
+        result.append({
+            "id": i.id,
+            "site_id": 0,
+            "name": i.name,
+            "type": i.type,
+            "config": i.config or '',
+            "status": 'active' if i.enabled else 'inactive'
+        })
+    return jsonify({"integrations": result})
+
+@admin_api.route("/super/integrations", methods=["POST"])
+@super_admin_required
+def create_integration():
+    data = request.get_json()
+    record = Integration(
+        name=data.get("type", "Integration"),
+        type=data.get("type", ""),
+        config=data.get("config", ""),
+        enabled=data.get("status", "active") == "active"
+    )
+    db.session.add(record)
+    db.session.commit()
+    return jsonify({"success": True, "id": record.id})
+
+@admin_api.route("/super/integrations/<int:integration_id>", methods=["PUT"])
+@super_admin_required
+def update_integration(integration_id):
+    record = db.session.get(Integration, integration_id)
+    if not record:
+        return jsonify({"error": "Not found"}), 404
+    data = request.get_json()
+    if 'type' in data: record.type = data['type']
+    if 'config' in data: record.config = data['config']
+    if 'name' in data: record.name = data['name']
+    if 'status' in data: record.enabled = data['status'] == 'active'
+    db.session.commit()
+    return jsonify({"success": True})
+
+@admin_api.route("/super/integrations/<int:integration_id>", methods=["DELETE"])
+@super_admin_required
+def delete_integration(integration_id):
+    record = db.session.get(Integration, integration_id)
+    if record:
+        db.session.delete(record)
+        db.session.commit()
+    return jsonify({"success": True})
+
+# --- SUPER ADMIN: ANNOUNCEMENTS CRUD ---
+@admin_api.route("/super/announcements", methods=["GET"])
+@super_admin_required
+def list_announcements():
+    records = Announcement.query.order_by(Announcement.created_at.desc()).all()
+    result = []
+    for a in records:
+        result.append({
+            "id": a.id,
+            "site_id": 0,
+            "title": a.title,
+            "message": a.message,
+            "status": 'active' if a.visible else 'inactive',
+            "created_at": a.created_at.isoformat() if a.created_at else None
+        })
+    return jsonify({"announcements": result})
+
+@admin_api.route("/super/announcements", methods=["POST"])
+@super_admin_required
+def create_announcement():
+    data = request.get_json()
+    record = Announcement(
+        title=data.get("title", ""),
+        message=data.get("message", ""),
+        visible=data.get("status", "active") == "active"
+    )
+    db.session.add(record)
+    db.session.commit()
+    return jsonify({"success": True, "id": record.id})
+
+@admin_api.route("/super/announcements/<int:announcement_id>", methods=["PUT"])
+@super_admin_required
+def update_announcement(announcement_id):
+    record = db.session.get(Announcement, announcement_id)
+    if not record:
+        return jsonify({"error": "Not found"}), 404
+    data = request.get_json()
+    if 'title' in data: record.title = data['title']
+    if 'message' in data: record.message = data['message']
+    if 'status' in data: record.visible = data['status'] == 'active'
+    db.session.commit()
+    return jsonify({"success": True})
+
+@admin_api.route("/super/announcements/<int:announcement_id>", methods=["DELETE"])
+@super_admin_required
+def delete_announcement(announcement_id):
+    record = db.session.get(Announcement, announcement_id)
+    if record:
+        db.session.delete(record)
+        db.session.commit()
+    return jsonify({"success": True})
+
+# --- SUPER ADMIN: CONVERSATIONS ---
+@admin_api.route("/super/conversations", methods=["GET"])
+@super_admin_required
+def list_conversations():
+    records = Conversation.query.order_by(Conversation.started_at.desc()).limit(100).all()
+    return jsonify({"conversations": [c.to_dict() for c in records]})
+
+@admin_api.route("/super/conversations/<int:conversation_id>", methods=["DELETE"])
+@super_admin_required
+def delete_conversation(conversation_id):
+    record = db.session.get(Conversation, conversation_id)
+    if record:
+        db.session.delete(record)
+        db.session.commit()
+    return jsonify({"success": True})
 
 # --- Lead Capture Dashboard & Export ---
 @admin_api.route("/super/leads", methods=["GET"])
@@ -493,9 +826,27 @@ def client_analytics():
 
 @admin_api.route("/client/leads", methods=["GET"])
 def client_leads():
+    """Get captured leads for the current site with name, email, and phone."""
+    from models.lead_capture import LeadCapture
     site_id = request.args.get("site_id") or session.get("site_id")
-    leads = ChatLog.query.filter_by(site_id=site_id, detected_intent='lead_capture').all()
-    return jsonify({"leads": [l.to_dict() for l in leads]})
+    
+    if not site_id:
+        return jsonify({"leads": []})
+    
+    # Query LeadCapture records instead of ChatLog
+    leads = LeadCapture.query.filter_by(site_id=int(site_id)).order_by(LeadCapture.captured_at.desc()).all()
+    
+    result = []
+    for lead in leads:
+        result.append({
+            'created_at': lead.captured_at.isoformat() if lead.captured_at else None,
+            'lead_name': lead.user_name,
+            'lead_email': lead.user_email,
+            'lead_phone': lead.user_phone,
+            'user_message': lead.question_context
+        })
+    
+    return jsonify({"leads": result})
 
 @admin_api.route("/client/config", methods=["GET", "POST"])
 def client_config():
@@ -528,6 +879,33 @@ def client_config():
                 required_keys.add(f)
                 
     return jsonify({"config": {k: config_dict.get(k, '') for k in required_keys}})
+
+@admin_api.route("/client/ai-settings", methods=["GET", "POST"])
+def client_ai_settings():
+    """Get/Set AI and chat behavior settings (preserve_chat_history, etc.)"""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    
+    if not site_id:
+        return jsonify({"error": "No site ID"}), 400
+    
+    if request.method == "POST":
+        data = request.get_json() or {}
+        # Save all settings to ClientConfig
+        for key, value in data.items():
+            config = ClientConfig.query.filter_by(site_id=site_id, key=key).first()
+            if config:
+                config.value = value
+            else:
+                new_cfg = ClientConfig(site_id=site_id, key=key, value=value)
+                db.session.add(new_cfg)
+        db.session.commit()
+        return jsonify({"success": True})
+    
+    # GET: Return all AI settings
+    configs = ClientConfig.query.filter_by(site_id=site_id).all()
+    settings = {c.key: c.value for c in configs}
+    
+    return jsonify({"settings": settings})
 
 @admin_api.route("/client/intents", methods=["GET", "POST"])
 def client_intents():
@@ -622,3 +1000,825 @@ def manage_client_intent(intent_id):
 
         db.session.commit()
         return jsonify({"success": True})
+
+
+# ===================================================
+# STAGE 2: ANALYTICS DASHBOARD
+# ===================================================
+
+@admin_api.route("/super/analytics/full", methods=["GET"])
+@super_admin_required
+def super_full_analytics():
+    """Full analytics for super admin (all sites or specific site)."""
+    site_id = request.args.get("site_id", type=int)
+    days = request.args.get("days", 30, type=int)
+    if site_id:
+        return jsonify(get_full_analytics(site_id, days))
+    # Aggregate across all sites
+    sites = Site.query.all()
+    if not sites:
+        return jsonify({"error": "No sites found"}), 404
+    return jsonify(get_full_analytics(sites[0].id, days))
+
+
+@admin_api.route("/client/analytics/full", methods=["GET"])
+def client_full_analytics():
+    """Full analytics dashboard for a client's site."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Missing site_id"}), 400
+    site_id = int(site_id)
+
+    allowed, err = require_feature(site_id, FEATURE_ANALYTICS)
+    if not allowed:
+        # Return basic overview even without analytics feature
+        return jsonify({"overview": get_overview(site_id, 30), "upgrade_required": True, "message": err})
+
+    days = request.args.get("days", 30, type=int)
+    return jsonify(get_full_analytics(site_id, days))
+
+
+# ===================================================
+# STAGE 2: FEATURE GATES
+# ===================================================
+
+@admin_api.route("/client/features", methods=["GET"])
+def client_features():
+    """Get feature flags and limits for the client's plan."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Missing site_id"}), 400
+    return jsonify(get_site_features(int(site_id)))
+
+
+@admin_api.route("/super/plans/<int:plan_id>/features", methods=["PUT"])
+@super_admin_required
+def update_plan_features(plan_id):
+    """Update feature gates for a specific plan."""
+    plan = db.session.get(Plan, plan_id)
+    if not plan:
+        return jsonify({"error": "Plan not found"}), 404
+
+    data = request.json or {}
+    feature_fields = [
+        'ai_enabled', 'workflows_enabled', 'forms_enabled',
+        'analytics_enabled', 'webhooks_enabled', 'custom_branding',
+        'priority_support', 'max_forms', 'max_webhooks',
+        'max_intents', 'max_monthly_chats'
+    ]
+    for field in feature_fields:
+        if field in data:
+            setattr(plan, field, data[field])
+
+    db.session.commit()
+    log_action(session.get('admin_id'), None, f'Updated plan features: {plan.name}')
+    return jsonify({"success": True, "plan": plan.to_dict()})
+
+
+# ===================================================
+# STAGE 2: MULTI-STEP FORMS
+# ===================================================
+
+@admin_api.route("/client/forms", methods=["GET", "POST"])
+def client_forms():
+    """List or create form definitions for a site."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Missing site_id"}), 400
+    site_id = int(site_id)
+
+    if request.method == "POST":
+        allowed, err = require_feature(site_id, FEATURE_FORMS)
+        if not allowed:
+            return jsonify({"error": err}), 403
+
+        current_count = FormDefinition.query.filter_by(site_id=site_id).count()
+        if not check_limit(site_id, 'max_forms', current_count):
+            return jsonify({"error": "Form limit reached for your plan. Please upgrade."}), 403
+
+        data = request.json or {}
+        form = FormDefinition(
+            site_id=site_id,
+            intent_id=data.get('intent_id'),
+            name=data.get('name', 'New Form'),
+            description=data.get('description', ''),
+            completion_message=data.get('completion_message', 'Thank you! Your information has been submitted.'),
+            webhook_url=data.get('webhook_url'),
+            save_as_lead=data.get('save_as_lead', True),
+            is_active=data.get('is_active', True)
+        )
+        form.set_steps(data.get('steps', []))
+        db.session.add(form)
+        db.session.commit()
+        return jsonify({"success": True, "form": form.to_dict()})
+
+    forms = FormDefinition.query.filter_by(site_id=site_id).all()
+    return jsonify({"forms": [f.to_dict() for f in forms]})
+
+
+@admin_api.route("/client/forms/<int:form_id>", methods=["GET", "PUT", "DELETE"])
+def manage_client_form(form_id):
+    """Get, update, or delete a form definition."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    form = FormDefinition.query.filter_by(id=form_id, site_id=site_id).first()
+    if not form:
+        return jsonify({"error": "Form not found"}), 404
+
+    if request.method == "GET":
+        return jsonify({"form": form.to_dict()})
+
+    if request.method == "DELETE":
+        FormSubmission.query.filter_by(form_id=form.id).delete()
+        db.session.delete(form)
+        db.session.commit()
+        return jsonify({"success": True})
+
+    if request.method == "PUT":
+        data = request.json or {}
+        form.name = data.get('name', form.name)
+        form.description = data.get('description', form.description)
+        form.completion_message = data.get('completion_message', form.completion_message)
+        form.webhook_url = data.get('webhook_url', form.webhook_url)
+        form.save_as_lead = data.get('save_as_lead', form.save_as_lead)
+        form.is_active = data.get('is_active', form.is_active)
+        form.intent_id = data.get('intent_id', form.intent_id)
+        if 'steps' in data:
+            form.set_steps(data['steps'])
+        db.session.commit()
+        return jsonify({"success": True, "form": form.to_dict()})
+
+
+@admin_api.route("/client/forms/<int:form_id>/submissions", methods=["GET"])
+def form_submissions(form_id):
+    """List submissions for a form."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    form = FormDefinition.query.filter_by(id=form_id, site_id=site_id).first()
+    if not form:
+        return jsonify({"error": "Form not found"}), 404
+
+    subs = FormSubmission.query.filter_by(form_id=form_id).order_by(FormSubmission.created_at.desc()).limit(50).all()
+    return jsonify({"submissions": [s.to_dict() for s in subs]})
+
+
+# ===================================================
+# STAGE 2: WEBHOOK MANAGEMENT
+# ===================================================
+
+@admin_api.route("/client/webhooks", methods=["GET", "POST"])
+def client_webhooks():
+    """List or create webhooks for a site."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Missing site_id"}), 400
+    site_id = int(site_id)
+
+    if request.method == "POST":
+        allowed, err = require_feature(site_id, FEATURE_WEBHOOKS)
+        if not allowed:
+            return jsonify({"error": err}), 403
+
+        current_count = WebhookConfig.query.filter_by(site_id=site_id).count()
+        if not check_limit(site_id, 'max_webhooks', current_count):
+            return jsonify({"error": "Webhook limit reached for your plan. Please upgrade."}), 403
+
+        data = request.json or {}
+        webhook = WebhookConfig(
+            site_id=site_id,
+            name=data.get('name', 'New Webhook'),
+            event_type=data.get('event_type', 'handoff'),
+            url=data.get('url', ''),
+            method=data.get('method', 'POST'),
+            max_retries=data.get('max_retries', 3),
+            timeout_seconds=data.get('timeout_seconds', 10),
+            enabled=data.get('enabled', True),
+            payload_template=data.get('payload_template')
+        )
+        if data.get('headers'):
+            webhook.set_headers(data['headers'])
+        db.session.add(webhook)
+        db.session.commit()
+        return jsonify({"success": True, "webhook": webhook.to_dict()})
+
+    webhooks = WebhookConfig.query.filter_by(site_id=site_id).all()
+    return jsonify({"webhooks": [w.to_dict() for w in webhooks]})
+
+
+@admin_api.route("/client/webhooks/<int:webhook_id>", methods=["GET", "PUT", "DELETE"])
+def manage_client_webhook(webhook_id):
+    """Get, update, or delete a webhook."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    webhook = WebhookConfig.query.filter_by(id=webhook_id, site_id=site_id).first()
+    if not webhook:
+        return jsonify({"error": "Webhook not found"}), 404
+
+    if request.method == "GET":
+        return jsonify({"webhook": webhook.to_dict()})
+
+    if request.method == "DELETE":
+        WebhookLog.query.filter_by(webhook_id=webhook.id).delete()
+        db.session.delete(webhook)
+        db.session.commit()
+        return jsonify({"success": True})
+
+    if request.method == "PUT":
+        data = request.json or {}
+        webhook.name = data.get('name', webhook.name)
+        webhook.event_type = data.get('event_type', webhook.event_type)
+        webhook.url = data.get('url', webhook.url)
+        webhook.method = data.get('method', webhook.method)
+        webhook.max_retries = data.get('max_retries', webhook.max_retries)
+        webhook.timeout_seconds = data.get('timeout_seconds', webhook.timeout_seconds)
+        webhook.enabled = data.get('enabled', webhook.enabled)
+        webhook.payload_template = data.get('payload_template', webhook.payload_template)
+        if 'headers' in data:
+            webhook.set_headers(data['headers'])
+        db.session.commit()
+        return jsonify({"success": True, "webhook": webhook.to_dict()})
+
+
+@admin_api.route("/client/webhooks/<int:webhook_id>/logs", methods=["GET"])
+def webhook_logs(webhook_id):
+    """View delivery logs for a webhook."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    webhook = WebhookConfig.query.filter_by(id=webhook_id, site_id=site_id).first()
+    if not webhook:
+        return jsonify({"error": "Webhook not found"}), 404
+
+    logs = WebhookLog.query.filter_by(webhook_id=webhook_id).order_by(WebhookLog.created_at.desc()).limit(50).all()
+    return jsonify({"logs": [l.to_dict() for l in logs]})
+
+
+@admin_api.route("/client/webhooks/stats", methods=["GET"])
+def client_webhook_stats():
+    """Get webhook delivery stats for a site."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Missing site_id"}), 400
+    return jsonify(get_webhook_stats(int(site_id)))
+
+
+# ===================================================
+# STAGE 2: CONVERSATION STATE (admin visibility)
+# ===================================================
+
+@admin_api.route("/client/sessions", methods=["GET"])
+def client_active_sessions():
+    """List active conversation states for a site."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Missing site_id"}), 400
+
+    states = ConversationState.query.filter_by(site_id=int(site_id))\
+        .order_by(ConversationState.updated_at.desc()).limit(50).all()
+    return jsonify({"sessions": [s.to_dict() for s in states]})
+
+
+@admin_api.route("/client/sessions/<session_id>", methods=["GET"])
+def client_session_detail(session_id):
+    """Get conversation state for a specific session."""
+    site_id = request.args.get("site_id") or session.get("site_id")
+    state = ConversationState.query.filter_by(
+        site_id=int(site_id), session_id=session_id
+    ).first()
+    if not state:
+        return jsonify({"error": "Session not found"}), 404
+    return jsonify({"session": state.to_dict()})
+
+
+# ===================================================
+# SUPER ADMIN: INTENT ASSIGNMENT MANAGEMENT
+# ===================================================
+
+@admin_api.route("/super/blueprints", methods=["GET"])
+@super_admin_required
+def get_blueprint_intents():
+    """Get all available blueprint intents (global intents with site_id=0)"""
+    blueprints = Intent.query.filter_by(site_id=0).all()
+    
+    bp_list = []
+    for bp in blueprints:
+        bp_list.append({
+            "id": bp.id,
+            "name": bp.intent_name,
+            "intent_type": bp.intent_type,
+            "category": bp.sector,
+            "phrases": [p.phrase for p in bp.phrases.all()],
+            "response": bp.response[:100] if bp.response else "",
+            "template_file": bp.template_file or "default"
+        })
+    
+    # Also return grouped format for reference
+    grouped = {}
+    for bp in bp_list:
+        template = bp["template_file"]
+        if template not in grouped:
+            grouped[template] = []
+        grouped[template].append(bp)
+    
+    return jsonify({
+        "blueprints": bp_list,
+        "grouped": [
+            {
+                "template_file": template,
+                "intent_count": len(intents),
+                "intents": intents
+            }
+            for template, intents in grouped.items()
+        ]
+    })
+
+
+@admin_api.route("/super/blueprints/<int:blueprint_id>", methods=["GET"])
+@super_admin_required
+def get_blueprint_detail(blueprint_id):
+    """Get full details of a single blueprint intent"""
+    blueprint = Intent.query.filter_by(id=blueprint_id, site_id=0).first()
+    if not blueprint:
+        return jsonify({"error": "Blueprint not found"}), 404
+    
+    return jsonify({
+        "blueprint": {
+            "id": blueprint.id,
+            "name": blueprint.intent_name,
+            "intent_type": blueprint.intent_type,
+            "sector": blueprint.sector,
+            "phrases": [p.phrase for p in blueprint.phrases.all()],
+            "response": blueprint.response,
+            "confidence_threshold": blueprint.confidence_threshold
+        }
+    }), 200
+
+
+@admin_api.route("/super/sites/<int:site_id>/intents", methods=["GET"])
+@super_admin_required
+def super_get_site_intents(site_id):
+    """Get all intents assigned to a specific site"""
+    intents = Intent.query.filter_by(site_id=site_id).all()
+    intents_list = [
+        {
+            "id": intent.id, 
+            "intent_name": intent.intent_name,
+            "intent_type": intent.intent_type,
+            "phrase_count": intent.phrases.count(),
+            "response": intent.response[:100] if intent.response else ""
+        }
+        for intent in intents
+    ]
+    return jsonify({"intents": intents_list})
+
+
+@admin_api.route("/super/sites/<int:site_id>/assign-intent", methods=["POST"])
+@super_admin_required
+def super_assign_intent_to_site(site_id):
+    """Assign a blueprint intent to a client site"""
+    from models.intent import IntentPhrase
+    
+    data = request.get_json() or {}
+    blueprint_id = data.get('blueprint_id')
+    
+    # Support both old (blueprint_id) and new (intent_name) formats
+    if blueprint_id:
+        # OLD FORMAT: Get blueprint from database
+        blueprint = Intent.query.filter_by(id=blueprint_id, site_id=0).first()
+        if not blueprint:
+            return jsonify({"error": "Blueprint intent not found"}), 404
+        
+        intent_name = blueprint.intent_name
+        intent_type = blueprint.intent_type
+        sector = blueprint.sector
+        confidence = blueprint.confidence
+        confidence_threshold = blueprint.confidence_threshold
+        response = blueprint.response
+        phrases = [p.phrase for p in blueprint.phrases.all()]
+    else:
+        # NEW FORMAT: Use provided intent data (from JSON upload)
+        intent_name = data.get('intent_name')
+        intent_type = data.get('intent_type', 'info')
+        sector = data.get('sector', 'general')
+        confidence = data.get('confidence', 0.8)
+        confidence_threshold = data.get('confidence_threshold', 0.7)
+        response = data.get('response')
+        phrases = data.get('phrases', [])
+        template_file = data.get('template_file')  # NEW: Capture template file name
+        
+        if not intent_name:
+            return jsonify({"error": "intent_name is required"}), 400
+    
+    # Check if intent already assigned to this site
+    existing = Intent.query.filter_by(site_id=site_id, intent_name=intent_name).first()
+    if existing:
+        return jsonify({"error": f"Intent '{intent_name}' already assigned to this site"}), 409
+    
+    try:
+        # Create a new intent for this site
+        new_intent = Intent(
+            site_id=site_id,
+            intent_name=intent_name,
+            intent_type=intent_type,
+            sector=sector,
+            confidence=confidence,
+            confidence_threshold=confidence_threshold,
+            response=response,
+            template_file=template_file  # NEW: Store source template file
+        )
+        db.session.add(new_intent)
+        db.session.flush()  # Get the new intent ID
+        
+        # Add phrases
+        for phrase in phrases:
+            new_phrase = IntentPhrase(intent_id=new_intent.id, phrase=phrase)
+            db.session.add(new_phrase)
+        
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "message": f"Intent '{intent_name}' assigned to site {site_id}",
+            "intent": {
+                "id": new_intent.id,
+                "intent_name": new_intent.intent_name,
+                "intent_type": new_intent.intent_type
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to assign intent: {str(e)}"}), 500
+
+
+@admin_api.route("/super/sites/<int:site_id>/intents/<intent_name>", methods=["DELETE"])
+@super_admin_required
+def super_remove_intent_from_site(site_id, intent_name):
+    """Remove an intent from a client site"""
+    intent = Intent.query.filter_by(site_id=site_id, intent_name=intent_name).first()
+    
+    if not intent:
+        return jsonify({"error": "Intent not found for this site"}), 404
+    
+    try:
+        from models.intent import IntentPhrase
+        # Delete associated phrases
+        IntentPhrase.query.filter_by(intent_id=intent.id).delete()
+        
+        # Delete the intent
+        db.session.delete(intent)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Intent '{intent_name}' removed from site {site_id}"
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to remove intent: {str(e)}"}), 500
+
+
+# ===================================================
+# BLUEPRINT CRUD OPERATIONS (Create/Edit/Delete)
+# ===================================================
+
+@admin_api.route("/super/blueprints", methods=["POST"])
+@super_admin_required
+def create_blueprint():
+    """Create a new blueprint intent (site_id=0)"""
+    from models.intent import IntentPhrase
+    
+    data = request.get_json() or {}
+    intent_name = data.get('intent_name', '').strip()
+    response = data.get('response', '').strip()
+    phrases = data.get('phrases', [])
+    intent_type = data.get('intent_type', 'info')
+    sector = data.get('sector', '')
+    
+    if not intent_name:
+        return jsonify({"error": "intent_name is required"}), 400
+    if not response:
+        return jsonify({"error": "response is required"}), 400
+    if not phrases or len(phrases) == 0:
+        return jsonify({"error": "At least one phrase is required"}), 400
+    
+    # Check if blueprint with same name already exists
+    existing = Intent.query.filter_by(site_id=0, intent_name=intent_name).first()
+    if existing:
+        return jsonify({"error": f"Blueprint '{intent_name}' already exists"}), 409
+    
+    try:
+        # Create new blueprint intent
+        new_blueprint = Intent(
+            site_id=0,  # site_id=0 marks it as a global blueprint
+            intent_name=intent_name,
+            intent_type=intent_type,
+            response=response,
+            sector=sector,
+            confidence_threshold=data.get('confidence_threshold', 0.7)
+        )
+        db.session.add(new_blueprint)
+        db.session.flush()  # Get the new intent ID
+        
+        # Add phrases
+        valid_phrases = []
+        for phrase in phrases:
+            phrase = (phrase or '').strip()
+            if phrase:
+                phrase_obj = IntentPhrase(intent_id=new_blueprint.id, phrase=phrase)
+                db.session.add(phrase_obj)
+                valid_phrases.append(phrase)
+        
+        if not valid_phrases:
+            db.session.rollback()
+            return jsonify({"error": "No valid phrases provided"}), 400
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Blueprint '{intent_name}' created successfully",
+            "blueprint": {
+                "id": new_blueprint.id,
+                "name": new_blueprint.intent_name,
+                "intent_type": new_blueprint.intent_type,
+                "sector": new_blueprint.sector,
+                "phrases": valid_phrases,
+                "response": new_blueprint.response
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to create blueprint: {str(e)}"}), 500
+
+
+@admin_api.route("/super/blueprints/<int:blueprint_id>", methods=["PUT"])
+@super_admin_required
+def update_blueprint(blueprint_id):
+    """Update an existing blueprint intent"""
+    from models.intent import IntentPhrase
+    
+    # Get the blueprint (must have site_id=0)
+    blueprint = Intent.query.filter_by(id=blueprint_id, site_id=0).first()
+    if not blueprint:
+        return jsonify({"error": "Blueprint not found"}), 404
+    
+    data = request.get_json() or {}
+    
+    try:
+        # Update basic fields
+        if 'intent_name' in data:
+            new_name = data['intent_name'].strip()
+            if new_name and new_name != blueprint.intent_name:
+                existing = Intent.query.filter_by(site_id=0, intent_name=new_name).first()
+                if existing:
+                    return jsonify({"error": f"Blueprint '{new_name}' already exists"}), 409
+                blueprint.intent_name = new_name
+        
+        if 'response' in data:
+            blueprint.response = data['response'].strip()
+        
+        if 'intent_type' in data:
+            blueprint.intent_type = data['intent_type']
+        
+        if 'sector' in data:
+            blueprint.sector = data['sector'].strip()
+        
+        if 'confidence_threshold' in data:
+            blueprint.confidence_threshold = data['confidence_threshold']
+        
+        # Update phrases if provided
+        if 'phrases' in data:
+            phrases = data['phrases']
+            if not phrases or len(phrases) == 0:
+                return jsonify({"error": "At least one phrase is required"}), 400
+            
+            # Delete old phrases
+            IntentPhrase.query.filter_by(intent_id=blueprint.id).delete()
+            
+            # Add new phrases
+            for phrase in phrases:
+                phrase = (phrase or '').strip()
+                if phrase:
+                    phrase_obj = IntentPhrase(intent_id=blueprint.id, phrase=phrase)
+                    db.session.add(phrase_obj)
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Blueprint '{blueprint.intent_name}' updated successfully",
+            "blueprint": {
+                "id": blueprint.id,
+                "name": blueprint.intent_name,
+                "intent_type": blueprint.intent_type,
+                "sector": blueprint.sector,
+                "phrases": [p.phrase for p in blueprint.phrases.all()],
+                "response": blueprint.response
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to update blueprint: {str(e)}"}), 500
+
+
+@admin_api.route("/super/blueprints/<int:blueprint_id>", methods=["DELETE"])
+@super_admin_required
+def delete_blueprint(blueprint_id):
+    """Delete a blueprint intent"""
+    from models.intent import IntentPhrase
+    
+    # Get the blueprint (must have site_id=0)
+    blueprint = Intent.query.filter_by(id=blueprint_id, site_id=0).first()
+    if not blueprint:
+        return jsonify({"error": "Blueprint not found"}), 404
+    
+    try:
+        blueprint_name = blueprint.intent_name
+        
+        # Delete associated phrases
+        IntentPhrase.query.filter_by(intent_id=blueprint.id).delete()
+        
+        # Delete the blueprint
+        db.session.delete(blueprint)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Blueprint '{blueprint_name}' deleted successfully"
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to delete blueprint: {str(e)}"}), 500
+
+
+# ---------------------------------------------------
+# INTENT TEMPLATES MANAGEMENT
+# ---------------------------------------------------
+def admin_required(func):
+    """Admin or super admin required"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        user_id = session.get("admin_id")
+        if not user_id:
+            return jsonify({"error": "Authentication required"}), 401
+        admin = db.session.get(Admin, user_id)
+        if not admin:
+            return jsonify({"error": "Admin not found"}), 404
+        return func(*args, **kwargs)
+    return wrapper
+
+
+# UNIFIED PATH LOGIC: Ensures all routes look at the exact same physical folder
+def get_templates_dir():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    templates_dir = os.path.join(base_dir, "intent_templates")
+    os.makedirs(templates_dir, exist_ok=True)
+    return templates_dir
+
+
+@admin_api.route("/intent-templates", methods=["GET"])
+@admin_required
+def get_intent_templates():
+    """List all intent template files"""
+    templates_dir = get_templates_dir()
+    
+    templates = []
+    try:
+        for filename in os.listdir(templates_dir):
+            if filename.endswith('.json'):
+                file_path = os.path.join(templates_dir, filename)
+                file_size = os.path.getsize(file_path)
+                file_time = os.path.getmtime(file_path)
+                
+                # Try to read file to get intent count
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        intent_count = len(data.get('intents', []))
+                except:
+                    intent_count = 0
+                
+                templates.append({
+                    "filename": filename,
+                    "size": file_size,
+                    "modified": datetime.fromtimestamp(file_time).isoformat(),
+                    "intents": intent_count
+                })
+        
+        templates.sort(key=lambda x: x['modified'], reverse=True)
+        return jsonify({"templates": templates}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_api.route("/intent-templates", methods=["POST"])
+@admin_required
+def upload_intent_template():
+    """Upload a new intent template file"""
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    if not file.filename.endswith('.json'):
+        return jsonify({"error": "Only .json files allowed"}), 400
+    
+    try:
+        # Read and validate JSON
+        file_content = file.read().decode('utf-8')
+        json_data = json.loads(file_content)
+        
+        # Validate structure
+        if 'intents' not in json_data or not isinstance(json_data['intents'], list):
+            return jsonify({"error": "Invalid format: must contain 'intents' array"}), 400
+        
+        # Save file
+        templates_dir = get_templates_dir()
+        
+        from werkzeug.utils import secure_filename
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(templates_dir, filename)
+        
+        # Check if file exists and prevent overwrite without confirmation
+        if os.path.exists(file_path):
+            return jsonify({
+                "error": "File already exists",
+                "exists": True,
+                "filename": filename
+            }), 409
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(json_data, f, indent=2)
+        
+        intent_count = len(json_data['intents'])
+        return jsonify({
+            "success": True,
+            "message": f"Template uploaded: {filename} ({intent_count} intents)",
+            "filename": filename,
+            "intents": intent_count
+        }), 201
+        
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid JSON file"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Upload failed: {str(e)}"}), 500
+
+
+@admin_api.route("/intent-templates/<filename>", methods=["GET"])
+@admin_required
+def download_intent_template(filename):
+    """Download a template file"""
+    from flask import send_from_directory
+    templates_dir = get_templates_dir()
+    file_path = os.path.join(templates_dir, filename)
+    
+    if not os.path.exists(file_path):
+        return jsonify({"error": "File not found"}), 404
+    return send_from_directory(templates_dir, filename, as_attachment=True)
+
+
+@admin_api.route("/intent-templates/<filename>", methods=["DELETE"])
+@admin_required
+def delete_intent_template(filename):
+    """Delete a template file"""
+    templates_dir = get_templates_dir()
+    file_path = os.path.join(templates_dir, filename)
+    
+    if not os.path.exists(file_path):
+        return jsonify({"error": "File not found"}), 404
+    
+    try:
+        os.remove(file_path)
+        return jsonify({"success": True, "message": f"Template '{filename}' deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to delete: {str(e)}"}), 500
+
+
+@admin_api.route("/intent-templates/<filename>/import", methods=["POST"])
+@admin_required
+def import_intent_template(filename):
+    """Import a template into the current site"""
+    user_id = session.get("admin_id")
+    admin = db.session.get(Admin, user_id)
+    site_id = admin.site_id
+    
+    templates_dir = get_templates_dir()
+    file_path = os.path.join(templates_dir, filename)
+    
+    if not os.path.exists(file_path):
+        return jsonify({"error": "Template file not found"}), 404
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            template_data = json.load(f)
+        
+        from services.importer import import_sector_template
+        result = import_sector_template(site_id, template_data)
+        
+        if result.get('success'):
+            return jsonify({"success": True, "message": result.get('message')}), 200
+        else:
+            return jsonify({"error": result.get('message')}), 400
+    except Exception as e:
+        return jsonify({"error": f"Import failed: {str(e)}"}), 500

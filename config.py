@@ -79,3 +79,15 @@ WIDGET_WIDTH = 420
 WIDGET_HEIGHT = 600
 WIDGET_MIN_WIDTH = 300
 WIDGET_MIN_HEIGHT = 400
+
+# Check LLM Configuration
+import logging
+_llm_logger = logging.getLogger(__name__)
+_openai_key = os.getenv('OPENAI_API_KEY', '').strip()
+if not _openai_key or not _openai_key.startswith('sk-'):
+    _llm_logger.warning("⚠️  LLM FALLBACK NOT CONFIGURED: OPENAI_API_KEY is missing or invalid")
+    _llm_logger.warning("   1. Get a key from: https://platform.openai.com/account/api-keys")
+    _llm_logger.warning("   2. Update .env: OPENAI_API_KEY=sk-your-key")
+    _llm_logger.warning("   3. Restart the app")
+else:
+    _llm_logger.debug("✓ LLM Fallback configured successfully")

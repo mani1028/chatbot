@@ -18,28 +18,61 @@ from models.platform_settings import get_openai_api_key
 
 def llm_fallback(message: str, site_id: int) -> str:
     """Query OpenAI LLM for fallback response."""
+    import os
+    import time
+    
     api_key = get_openai_api_key()
     if not api_key:
+        logging.warning(f"LLM Fallback [site_id={site_id}]: No OpenAI API key found")
+        return "I'm not sure how to help with that right now. Please try rephrasing."
+    
+    # Validate API key format
+    if not isinstance(api_key, str):
+        logging.error(f"LLM Fallback [site_id={site_id}]: API key is not a string")
+        return "I'm not sure how to help with that right now."
+        
+    if not api_key.startswith('sk-'):
+        logging.error(f"LLM Fallback [site_id={site_id}]: Invalid API key format. Starts with: {api_key[:10] if len(api_key) > 10 else api_key}")
         return "I'm not sure how to help with that right now."
 
-    # Updated syntax for OpenAI 1.0.0+
-    from openai import OpenAI
-    client = OpenAI(api_key=api_key)
-
     try:
+        from openai import OpenAI
+        logging.debug(f"LLM Fallback [site_id={site_id}]: Initializing OpenAI client")
+        client = OpenAI(api_key=api_key, timeout=15)
+        
+        logging.info(f"LLM Fallback [site_id={site_id}]: Calling GPT-4o-mini with: {message[:80]}...")
+        
+        start_time = time.time()
         completion = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a helpful AI assistant for a business chatbot. Answer concisely and professionally."},
+                {"role": "system", "content": "You are a helpful AI assistant for a business chatbot. Answer concisely and professionally in 1-2 sentences."},
                 {"role": "user", "content": message}
             ],
-            max_tokens=200,
+            max_tokens=150,
             temperature=0.7
         )
-        return completion.choices[0].message.content.strip()
+        elapsed = time.time() - start_time
+        response = completion.choices[0].message.content.strip()
+        logging.info(f"LLM Fallback [site_id={site_id}]: Success in {elapsed:.2f}s. Response: {response[:100]}...")
+        return response
+        
     except Exception as e:
-        logging.error(f"OpenAI fallback error: {e}")
-        return "I'm not sure how to help with that right now."
+        error_type = type(e).__name__
+        error_msg = str(e)
+        logging.error(f"LLM Fallback [site_id={site_id}]: API Error [{error_type}]: {error_msg}")
+        
+        # Provide specific error info
+        if "authentication" in error_msg.lower() or "invalid_api_key" in error_msg.lower():
+            logging.error(f"LLM Fallback [site_id={site_id}]: Check your OpenAI API key validity")
+        elif "rate_limit" in error_msg.lower():
+            logging.warning(f"LLM Fallback [site_id={site_id}]: Rate limited - will retry")
+        elif "timeout" in error_msg.lower():
+            logging.warning(f"LLM Fallback [site_id={site_id}]: Request timeout")
+            
+        import traceback
+        logging.debug(f"LLM Fallback Traceback:\n{traceback.format_exc()}")
+        return "I'm not sure how to help with that right now. Please try rephrasing."
 
 
 def handle_message(message: str, site_id: int, history: list = None, _site_id: int = 0, page_url: str = None) -> dict:

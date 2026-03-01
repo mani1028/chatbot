@@ -53,7 +53,10 @@
             const data = await res.json();
             config = { ...config, ...data };
             buildUI();
-            await loadChatHistory(); // Load chat history after UI is built
+            // NEW: Only load chat history if admin enabled it
+            if (config.preserve_chat_history) {
+                await loadChatHistory();
+            }
         } catch (e) {
             console.error("ChatbotX: Failed to init", e);
         }

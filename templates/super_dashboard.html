@@ -187,6 +187,9 @@
             <a class="nav-item" onclick="switchTab('announcements', this)">
                 <i class="fas fa-bullhorn"></i> Announcements
             </a>
+            <a class="nav-item" onclick="switchTab('blueprint-intents', this)">
+                <i class="fas fa-cube"></i> Blueprints & Templates
+            </a>
             <a class="nav-item" onclick="switchTab('settings', this)">
                 <i class="fas fa-cogs"></i> Settings
             </a>
@@ -525,6 +528,53 @@
         </div>
     </div>
 
+    <!-- Blueprint Modal -->
+    <div class="modal-overlay" id="blueprintModal">
+        <div class="modal-content" style="width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 id="blueprintModalTitle" style="font-size: 1.25rem; font-weight: 600;">Create Blueprint Intent</h2>
+                <button onclick="closeBlueprintModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <form id="blueprintForm">
+                <input type="hidden" id="blueprintId">
+                <div class="form-group">
+                    <label>Blueprint Name</label>
+                    <input type="text" id="blueprintName" class="form-control" placeholder="e.g. pricing, hours, policies" required>
+                </div>
+                <div class="form-group">
+                    <label>Sector/Category (optional)</label>
+                    <input type="text" id="blueprintSector" class="form-control" placeholder="e.g. hospital, retail, tech">
+                </div>
+                <div class="form-group">
+                    <label>Training Phrases (one per line)</label>
+                    <textarea id="blueprintPhrases" class="form-control" rows="4" placeholder="what is the cost&#10;how much&#10;pricing information" required></textarea>
+                    <small style="color: var(--text-secondary);">Enter one phrase per line</small>
+                </div>
+                <div class="form-group">
+                    <label>Intent Type</label>
+                    <select id="blueprintType" class="form-control">
+                        <option value="info">📝 Standard Text Reply</option>
+                        <option value="action">⚙️ Action/Workflow</option>
+                        <option value="lead">📋 Lead Capture Form</option>
+                        <option value="human">👤 Live Agent Handoff</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Bot Response Text</label>
+                    <textarea id="blueprintResponse" class="form-control" rows="4" placeholder="The bot's response to this intent" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Confidence Threshold (0.0 - 1.0)</label>
+                    <input type="number" id="blueprintThreshold" class="form-control" min="0" max="1" step="0.01" value="0.7">
+                    <small style="color: var(--text-secondary);">Minimum confidence score to trigger (0.7 = 70%)</small>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeBlueprintModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><span id="blueprintSubmitText">Create Blueprint</span></button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -586,6 +636,249 @@
                                     </thead>
                                     <tbody id="tenantTableBody">
                                         <tr><td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-secondary);">Loading clients...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLIENTS TAB -->
+            <div id="clients" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Client Management</h1>
+                        <p style="color:var(--text-secondary);">All registered tenants and their status.</p>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;">
+                        <input type="text" id="clientSearchInput" class="form-control" placeholder="Search clients..." style="width:240px;" oninput="filterClients(this.value)">
+                        <button class="btn btn-primary" onclick="openTenantModal()">
+                            <i class="fas fa-plus"></i> New Tenant
+                        </button>
+                    </div>
+                </div>
+                <div class="stats-grid" style="margin-top: 1.5rem;">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Total Clients</h3>
+                            <p id="clientStatTotal">--</p>
+                        </div>
+                        <div class="stat-icon"><i class="fas fa-building"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Active</h3>
+                            <p id="clientStatActive" style="color:var(--success);">--</p>
+                        </div>
+                        <div class="stat-icon" style="background:#ECFDF5;color:var(--success);"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Suspended</h3>
+                            <p id="clientStatSuspended" style="color:var(--danger);">--</p>
+                        </div>
+                        <div class="stat-icon" style="background:var(--danger-bg);color:var(--danger);"><i class="fas fa-ban"></i></div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-users" style="color:var(--primary);"></i> All Clients</h3>
+                        <button class="btn-icon" onclick="window.loadClientsData()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="card-body no-padding">
+                        <div style="overflow-x:auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Company</th>
+                                        <th>Domain</th>
+                                        <th>Plan</th>
+                                        <th>Messages</th>
+                                        <th>Status</th>
+                                        <th style="text-align:right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientsTableBody">
+                                    <tr><td colspan="7" style="text-align:center;padding:2rem;">Loading clients...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLANS & BILLING TAB -->
+            <div id="plans" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Plans & Billing</h1>
+                        <p style="color:var(--text-secondary);">Manage subscription plans and billing records.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openBillingModal()"><i class="fas fa-plus"></i> Add Billing</button>
+                </div>
+                <div class="stats-grid" style="margin-top: 1.5rem;">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Total Plans</h3>
+                            <p id="planStatTotal">--</p>
+                        </div>
+                        <div class="stat-icon"><i class="fas fa-box"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Active Subscriptions</h3>
+                            <p id="planStatActive" style="color:var(--success);">--</p>
+                        </div>
+                        <div class="stat-icon" style="background:#ECFDF5;color:var(--success);"><i class="fas fa-check"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Total Revenue</h3>
+                            <p id="planStatRevenue" style="color:var(--primary);">--</p>
+                        </div>
+                        <div class="stat-icon" style="background:var(--primary-light);color:var(--primary);"><i class="fas fa-dollar-sign"></i></div>
+                    </div>
+                </div>
+                <div class="content-grid" style="margin-top:1.5rem;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-layer-group" style="color:var(--primary);"></i> Subscription Plans</h3>
+                        </div>
+                        <div class="card-body no-padding">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Plan Name</th>
+                                        <th>Price</th>
+                                        <th>Max Intents</th>
+                                        <th>Max Monthly Chats</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="plansTableBody">
+                                    <tr><td colspan="5" style="text-align:center;padding:2rem;">Loading plans...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-file-invoice-dollar" style="color:var(--warning);"></i> Recent Billing</h3>
+                        </div>
+                        <div class="card-body no-padding">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Tenant</th>
+                                        <th>Amount</th>
+                                        <th>Paid</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="plansBillingBody">
+                                    <tr><td colspan="4" style="text-align:center;padding:2rem;">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLATFORM ANALYTICS TAB -->
+            <div id="analytics" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Platform Analytics</h1>
+                        <p style="color:var(--text-secondary);">Platform-wide insights and performance metrics.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="window.loadAnalyticsData()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+                <div class="stats-grid" style="margin-top: 1.5rem;">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Total Conversations</h3>
+                            <p id="analyticsChats">--</p>
+                        </div>
+                        <div class="stat-icon"><i class="fas fa-comments"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Active Tenants</h3>
+                            <p id="analyticsActiveTenants">--</p>
+                        </div>
+                        <div class="stat-icon" style="background:#ECFDF5;color:var(--success);"><i class="fas fa-building"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Total Bots</h3>
+                            <p id="analyticsBots">--</p>
+                        </div>
+                        <div class="stat-icon" style="background:var(--warning-bg);color:var(--warning);"><i class="fas fa-robot"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Total Revenue</h3>
+                            <p id="analyticsRevenue">--</p>
+                        </div>
+                        <div class="stat-icon" style="background:var(--primary-light);color:var(--primary);"><i class="fas fa-dollar-sign"></i></div>
+                    </div>
+                </div>
+                <div class="content-grid" style="margin-top: 1.5rem;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-trophy" style="color:var(--warning);"></i> Top Tenants by Messages</h3>
+                        </div>
+                        <div class="card-body no-padding">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Tenant</th>
+                                        <th>Messages</th>
+                                        <th>Share</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analyticsTopTenants">
+                                    <tr><td colspan="4" style="text-align:center;padding:2rem;">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-brain" style="color:var(--primary);"></i> Top Intents</h3>
+                            </div>
+                            <div class="card-body no-padding">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Intent</th>
+                                            <th>Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analyticsTopIntents">
+                                        <tr><td colspan="2" style="text-align:center;padding:1.5rem;">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-bar" style="color:var(--success);"></i> Monthly Volume</h3>
+                            </div>
+                            <div class="card-body no-padding">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Month</th>
+                                            <th>Messages</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analyticsMonthly">
+                                        <tr><td colspan="2" style="text-align:center;padding:1.5rem;">Loading...</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -700,6 +993,71 @@
                                     <tbody id="activeIntentsList"></tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- BLUEPRINT INTENTS TAB (UNIFIED MANAGEMENT) -->
+            <div id="blueprint-intents" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Blueprints & Templates</h1>
+                        <p style="color:var(--text-secondary);">Manage blueprint templates and intent template library.</p>
+                    </div>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid var(--border);">
+                    <button class="btn-tab active" onclick="switchBlueprintTab('blueprints', this)" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; font-weight: 500; color: var(--text-primary); border-bottom: 3px solid transparent;">
+                        <i class="fas fa-cube"></i> Blueprints
+                    </button>
+                </div>
+
+                <!-- BLUEPRINTS SECTION -->
+                <div id="blueprints-section" class="blueprint-tab-content" style="display: block;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-link" style="color: var(--primary);"></i> Assign to Client</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Select Template File</label>
+                                <select id="templateFileSelectForAssign" class="form-control" onchange="onTemplateFileSelectedForAssign()">
+                                    <option value="">-- Choose a Template File --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Select Client</label>
+                                <select id="clientSelectForBlueprint" class="form-control" onchange="onClientSelectedForAssign()">
+                                    <option value="">-- Choose Client --</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="assignBlueprintToClient()">
+                                <i class="fas fa-check"></i> Assign All Intents
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Already Assigned Intents Section -->
+                    <div class="card" style="margin-top: 1.5rem; display: none;" id="assignedIntentsCard">
+                        <div class="card-header">
+                            <h3><i class="fas fa-check-circle" style="color: var(--success);"></i> Already Assigned Intents</h3>
+                        </div>
+                        <div class="card-body no-padding">
+                            <table id="assignedIntentsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Source File</th>
+                                        <th>Intent Name</th>
+                                        <th>Type</th>
+                                        <th>Assigned</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="assignedIntentsTableBody">
+                                    <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No intents assigned yet</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -890,7 +1248,7 @@
             </div>
 
             <!-- Usage Tab -->
-            <div class="tab-content" id="usageTab">
+            <div class="tab-content" id="usage">
                 <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
                     <div class="page-title">
                         <h1>Usage Management</h1>
@@ -920,7 +1278,7 @@
             </div>
 
             <!-- Suspensions Tab -->
-            <div class="tab-content" id="suspensionsTab">
+            <div class="tab-content" id="suspensions">
                 <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
                     <div class="page-title">
                         <h1>Suspensions Management</h1>
@@ -950,7 +1308,7 @@
             </div>
 
             <!-- Conversations Tab -->
-            <div class="tab-content" id="conversationsTab">
+            <div class="tab-content" id="conversations">
                 <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
                     <div class="page-title">
                         <h1>Conversations Management</h1>
@@ -980,7 +1338,7 @@
             </div>
 
             <!-- Integrations Tab -->
-            <div class="tab-content" id="integrationsTab">
+            <div class="tab-content" id="integrations">
                 <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
                     <div class="page-title">
                         <h1>Integrations Management</h1>
@@ -1010,7 +1368,7 @@
             </div>
 
             <!-- Announcements Tab -->
-            <div class="tab-content" id="announcementsTab">
+            <div class="tab-content" id="announcements">
                 <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
                     <div class="page-title">
                         <h1>Announcements Management</h1>
@@ -1041,6 +1399,30 @@
 
         </div>
     </main>
+
+    <!-- Assign Template Modal -->
+    <div class="modal-overlay" id="assignTemplateModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 600;">Assign Template to Client</h2>
+                <button onclick="closeAssignTemplateModal()" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Selected Template</label>
+                <input type="text" id="assignTemplateFilename" class="form-control" readonly>
+            </div>
+            <div class="form-group">
+                <label>Select Target Tenant</label>
+                <select id="assignTemplateSiteId" class="form-control">
+                    <option value="">-- Loading Tenants --</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                <button type="button" class="btn btn-outline" onclick="closeAssignTemplateModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmAssignTemplate()">Deploy Template</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="toast">
@@ -1080,6 +1462,9 @@
             if (element) element.classList.add('active');
 
             // Trigger corresponding data loaders
+            if (tabId === 'clients') window.loadClientsData && window.loadClientsData();
+            if (tabId === 'plans') window.loadPlansData && window.loadPlansData();
+            if (tabId === 'analytics') window.loadAnalyticsData && window.loadAnalyticsData();
             if (tabId === 'dashboard') window.loadDashboardData && window.loadDashboardData();
             if (tabId === 'bots') window.loadBotsData && window.loadBotsData();
             if (tabId === 'billing') window.loadBillingData && window.loadBillingData();
@@ -1091,13 +1476,12 @@
             if (tabId === 'logs') window.loadAuditLogs && window.loadAuditLogs();
             if (tabId === 'handoffs') window.loadHandoffData && window.loadHandoffData();
             if (tabId === 'settings') window.loadPlatformSettings && window.loadPlatformSettings();
-            
-            // Extended Resource Tabs
-            if (tabId === 'usageTab') window.loadUsageData && window.loadUsageData();
-            if (tabId === 'suspensionsTab') window.loadSuspensionsData && window.loadSuspensionsData();
-            if (tabId === 'conversationsTab') window.loadConversationsData && window.loadConversationsData();
-            if (tabId === 'integrationsTab') window.loadIntegrationsData && window.loadIntegrationsData();
-            if (tabId === 'announcementsTab') window.loadAnnouncementsData && window.loadAnnouncementsData();
+            if (tabId === 'usage') window.loadUsageData && window.loadUsageData();
+            if (tabId === 'suspensions') window.loadSuspensionsData && window.loadSuspensionsData();
+            if (tabId === 'blueprint-intents') window.loadBlueprints && window.loadBlueprints();
+            if (tabId === 'conversations') window.loadConversationsData && window.loadConversationsData();
+            if (tabId === 'integrations') window.loadIntegrationsData && window.loadIntegrationsData();
+            if (tabId === 'announcements') window.loadAnnouncementsData && window.loadAnnouncementsData();
         };
 
         // --- Modals ---
@@ -1215,6 +1599,9 @@
                     }
                 };
             }
+            
+            // Load available template files for blueprints section
+            window.loadAvailableTemplates && window.loadAvailableTemplates();
         });
 
         // --- Data Fetchers ---
@@ -1486,6 +1873,192 @@
         };
 
         // --- Extended Tab Loaders ---
+
+        // --- CLIENTS TAB ---
+        let _allClientsData = [];
+        window.loadClientsData = async function() {
+            const tbody = document.getElementById('clientsTableBody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">Loading...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/super/sites');
+                const data = await res.json();
+                const sites = data.sites || [];
+                _allClientsData = sites;
+                const active = sites.filter(s => s.status === 'active' || s.is_active).length;
+                const suspended = sites.filter(s => s.status === 'suspended').length;
+                document.getElementById('clientStatTotal').textContent = sites.length;
+                document.getElementById('clientStatActive').textContent = active;
+                document.getElementById('clientStatSuspended').textContent = suspended;
+                renderClientsTable(sites);
+            } catch(e) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">Error loading clients.</td></tr>';
+            }
+        };
+
+        function renderClientsTable(sites) {
+            const tbody = document.getElementById('clientsTableBody');
+            tbody.innerHTML = '';
+            if (sites.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">No clients found.</td></tr>';
+                return;
+            }
+            sites.forEach(site => {
+                const badge = site.is_active
+                    ? '<span class="badge active"><span class="badge-dot"></span> Active</span>'
+                    : '<span class="badge inactive"><span class="badge-dot"></span> Suspended</span>';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${site.id}</td>
+                    <td><strong>${site.name}</strong></td>
+                    <td>${site.domain || 'Localhost'}</td>
+                    <td>${site.plan_name || 'No Plan'}</td>
+                    <td>${site.usage_percent || 0}%</td>
+                    <td>${badge}</td>
+                    <td style="text-align:right;">
+                        <button class="btn-icon" onclick="toggleStatus(${site.id})" title="Toggle Status"><i class="fas fa-toggle-on"></i></button>
+                        <button class="btn-icon" onclick="openEditSiteModal(${site.id}, '${(site.name||'').replace(/'/g,"\\'")}', '${(site.domain||'').replace(/'/g,"\\'")}')"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon" onclick="impersonate(${site.id})" title="Login as Client"><i class="fas fa-user-secret"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.filterClients = function(query) {
+            const q = query.toLowerCase();
+            const filtered = _allClientsData.filter(s =>
+                (s.name || '').toLowerCase().includes(q) ||
+                (s.domain || '').toLowerCase().includes(q) ||
+                (s.plan_name || '').toLowerCase().includes(q) ||
+                String(s.id).includes(q)
+            );
+            renderClientsTable(filtered);
+        };
+
+        // --- PLANS & BILLING TAB ---
+        window.loadPlansData = async function() {
+            try {
+                const [plansRes, billingRes] = await Promise.all([
+                    fetch('/admin/api/super/plans'),
+                    fetch('/admin/api/super/billing')
+                ]);
+                const plansData = await plansRes.json();
+                const billingData = await billingRes.json();
+                const plans = plansData.plans || [];
+                const billing = billingData.billing || [];
+
+                document.getElementById('planStatTotal').textContent = plans.length;
+                document.getElementById('planStatActive').textContent = billing.filter(b => b.status === 'active').length;
+                const totalRev = billing.filter(b => b.paid).reduce((sum, b) => sum + (b.amount || 0), 0);
+                document.getElementById('planStatRevenue').textContent = '$' + totalRev.toLocaleString();
+
+                // Plans table
+                const pBody = document.getElementById('plansTableBody');
+                pBody.innerHTML = '';
+                if (plans.length > 0) {
+                    plans.forEach(p => {
+                        const badge = p.is_active ? '<span class="badge active">Active</span>' : '<span class="badge inactive">Inactive</span>';
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${p.name}</strong></td>
+                            <td>$${p.price || 0}</td>
+                            <td>${p.max_intents || '-'}</td>
+                            <td>${p.max_monthly_chats || '-'}</td>
+                            <td>${badge}</td>
+                        `;
+                        pBody.appendChild(tr);
+                    });
+                } else {
+                    pBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">No plans found.</td></tr>';
+                }
+
+                // Billing table
+                const bBody = document.getElementById('plansBillingBody');
+                bBody.innerHTML = '';
+                if (billing.length > 0) {
+                    billing.forEach(b => {
+                        const badge = b.status === 'active' ? '<span class="badge active">Active</span>' : '<span class="badge warning">' + b.status + '</span>';
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>Tenant #${b.site_id}</td>
+                            <td>$${b.amount}</td>
+                            <td>${b.paid ? '<span style="color:var(--success);">Yes</span>' : '<span style="color:var(--danger);">No</span>'}</td>
+                            <td>${badge}</td>
+                        `;
+                        bBody.appendChild(tr);
+                    });
+                } else {
+                    bBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;">No billing records.</td></tr>';
+                }
+            } catch(e) { console.error('Plans load error:', e); }
+        };
+
+        // --- PLATFORM ANALYTICS TAB ---
+        window.loadAnalyticsData = async function() {
+            try {
+                const res = await fetch('/admin/api/super/analytics');
+                const data = await res.json();
+
+                document.getElementById('analyticsChats').textContent = (data.total_chats || 0).toLocaleString();
+                document.getElementById('analyticsActiveTenants').textContent = data.active_sites || 0;
+                document.getElementById('analyticsBots').textContent = data.total_bots || 0;
+                document.getElementById('analyticsRevenue').textContent = '$' + (data.total_revenue || 0).toLocaleString();
+
+                // Top tenants
+                const ttBody = document.getElementById('analyticsTopTenants');
+                ttBody.innerHTML = '';
+                const topTenants = data.top_tenants || [];
+                if (topTenants.length > 0) {
+                    const maxMsgs = topTenants[0].messages || 1;
+                    topTenants.forEach((t, i) => {
+                        const pct = Math.round((t.messages / maxMsgs) * 100);
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${i + 1}</td>
+                            <td><strong>${t.name}</strong></td>
+                            <td>${t.messages.toLocaleString()}</td>
+                            <td><div class="usage-bar"><div class="usage-fill" style="width:${pct}%"></div></div></td>
+                        `;
+                        ttBody.appendChild(tr);
+                    });
+                } else {
+                    ttBody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;">No data yet.</td></tr>';
+                }
+
+                // Top intents
+                const tiBody = document.getElementById('analyticsTopIntents');
+                tiBody.innerHTML = '';
+                const topIntents = data.top_intents || [];
+                if (topIntents.length > 0) {
+                    topIntents.forEach(t => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><strong>${t.intent}</strong></td><td>${t.count}</td>`;
+                        tiBody.appendChild(tr);
+                    });
+                } else {
+                    tiBody.innerHTML = '<tr><td colspan="2" style="text-align:center;padding:1.5rem;">No data yet.</td></tr>';
+                }
+
+                // Monthly volume
+                const mBody = document.getElementById('analyticsMonthly');
+                mBody.innerHTML = '';
+                const monthly = data.monthly_chats || [];
+                if (monthly.length > 0) {
+                    monthly.reverse().forEach(m => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><strong>${m.month}</strong></td><td>${m.count.toLocaleString()}</td>`;
+                        mBody.appendChild(tr);
+                    });
+                } else {
+                    mBody.innerHTML = '<tr><td colspan="2" style="text-align:center;padding:1.5rem;">No data yet.</td></tr>';
+                }
+            } catch(e) {
+                console.error('Analytics load error:', e);
+                document.getElementById('analyticsChats').textContent = 'Error';
+            }
+        };
+
+        // --- Usage Tab Loader ---
         window.loadUsageData = async function() {
             const tbody = document.getElementById('usageTableBody');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">Loading...</td></tr>';
@@ -1865,6 +2438,914 @@
             if (!data.intents || data.intents.length === 0) { tbody.innerHTML = '<tr><td style="padding:1rem;color:var(--text-secondary)">No intents assigned</td></tr>'; return; }
             tbody.innerHTML = data.intents.map(i => `<tr><td style="padding:0.9rem;"><strong>${i.intent_name}</strong></td></tr>`).join('');
         };
+
+        // --- Blueprint Intents (Super Admin) ---
+        window.loadBlueprints = async function() {
+            console.log('[DEBUG] loadBlueprints called');
+            const tbody = document.getElementById('blueprintTableBody');
+            const select = document.getElementById('blueprintSelectAssign');
+            
+            if (!tbody || !select) {
+                console.error('[ERROR] Could not find blueprint elements');
+                return;
+            }
+            
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Loading blueprints...</td></tr>';
+            select.innerHTML = '<option value="">-- Choose Blueprint --</option>';
+            
+            try {
+                console.log('[DEBUG] Fetching blueprints...');
+                const res = await fetch('/admin/api/super/blueprints');
+                console.log('[DEBUG] Blueprints response:', res.status, res.ok);
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('[DEBUG] Blueprints data:', data);
+                    tbody.innerHTML = '';
+                    
+                    if (data.blueprints && data.blueprints.length > 0) {
+                        data.blueprints.forEach(bp => {
+                            // Add to table
+                            const tr = document.createElement('tr');
+                            const phrases = (bp.phrases || []).slice(0, 2).join(', ');
+                            tr.innerHTML = `
+                                <td><strong>${bp.name || ''}</strong></td>
+                                <td>${bp.category || ''}</td>
+                                <td><span style="font-size:0.85rem; color:var(--text-secondary);">${phrases}${bp.phrases && bp.phrases.length > 2 ? '...' : ''}</span></td>
+                                <td style="text-align: right;">
+                                    <button class="btn-icon" title="Edit" onclick="editBlueprint('${bp.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon" style="color: var(--danger);" title="Delete" onclick="deleteBlueprint('${bp.id}')"><i class="fas fa-trash"></i></button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                            
+                            // Add to assignment dropdown
+                            const opt = document.createElement('option');
+                            opt.value = bp.id;
+                            opt.textContent = bp.name;
+                            select.appendChild(opt);
+                        });
+                        console.log('[DEBUG] Successfully loaded', data.blueprints.length, 'blueprints');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-secondary);">No blueprint intents found.</td></tr>';
+                    }
+                } else {
+                    console.error('[ERROR] API Response not ok:', res.status);
+                    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Failed to load blueprints (Status: ' + res.status + ')</td></tr>';
+                }
+            } catch (e) {
+                console.error('[ERROR] loadBlueprints exception:', e);
+                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Failed to load blueprints: ' + e.message + '</td></tr>';
+            }
+            
+            // Load clients for assignment
+            await loadClientsForAssignment();
+        };
+
+        window.loadClientsForAssignment = async function() {
+            console.log('[DEBUG] loadClientsForAssignment called');
+            const select = document.getElementById('clientSelectForBlueprint');
+            
+            if (!select) {
+                console.error('[ERROR] Could not find clientSelectForBlueprint element');
+                return;
+            }
+            
+            select.innerHTML = '<option value="">-- Choose Client --</option>';
+            
+            try {
+                console.log('[DEBUG] Fetching sites...');
+                const res = await fetch('/admin/api/super/sites');
+                console.log('[DEBUG] Sites response:', res.status, res.ok);
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('[DEBUG] Sites data:', data);
+                    
+                    if (data.sites && data.sites.length > 0) {
+                        data.sites.forEach(site => {
+                            const opt = document.createElement('option');
+                            opt.value = site.id;
+                            opt.textContent = site.name;
+                            select.appendChild(opt);
+                        });
+                        console.log('[DEBUG] Successfully loaded', data.sites.length, 'clients');
+                    } else {
+                        console.warn('[WARN] No sites returned from API');
+                    }
+                } else {
+                    console.error('[ERROR] Sites API response not ok:', res.status);
+                }
+            } catch (e) {
+                console.error('[ERROR] loadClientsForAssignment exception:', e);
+            }
+        };
+
+        window.loadBlueprintClients = async function() {
+            const blueprintId = document.getElementById('blueprintSelectAssign').value;
+            const card = document.getElementById('clientAssignmentCard');
+            const tbody = document.getElementById('assignedClientsBody');
+            
+            if (!blueprintId) {
+                card.style.display = 'none';
+                return;
+            }
+
+            try {
+                // Get the blueprint name for display
+                const bpRes = await fetch(`/admin/api/super/blueprints/${blueprintId}`);
+                if (!bpRes.ok) return;
+                const bpData = await bpRes.json();
+                
+                // Load all sites and check which ones have this blueprint assigned
+                const sitesRes = await fetch('/admin/api/super/sites');
+                if (!sitesRes.ok) return;
+                const sitesData = await sitesRes.json();
+                
+                tbody.innerHTML = '';
+                let hasAssignments = false;
+                
+                if (sitesData.sites) {
+                    for (const site of sitesData.sites) {
+                        const intentsRes = await fetch(`/admin/api/super/sites/${site.id}/intents`);
+                        if (!intentsRes.ok) continue;
+                        
+                        const intentsData = await intentsRes.json();
+                        const hasBlueprint = intentsData.intents.some(i => i.intent_name === bpData.blueprint.name);
+                        
+                        if (hasBlueprint) {
+                            hasAssignments = true;
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td style="padding: 0.75rem 1rem;"><strong>${site.name}</strong></td>
+                                <td style="text-align: right; padding: 0.75rem 1rem;">
+                                    <button class="btn-icon" style="color: var(--danger);" title="Remove" onclick="removeBlueprintFromClient(${site.id}, '${bpData.blueprint.name}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        }
+                    }
+                }
+                
+                card.style.display = hasAssignments ? 'block' : 'none';
+            } catch (e) {
+                console.error('Failed to load blueprint clients', e);
+            }
+        };
+
+        window.loadAvailableTemplates = async function() {
+            try {
+                const res = await fetch('/admin/api/intent-templates');
+                if (res.ok) {
+                    const data = await res.json();
+                    const files = data.files || data.templates || [];
+                    
+                    // Populate template file selector for assign section
+                    const assignSelect = document.getElementById('templateFileSelectForAssign');
+                    if (assignSelect) {
+                        assignSelect.innerHTML = '<option value="">-- Choose a Template File --</option>';
+                        
+                        files.forEach(file => {
+                            const fileName = typeof file === 'string' ? file : file.filename;
+                            const opt = document.createElement('option');
+                            opt.value = fileName;
+                            opt.textContent = fileName;
+                            assignSelect.appendChild(opt);
+                        });
+                    }
+                    
+                    console.log('[DEBUG] Loaded', files.length, 'template files');
+                } else {
+                    console.error('[ERROR] Failed to load templates:', res.status);
+                }
+            } catch (e) {
+                console.error('[ERROR] loadAvailableTemplates exception:', e);
+            }
+        };
+
+        window.onTemplateFileSelectedForAssign = async function() {
+            const fileName = document.getElementById('templateFileSelectForAssign').value;
+            
+            if (!fileName) {
+                window.currentIntents = [];
+                showToast('Please select a template file', 'info');
+                return;
+            }
+            
+            try {
+                console.log('[DEBUG] Loading template for assign:', fileName);
+                const res = await fetch(`/admin/api/intent-templates/${fileName}`);
+                
+                if (res.ok) {
+                    const jsonData = await res.json();
+                    let intents = jsonData.intents || [];
+                    
+                    // Get sector from template level
+                    const templateSector = jsonData.sector || 'general';
+                    
+                    // Normalize intent data
+                    intents = intents.map(intent => ({
+                        name: intent.name || intent.intent_name || 'Unknown',
+                        type: intent.type || intent.intent_type || 'INFO',
+                        phrases: intent.phrases || [],
+                        response: intent.response || '',
+                        sector: intent.sector || templateSector,
+                        confidence_threshold: intent.confidence_threshold || 0.85
+                    }));
+                    
+                    // Store intents
+                    window.currentIntents = intents;
+                    
+                    // Load clients
+                    loadClientsForAssignment();
+                    
+                    console.log('[DEBUG] Loaded', intents.length, 'intents from', fileName);
+                    showToast(`Template loaded: ${intents.length} intents ready to assign`);
+                } else {
+                    showToast('Failed to load template file', 'error');
+                    console.error('[ERROR] Failed to load template:', res.status);
+                    window.currentIntents = [];
+                }
+            } catch (err) {
+                showToast('Error loading template: ' + err.message, 'error');
+                console.error('[ERROR] onTemplateFileSelectedForAssign exception:', err);
+                window.currentIntents = [];
+            }
+        };
+
+        window.onClientSelectedForAssign = async function() {
+            const clientId = document.getElementById('clientSelectForBlueprint').value;
+            const card = document.getElementById('assignedIntentsCard');
+            
+            if (!clientId) {
+                card.style.display = 'none';
+                return;
+            }
+            
+            try {
+                console.log('[DEBUG] Loading assigned intents for client:', clientId);
+                const res = await fetch(`/admin/api/super/sites/${clientId}`);
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    const site = data.site || {};
+                    const intents = site.intents || [];
+                    
+                    console.log('[DEBUG] Client has', intents.length, 'assigned intents');
+                    
+                    const tbody = document.getElementById('assignedIntentsTableBody');
+                    
+                    if (intents.length === 0) {
+                        card.style.display = 'none';
+                        return;
+                    }
+                    
+                    // Group intents by source file
+                    const groupedByFile = {};
+                    intents.forEach(intent => {
+                        const sourceFile = intent.template_file || 'Unknown';
+                        if (!groupedByFile[sourceFile]) {
+                            groupedByFile[sourceFile] = [];
+                        }
+                        groupedByFile[sourceFile].push(intent);
+                    });
+                    
+                    console.log('[DEBUG] Grouped intents by file:', Object.keys(groupedByFile));
+                    
+                    // Show card with intents
+                    card.style.display = 'block';
+                    tbody.innerHTML = '';
+                    
+                    // Display intents grouped by file
+                    Object.keys(groupedByFile).sort().forEach(fileName => {
+                        const fileIntents = groupedByFile[fileName];
+                        
+                        fileIntents.forEach((intent, idx) => {
+                            const createdDate = new Date(intent.created_at).toLocaleDateString() || 'N/A';
+                            const tr = document.createElement('tr');
+                            // Show source file only on first intent of each file
+                            const fileDisplay = idx === 0 ? `<strong>${fileName}</strong>` : '';
+                            tr.innerHTML = `
+                                <td>${fileDisplay}</td>
+                                <td><strong>${intent.intent_name}</strong></td>
+                                <td>${intent.intent_type || 'N/A'}</td>
+                                <td><small>${createdDate}</small></td>
+                                <td style="text-align: right;">
+                                    <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="deleteAssignedIntent(${clientId}, '${intent.intent_name}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    });
+                } else {
+                    console.error('[ERROR] Failed to load client data:', res.status);
+                    card.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('[ERROR] onClientSelectedForAssign exception:', err);
+                card.style.display = 'none';
+            }
+        };
+
+        window.deleteAssignedIntent = async function(clientId, intentName) {
+            if (!confirm(`Delete intent "${intentName}" from this client?`)) return;
+            
+            try {
+                console.log('[DEBUG] Deleting intent:', intentName, 'from client:', clientId);
+                const res = await fetch(`/admin/api/super/sites/${clientId}/intents/${intentName}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showToast(`Intent "${intentName}" deleted successfully`);
+                    // Reload assigned intents
+                    onClientSelectedForAssign();
+                } else {
+                    showToast(data.error || 'Failed to delete intent', 'error');
+                    console.error('[ERROR] Delete failed:', data.error);
+                }
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+                console.error('[ERROR] deleteAssignedIntent exception:', err);
+            }
+        };
+
+        window.loadTemplateFileByName = async function() {
+            const fileName = document.getElementById('templateFileSelect').value;
+            
+            if (!fileName) {
+                document.getElementById('loadedFileName').textContent = 'Select a Template';
+                document.getElementById('templateFileName').textContent = 'Select a template to view intents';
+                document.getElementById('blueprintTableBody').innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">Load a template file to see intents</td></tr>';
+                document.getElementById('blueprintSelectAssign').innerHTML = '<option value="">-- Load a template first --</option>';
+                return;
+            }
+            
+            try {
+                console.log('[DEBUG] Loading template:', fileName);
+                const res = await fetch(`/admin/api/intent-templates/${fileName}`);
+                
+                if (res.ok) {
+                    const jsonData = await res.json();
+                    let intents = jsonData.intents || [];
+                    
+                    // Get sector from template level or use default
+                    const templateSector = jsonData.sector || 'general';
+                    
+                    // Normalize intent data to have consistent field names
+                    intents = intents.map(intent => ({
+                        name: intent.name || intent.intent_name || 'Unknown',
+                        type: intent.type || intent.intent_type || 'INFO',
+                        phrases: intent.phrases || [],
+                        response: intent.response || '',
+                        sector: intent.sector || templateSector,
+                        confidence_threshold: intent.confidence_threshold || 0.85
+                    }));
+                    
+                    // Update file name display
+                    document.getElementById('loadedFileName').textContent = fileName;
+                    document.getElementById('templateFileName').textContent = `Loaded: ${fileName}`;
+                    
+                    // Store intents for later use
+                    window.currentIntents = intents;
+                    
+                    // Populate table
+                    const tbody = document.getElementById('blueprintTableBody');
+                    tbody.innerHTML = '';
+                    
+                    if (intents.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">No intents found in file</td></tr>';
+                        document.getElementById('blueprintSelectAssign').innerHTML = '<option value="">No intents available</option>';
+                        return;
+                    }
+                    
+                    intents.forEach(intent => {
+                        const phrases = (intent.phrases || []).slice(0, 2).join(', ');
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${intent.name}</strong></td>
+                            <td>${intent.type}</td>
+                            <td>${phrases}${intent.phrases && intent.phrases.length > 2 ? '...' : ''}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    
+                    // Populate Select Intent dropdown
+                    const select = document.getElementById('blueprintSelectAssign');
+                    select.innerHTML = '<option value="">-- Select an Intent --</option>';
+                    intents.forEach((intent, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify(intent);  // Store full intent data
+                        opt.textContent = intent.name;
+                        select.appendChild(opt);
+                    });
+                    
+                    // Load clients for assignment
+                    loadClientsForAssignment();
+                    
+                    showToast(`Loaded ${intents.length} intents from ${fileName}`);
+                } else {
+                    showToast('Failed to load template file', 'error');
+                    console.error('[ERROR] Failed to load template:', res.status);
+                }
+            } catch (err) {
+                showToast('Error loading template: ' + err.message, 'error');
+                console.error('[ERROR] loadTemplateFileByName exception:', err);
+            }
+        };
+
+        window.loadTemplateFile = function() {
+            const fileInput = document.getElementById('templateFileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showToast('Please select a file', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    let intents = jsonData.intents || [];
+                    const fileName = file.name;
+                    
+                    // Get sector from template level or use default
+                    const templateSector = jsonData.sector || 'general';
+                    
+                    // Normalize intent data to have consistent field names
+                    intents = intents.map(intent => ({
+                        name: intent.name || intent.intent_name || 'Unknown',
+                        type: intent.type || intent.intent_type || 'INFO',
+                        phrases: intent.phrases || [],
+                        response: intent.response || '',
+                        sector: intent.sector || templateSector,
+                        confidence_threshold: intent.confidence_threshold || 0.85
+                    }));
+                    
+                    // Update file name display
+                    document.getElementById('loadedFileName').textContent = fileName;
+                    document.getElementById('templateFileName').textContent = `Loaded: ${fileName}`;
+                    
+                    // Store intents for later use
+                    window.currentIntents = intents;
+                    
+                    // Populate table
+                    const tbody = document.getElementById('blueprintTableBody');
+                    tbody.innerHTML = '';
+                    
+                    if (intents.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">No intents found in file</td></tr>';
+                        document.getElementById('blueprintSelectAssign').innerHTML = '<option value="">No intents available</option>';
+                        return;
+                    }
+                    
+                    intents.forEach(intent => {
+                        const phrases = (intent.phrases || []).slice(0, 2).join(', ');
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${intent.name}</strong></td>
+                            <td>${intent.type}</td>
+                            <td>${phrases}${intent.phrases && intent.phrases.length > 2 ? '...' : ''}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    
+                    // Populate Select Intent dropdown
+                    const select = document.getElementById('blueprintSelectAssign');
+                    select.innerHTML = '<option value="">-- Select an Intent --</option>';
+                    intents.forEach((intent, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify(intent);  // Store full intent data
+                        opt.textContent = intent.name;
+                        select.appendChild(opt);
+                    });
+                    
+                    // Load clients for assignment
+                    loadClientsForAssignment();
+                    
+                    showToast(`Loaded ${intents.length} intents from ${fileName}`);
+                } catch (err) {
+                    showToast('Invalid JSON file', 'error');
+                    console.error('Error parsing JSON:', err);
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+
+        window.assignBlueprintToClient = async function() {
+            console.log('[DEBUG] assignBlueprintToClient called');
+            const intents = window.currentIntents || [];
+            const clientId = document.getElementById('clientSelectForBlueprint').value;
+            const templateFileName = document.getElementById('templateFileSelectForAssign').value;
+            
+            console.log('[DEBUG] intents count:', intents.length, 'clientId:', clientId, 'templateFile:', templateFileName);
+            
+            if (intents.length === 0 || !clientId) {
+                showToast('Please select both template file and client', 'error');
+                console.warn('[WARN] Missing template file or client selection');
+                return;
+            }
+
+            try {
+                console.log('[DEBUG] Assigning', intents.length, 'intents from', templateFileName, 'to client:', clientId);
+                
+                let successCount = 0;
+                let failedCount = 0;
+                const failedIntents = [];
+                
+                // Loop through all intents and assign each one
+                for (const intent of intents) {
+                    try {
+                        const intentName = intent.name;
+                        console.log('[DEBUG] Assigning intent:', intentName);
+                        
+                        const res = await fetch(`/admin/api/super/sites/${clientId}/assign-intent`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                intent_name: intentName,
+                                intent_type: intent.type,
+                                sector: intent.sector || 'general',
+                                phrases: intent.phrases || [],
+                                response: intent.response || '',
+                                confidence_threshold: intent.confidence_threshold || 0.8,
+                                template_file: templateFileName
+                            })
+                        });
+
+                        const data = await res.json();
+                        
+                        if (res.ok) {
+                            successCount++;
+                            console.log('[DEBUG] Successfully assigned:', intentName);
+                        } else {
+                            failedCount++;
+                            failedIntents.push(intentName);
+                            console.warn('[WARN] Failed to assign:', intentName, data.error);
+                        }
+                    } catch (itemErr) {
+                        failedCount++;
+                        failedIntents.push(intent.name);
+                        console.error('[ERROR] Exception assigning', intent.name, itemErr);
+                    }
+                }
+                
+                // Show summary message
+                if (successCount > 0 && failedCount === 0) {
+                    showToast(`✓ All ${successCount} intents from ${templateFileName} assigned successfully!`);
+                    // Refresh the assigned intents list
+                    onClientSelectedForAssign();
+                } else if (successCount > 0 && failedCount > 0) {
+                    showToast(`✓ ${successCount} intents assigned, ${failedCount} failed`, 'warning');
+                    onClientSelectedForAssign();
+                } else {
+                    showToast(`✗ Failed to assign intents: ${failedIntents.join(', ')}`, 'error');
+                }
+                
+                console.log('[DEBUG] Assignment complete - Success:', successCount, 'Failed:', failedCount);
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+                console.error('[ERROR] assignBlueprintToClient exception:', err);
+            }
+        };
+
+        window.removeBlueprintFromClient = async function(siteId, intentName) {
+            if (!confirm(`Remove this blueprint from the client?`)) return;
+            
+            try {
+                const res = await fetch(`/admin/api/super/sites/${siteId}/intents/${intentName}`, { method: 'DELETE' });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showToast('Blueprint removed successfully');
+                    await loadBlueprintClients();
+                } else {
+                    showToast(data.error || 'Removal failed', 'error');
+                }
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+            }
+        };
+
+        window.openBlueprintModal = function() {
+            document.getElementById('blueprintForm').reset();
+            document.getElementById('blueprintId').value = '';
+            document.getElementById('blueprintModalTitle').textContent = 'Create Blueprint Intent';
+            document.getElementById('blueprintSubmitText').textContent = 'Create Blueprint';
+            document.getElementById('blueprintModal').style.display = 'flex';
+        };
+
+        window.closeBlueprintModal = function() {
+            document.getElementById('blueprintModal').style.display = 'none';
+        };
+
+        window.editBlueprint = function(id) {
+            fetch(`/admin/api/super/blueprints/${id}`)
+                .then(res => res.ok ? res.json() : Promise.reject('Not found'))
+                .then(data => {
+                    const bp = data.blueprint;
+                    document.getElementById('blueprintId').value = id;
+                    document.getElementById('blueprintName').value = bp.name || '';
+                    document.getElementById('blueprintSector').value = bp.sector || '';
+                    document.getElementById('blueprintPhrases').value = (bp.phrases || []).join('\n');
+                    document.getElementById('blueprintType').value = (bp.intent_type || 'info').toLowerCase();
+                    document.getElementById('blueprintResponse').value = bp.response || '';
+                    document.getElementById('blueprintThreshold').value = bp.confidence_threshold || 0.7;
+                    document.getElementById('blueprintModalTitle').textContent = 'Edit Blueprint Intent';
+                    document.getElementById('blueprintSubmitText').textContent = 'Update Blueprint';
+                    document.getElementById('blueprintModal').style.display = 'flex';
+                })
+                .catch(e => showToast('Failed to load blueprint', 'error'));
+        };
+
+        window.deleteBlueprint = function(id) {
+            if (!confirm('Are you sure you want to delete this blueprint? This will not affect existing assignments.')) return;
+            fetch(`/admin/api/super/blueprints/${id}`, { method: 'DELETE' })
+                .then(res => res.ok ? res.json() : Promise.reject('Delete failed'))
+                .then(data => {
+                    showToast(data.message || 'Blueprint deleted successfully');
+                    loadBlueprints();
+                })
+                .catch(e => showToast('Failed to delete blueprint', 'error'));
+        };
+
+        // Blueprint Form Submission (Create/Edit)
+        document.getElementById('blueprintForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+
+            const id = document.getElementById('blueprintId').value;
+            const phrasesText = document.getElementById('blueprintPhrases').value;
+            const phrases = phrasesText.split('\n').map(p => p.trim()).filter(p => p);
+
+            if (phrases.length === 0) {
+                showToast('Please add at least one phrase', 'error');
+                btn.innerHTML = id ? 'Update Blueprint' : 'Create Blueprint';
+                btn.disabled = false;
+                return;
+            }
+
+            const payload = {
+                intent_name: document.getElementById('blueprintName').value,
+                sector: document.getElementById('blueprintSector').value,
+                phrases: phrases,
+                intent_type: document.getElementById('blueprintType').value,
+                response: document.getElementById('blueprintResponse').value,
+                confidence_threshold: parseFloat(document.getElementById('blueprintThreshold').value)
+            };
+
+            const url = id ? `/admin/api/super/blueprints/${id}` : '/admin/api/super/blueprints';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(data.message || (id ? 'Blueprint updated!' : 'Blueprint created!'));
+                    closeBlueprintModal();
+                    loadBlueprints();
+                } else {
+                    showToast(data.error || 'Failed to save blueprint', 'error');
+                }
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+                console.error(err);
+            } finally {
+                btn.innerHTML = id ? 'Update Blueprint' : 'Create Blueprint';
+                btn.disabled = false;
+            }
+        });
+
+        // ====== BLUEPRINT TAB SWITCHING ======
+        window.switchBlueprintTab = function(tabName, element) {
+            // Hide all sections
+            document.querySelectorAll('.blueprint-tab-content').forEach(el => el.style.display = 'none');
+            
+            // Show selected section
+            document.getElementById(tabName + '-section').style.display = 'block';
+            
+            // Update button styles
+            document.querySelectorAll('.btn-tab').forEach(el => {
+                el.style.color = 'var(--text-secondary)';
+                el.style.borderBottom = '3px solid transparent';
+            });
+            element.style.color = 'var(--text-primary)';
+            element.style.borderBottom = '3px solid var(--primary)';
+            
+            // Load templates if switching to blueprints tab
+            if (tabName === 'blueprints') {
+                window.loadAvailableTemplates && window.loadAvailableTemplates();
+            }
+            
+            // Load templates if switching to templates tab
+            if (tabName === 'templates') {
+                loadIntentTemplates();
+            }
+        };
+
+        // ====== INTENT TEMPLATES MANAGEMENT ======
+        window.loadIntentTemplates = async function() {
+            const tbody = document.getElementById('templatesTableBody');
+            const spinner = document.getElementById('templatesLoadingSpinner');
+            
+            spinner.style.display = 'block';
+            tbody.innerHTML = '';
+            
+            try {
+                const res = await fetch('/admin/api/intent-templates');
+                if (res.ok) {
+                    const data = await res.json();
+                    spinner.style.display = 'none';
+                    
+                    if (!data.templates || data.templates.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No templates found. Upload one to get started!</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = '';
+                    data.templates.forEach(template => {
+                        const modified = new Date(template.modified).toLocaleDateString();
+                        const sizeKB = (template.size / 1024).toFixed(1);
+                        
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong>${template.filename}</strong></td>
+                            <td><span class="badge" style="background: #E0E7FF; color: var(--primary);">${template.intents}</span></td>
+                            <td>${sizeKB} KB</td>
+                            <td>${modified}</td>
+                            <td style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                <button class="btn-icon" title="Download" onclick="downloadTemplate('${template.filename}')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button class="btn-icon" title="Distribute to Clients" onclick="openAssignTemplateModal('${template.filename}')">
+                                    <i class="fas fa-share-alt" style="color: var(--success);"></i>
+                                </button>
+                                <button class="btn-icon" title="Delete" onclick="deleteTemplate('${template.filename}')" style="color: var(--danger);">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    spinner.style.display = 'none';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load templates</td></tr>';
+                }
+            } catch (e) {
+                console.error('Error loading templates', e);
+                spinner.style.display = 'none';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load templates</td></tr>';
+            }
+        };
+
+        window.uploadIntentTemplate = async function() {
+            const fileInput = document.getElementById('templateFileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showToast('Please select a file', 'error');
+                return;
+            }
+            
+            if (!file.name.endsWith('.json')) {
+                showToast('Only .json files are allowed', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const res = await fetch('/admin/api/intent-templates', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                
+                if (res.status === 409) {
+                    const overwrite = confirm(`File '${data.filename}' already exists. Do you want to replace it?`);
+                    if (overwrite) {
+                        deleteTemplate(data.filename, async () => {
+                            uploadIntentTemplate();
+                        });
+                    }
+                } else if (res.ok) {
+                    showToast(data.message);
+                    fileInput.value = '';
+                    await loadIntentTemplates();
+                } else {
+                    showToast(data.error || 'Upload failed', 'error');
+                }
+            } catch (e) {
+                showToast('Upload error: ' + e.message, 'error');
+            }
+        };
+
+        window.downloadTemplate = function(filename) {
+            try {
+                const link = document.createElement('a');
+                link.href = `/admin/api/intent-templates/${encodeURIComponent(filename)}`;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast('Downloading template...');
+            } catch (e) {
+                showToast('Download failed', 'error');
+            }
+        };
+
+        window.deleteTemplate = async function(filename, callback) {
+            if (!confirm(`Delete template '${filename}'? This cannot be undone.`)) return;
+            
+            try {
+                const res = await fetch(`/admin/api/intent-templates/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message);
+                    await loadIntentTemplates();
+                    if (callback) callback();
+                } else {
+                    showToast(data.error || 'Delete failed', 'error');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message, 'error');
+            }
+        };
+
+        // Assign Template Modal Functions
+        window.openAssignTemplateModal = async function(filename) {
+            document.getElementById('assignTemplateFilename').value = filename;
+            const select = document.getElementById('assignTemplateSiteId');
+            select.innerHTML = '<option value="">-- Loading Tenants --</option>';
+            document.getElementById('assignTemplateModal').style.display = 'flex';
+            
+            try {
+                const res = await fetch('/admin/api/super/sites');
+                const data = await res.json();
+                select.innerHTML = '<option value="">-- Choose Tenant --</option>';
+                if (data.sites) {
+                    data.sites.forEach(site => {
+                        select.appendChild(new Option(site.name, site.id));
+                    });
+                }
+            } catch(e) {
+                select.innerHTML = '<option value="">Error loading tenants</option>';
+            }
+        };
+
+        window.closeAssignTemplateModal = function() {
+            document.getElementById('assignTemplateModal').style.display = 'none';
+        };
+
+        window.confirmAssignTemplate = async function() {
+            const filename = document.getElementById('assignTemplateFilename').value;
+            const siteId = document.getElementById('assignTemplateSiteId').value;
+            
+            if (!siteId) {
+                showToast('Please select a tenant', 'error');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/admin/api/super/import_template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ site_id: siteId, filename: filename })
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.success) {
+                    showToast('Successfully assigned template to client!');
+                    closeAssignTemplateModal();
+                } else {
+                    showToast(data.error || 'Import failed', 'error');
+                }
+            } catch (e) {
+                showToast('Network error while assigning template', 'error');
+            }
+        };
+
     </script>
 </body>
 </html>

@@ -96,21 +96,29 @@ def get_widget_settings():
             "primary_color": "#667eea",
             "initial_message": "How can I help?",
             "theme_mode": "light",
-            "ai_enabled": False
+            "ai_enabled": False,
+            "preserve_chat_history": False
         })
     branding = BrandingSettings.query.filter_by(site_id=site.id).first()
     ai_config = ClientConfig.query.filter_by(site_id=site.id, key="ai_mode").first()
     ai_enabled = ai_config.value == "on" if ai_config else False
+    
+    # NEW: Get preserve_chat_history setting
+    preserve_history_config = ClientConfig.query.filter_by(site_id=site.id, key="preserve_chat_history").first()
+    preserve_chat_history = preserve_history_config.value == "on" if preserve_history_config else False
+    
     if not branding:
         return jsonify({
             "bot_name": "ChatBot",
             "primary_color": "#667eea",
             "initial_message": "How can I help?",
             "theme_mode": "light",
-            "ai_enabled": ai_enabled
+            "ai_enabled": ai_enabled,
+            "preserve_chat_history": preserve_chat_history
         })
     data = branding.to_dict()
     data["ai_enabled"] = ai_enabled
+    data["preserve_chat_history"] = preserve_chat_history
     return jsonify(data)
 
 @app.route("/widget/init.html")

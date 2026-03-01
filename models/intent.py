@@ -16,6 +16,7 @@ class Intent(db.Model):
     confidence = db.Column(db.Float, default=0.8)
     confidence_threshold = db.Column(db.Float, default=0.7)
     response = db.Column(db.Text, nullable=True)
+    template_file = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships

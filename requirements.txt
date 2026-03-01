@@ -1,34 +1,80 @@
+# ============================================================================
+# AI-Powered Multi-Tenant Chatbot SaaS Platform - Dependencies
+# ============================================================================
+# See README.md for feature status and README_FEATURES.md for full documentation
+#
+# IMPORTANT: For free LLM alternatives to OpenAI:
+#   - OpenRouter: pip install openrouter
+#   - Google Gemini: pip install google-generativeai
+#   - Hugging Face: pip install huggingface_hub
+#
+# ============================================================================
+# CORE FRAMEWORK
+# ============================================================================
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
 SQLAlchemy==2.0.36
 Werkzeug==3.0.3
+
+# ============================================================================
+# WEB & NETWORKING
+# ============================================================================
 requests==2.31.0
-thefuzz==0.19.0
 flask-cors==4.0.0
 flask-socketio==5.3.6
 simple-websocket==1.0.0
 gevent
+gevent-websocket
+
+# ============================================================================
+# TEXT PROCESSING & INTENT MATCHING
+# ============================================================================
+thefuzz==0.19.0
 python-Levenshtein
 python-dotenv
+
+# ============================================================================
+# DATABASE & ORM
+# ============================================================================
 Flask-Migrate
+psycopg2-binary  # For PostgreSQL in production
+
+# ============================================================================
+# SECURITY & RATE LIMITING
+# ============================================================================
 flask-limiter
-psycopg2-binary
-# Additional recommended dependencies
-# Additional recommended dependencies
-python-docx
-requests
-beautifulsoup4
-chromadb
-# Additional recommended dependencies
 itsdangerous
-gunicorn
+
+# ============================================================================
+# LLM FALLBACK (OpenAI)
+# ============================================================================
+# Current: OpenAI GPT-4o-mini
+# Consider free alternatives: OpenRouter, Google Gemini, Hugging Face
+openai
+aiohttp
+
+# ============================================================================
+# VECTOR SEARCH & SEMANTIC SEARCH (RAG)
+# ============================================================================
+# ChromaDB for knowledge base embeddings
+chromadb
+# Dense vector representations
+sentence-transformers
+
+# ============================================================================
+# DOCUMENT PROCESSING & FILE HANDLING
+# ============================================================================
+PyPDF2
+beautifulsoup4
+python-docx
+
+# ============================================================================
+# TESTING & DEVELOPMENT
+# ============================================================================
 pytest
 pytest-flask
 
-# For LLM fallback
-openai
-aiohttp
-# For RAG (vector search)
-sentence-transformers
-PyPDF2
-gevent-websocket
+# ============================================================================
+# PRODUCTION SERVER
+# ============================================================================
+gunicorn

@@ -41,7 +41,22 @@ class PlatformSetting(db.Model):
 
 # Utility to fetch OpenAI API key
 def get_openai_api_key():
-    setting = PlatformSetting.query.filter_by(key='OPENAI_API_KEY').first()
-    if setting and setting.value:
-        return setting.value
-    return None
+    import os
+    from flask import has_app_context
+    
+    # Always try environment variable first (no DB context needed)
+    env_key = os.getenv('OPENAI_API_KEY')
+    if env_key and env_key != '' and env_key.startswith('sk-'):
+        return env_key
+    
+    # If we have app context, check database
+    if has_app_context():
+        try:
+            setting = PlatformSetting.query.filter_by(key='OPENAI_API_KEY').first()
+            if setting and setting.value and setting.value.startswith('sk-'):
+                return setting.value
+        except Exception:
+            pass
+    
+    # Fallback to env even if invalid format (let OpenAI handle the error)
+    return env_key if env_key else None

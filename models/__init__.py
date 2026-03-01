@@ -24,6 +24,11 @@ from .sector_template import SectorTemplate
 from .file_manager import TemplateFile, SiteFile
 from .booking_request import BookingRequest
 
+# Stage 2 models
+from .conversation_state import ConversationState
+from .form import FormDefinition, FormSubmission
+from .webhook import WebhookConfig, WebhookLog
+
 # 2. Define what is accessible when someone does "from models import *"
 __all__ = [
     'db',
@@ -49,6 +54,12 @@ __all__ = [
     'AuditLog',
     'SectorTemplate',
     'TemplateFile',
-    'SiteFile'
+    'SiteFile',
+    # Stage 2
+    'ConversationState',
+    'FormDefinition',
+    'FormSubmission',
+    'WebhookConfig',
+    'WebhookLog',
 ]
 
