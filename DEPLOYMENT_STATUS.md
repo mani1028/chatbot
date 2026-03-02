@@ -1,235 +1,332 @@
-# ✅ Multi-Tenant Chatbot SaaS - Ready to Test!
+# Deployment Status & Guide
 
-## 🚀 Status: LIVE & RUNNING
-
-Your Flask application is now live at `http://localhost:5000`
-
----
-
-## 📋 Quick Start
-
-### 1. **Open Test Website in Browser**
-   - **Option A (Single Site)**: Open `TEST_WIDGET.html` in your browser
-   - **Option B (Multi-Tenant)**: Open both `TEST_WIDGET.html` and `TEST_WIDGET_2.html` in separate tabs
-
-### 2. **Interact with the Chat Widget**
-   - Click the **💬 bubble** in the bottom-right/left corner
-   - Type a message: "What are your business hours?"
-   - See the bot respond with intent detection + confidence score
-
-### 3. **View Admin Dashboard**
-   - Go to: `http://localhost:5000/admin/login`
-   - Username: `admin`
-   - Password: `admin123`
-   - Explore: FAQs, Branding, Embed Widget settings
+**Last Updated**: March 1, 2026  
+**Current Status**: ✅ Development Ready | ⚠️ Production Needs Configuration
 
 ---
 
-## 🏗️ Architecture Summary
+## System Status
 
-### **Database Layer**
-✅ **Models Created**:
-- `Site` - Multi-tenant identity (site_id)
-- `Intent` - Intent definitions per site
-- `IntentPhrase` - Phrase examples for intent matching
-- `ChatLog` - Multi-tenant conversation logs
+### ✅ Core Components Ready
+- Flask application framework
+- SQLite database with ORM models
+- Multi-tenant architecture with site isolation
+- Admin and super admin dashboards
+- intent detection engine with fuzzy matching
+- LLM integration (OpenAI, with free alternatives available)
+- Vector search/semantic search via ChromaDB
+- File upload/management system
+- Chat widget and embed functionality
 
-### **Intent Engine**
-✅ **Core Logic**:
-- `core/tokenizer.py` - Simple stopword tokenizer
-- `core/intent_engine.py` - Intent detection with confidence scoring
-- Supports: `AUTO`, `LEAD`, `HUMAN` intent types
-
-### **API Routes**
-✅ **Multi-Tenant Endpoints**:
-- `POST /api/chat` - Send message (requires site_id)
-- `GET /api/chat/history` - Get session history
-- Domain whitelisting enforcement
-
-### **Widget**
-✅ **Smart Embed**:
-- `static/widget/widget.js` - No hardcoding
-- Reads `data-site-id` from script tag
-- Dynamic API URL detection
-- Session persistence via localStorage
+### ⚠️ Requires Configuration for Production
+- Database (recommend PostgreSQL instead of SQLite)
+- Web server (recommend Gunicorn + Nginx reverse proxy)
+- SSL/TLS certificates for HTTPS
+- Email service configuration
+- Backup strategy
+- Monitoring and logging setup
+- Rate limiting and DDoS protection
 
 ---
 
-## 📊 What Works Now
+## Development Environment
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **Multi-Tenant** | ✅ Complete | Sites are fully isolated by `site_id` |
-| **Intent Detection** | ✅ Complete | Uses tokenizer + phrase matching |
-| **Intent Types** | ✅ Complete | AUTO, LEAD, HUMAN support |
-| **Widget Embed** | ✅ Complete | Data-attribute based config |
-| **Domain Whitelisting** | ✅ Complete | Checked via Referer header |
-| **Session Management** | ✅ Complete | localStorage-based persistence |
-| **Chat Logging** | ✅ Complete | Stored per site_id |
-| **Admin Dashboard** | ⚠️ Partial | Basic FAQs/Branding work, needs Site/Intent UI |
-
----
-
-## 🧪 Testing the Widget
-
-### **Required: Create Test Data First**
-
-The widget needs intents configured in the database. Use Python to seed data:
-
-```python
-# In Python REPL or script:
-from app import app
-from database import db
-from models.site import Site
-from models.intent import Intent, IntentPhrase
-
-with app.app_context():
-    # Create Site 1 (if not exists)
-    site = Site.query.first()
-    if not site:
-        site = Site(
-            id=1,
-            name='Test College',
-            domain='localhost',
-            bot_name='AlinaX',
-            domain_whitelist='localhost'
-        )
-        db.session.add(site)
-        db.session.commit()
-    
-    # Create an intent
-    if not Intent.query.filter_by(site_id=1).first():
-        intent = Intent(
-            site_id=1,
-            intent_name='BUSINESS_HOURS',
-            intent_type='AUTO',
-            response='We are open Monday to Friday, 9 AM to 6 PM. Closed weekends.',
-            confidence=0.8
-        )
-        db.session.add(intent)
-        db.session.flush()
-        
-        # Add phrases
-        phrases = [
-            IntentPhrase(intent_id=intent.id, phrase='what are your hours'),
-            IntentPhrase(intent_id=intent.id, phrase='when are you open'),
-            IntentPhrase(intent_id=intent.id, phrase='business hours'),
-        ]
-        for p in phrases:
-            db.session.add(p)
-        
-        db.session.commit()
-        print("✓ Test data created!")
-```
-
-### **Then Test**
-1. Open `TEST_WIDGET.html`
-2. Click chat bubble
-3. Type: "What are your hours?"
-4. Bot responds with configured answer
-
----
-
-## 🔧 Key Files Changed/Created
-
-### **New Production Files**
-- ✅ `models/site.py` - Site model
-- ✅ `models/intent.py` - Intent & IntentPhrase models
-- ✅ `models/chat_log.py` - Multi-tenant ChatLog
-- ✅ `core/tokenizer.py` - Tokenization logic
-- ✅ `core/intent_engine.py` - Intent detection
-- ✅ `services/chat_service.py` - Intent service wrapper
-- ✅ `routes/chat_routes.py` - Multi-tenant API endpoints
--  `static/widget/widget.js` - Improved widget (v2.0)
-
-### **Test Files**
-- ✅ `TEST_WIDGET.html` - Site #1 test page
-- ✅ `TEST_WIDGET_2.html` - Site #2 test page
-- ✅ `TESTING_GUIDE.md` - Complete testing instructions
-
-### **Updated**
-- ✅ `app.py` - Fixed imports, removed old endpoints, registered blueprint
-- ✅ `models/__init__.py` - Moved models to package
-
----
-
-## 🐛 Known Issues & Next Steps
-
-### **What Still Needs Work**
-1. **Admin Dashboard** - Needs UI for managing Sites/Intents/Phrases (currently only FAQs)
-2. **Lead Service** - LEAD intent type flagged but no form handler
-3. **Handoff Service** - HUMAN intent type flagged but no CRM integration
-4. **Database Migrations** - Old FAQ/ChatLog data may exist; needs migration script
-
-### **Recommended Next Steps**
-1. Seed test data (use Python script above)
-2. Test widget on both TEST files
-3. Build admin UI for Sites/Intents management
-4. Add lead capture form in widget
-5. Implement CRM handoff service
-6. Deploy to production domain
-
----
-
-## 📞 API Examples
-
-### **Send Message (Multi-Tenant)**
+### Running Locally
 ```bash
-curl -X POST http://localhost:5000/api/chat \
-  -H "Content-Type: application/json" \
-  -H "Referer: http://localhost/" \
-  -d '{
-    "site_id": 1,
-    "message": "What are your hours?",
-    "session_id": "session-abc123"
-  }'
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Create .env file
+cp .env.example .env
+# Edit .env and add OPENAI_API_KEY
+
+# 3. Start Flask server
+python app.py
+
+# 4. Access at http://localhost:5000
 ```
 
-**Response:**
-```json
-{
-  "reply": "We are open...",
-  "intent": "BUSINESS_HOURS",
-  "intent_type": "AUTO",
-  "confidence": 0.92,
-  "handoff": false,
-  "lead_capture": false
+### Default Credentials
+- Admin login: `admin` / `admin123`
+- Super admin: Created via database
+
+---
+
+## Production Deployment Checklist
+
+### Before Launch
+- [ ] Change SECRET_KEY in config.py
+- [ ] Use strong admin passwords
+- [ ] Set up PostgreSQL database
+- [ ] Configure backup strategy
+- [ ] Set up monitoring (Sentry, DataDog, etc.)
+- [ ] Enable HTTPS with valid SSL certificate
+- [ ] Configure rate limiting
+- [ ] Set up email service
+- [ ] Test all admin functions
+- [ ] Load test the system
+
+### Recommended Stack
+```
+┌─────────────────────────────────────────┐
+│ Nginx (Reverse Proxy, SSL)              │
+├─────────────────────────────────────────┤
+│ Gunicorn (WSGI App Server - 4+ workers) │
+├─────────────────────────────────────────┤
+│ Flask Application                       │
+├─────────────────────────────────────────┤
+│ PostgreSQL (Database)                   │
+├─────────────────────────────────────────┤
+│ Redis (Caching, Session Store)          │
+├─────────────────────────────────────────┤
+│ ChromaDB (Vector Store)                 │
+└─────────────────────────────────────────┘
+```
+
+### Deployment Steps
+
+#### 1. Server Setup (Ubuntu 20.04+)
+```bash
+# Install system dependencies
+sudo apt-get update
+sudo apt-get install python3.10 python3.10-venv postgresql redis-server nginx
+
+# Create app directory
+sudo mkdir -p /opt/chatbot
+sudo chown $USER /opt/chatbot
+cd /opt/chatbot
+
+# Clone repository
+git clone <repo> .
+```
+
+#### 2. Python Setup
+```bash
+python3.10 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install gunicorn
+```
+
+#### 3. Database Setup
+```bash
+sudo -u postgres psql
+
+postgres=# CREATE DATABASE chatbot_db;
+postgres=# CREATE USER chatbot_user WITH PASSWORD 'secure_password_here';
+postgres=# GRANT ALL PRIVILEGES ON DATABASE chatbot_db TO chatbot_user;
+postgres=# \q
+```
+
+#### 4. Configure Application
+```bash
+# Copy and edit .env
+cp .env.example .env
+nano .env
+# Set:
+# - OPENAI_API_KEY (or use free alternative)
+# - DATABASE_URL=postgresql://chatbot_user:password@localhost/chatbot_db
+# - SECRET_KEY=long_random_string_here
+# - DEBUG=False
+```
+
+#### 5. Initialize Database
+```bash
+python app.py  # This creates tables
+# Then Ctrl+C to stop
+```
+
+#### 6. Gunicorn Configuration
+Create `/opt/chatbot/gunicorn.conf.py`:
+```python
+import multiprocessing
+
+bind = "127.0.0.1:5000"
+workers = multiprocessing.cpu_count() * 2 + 1
+worker_class = "sync"
+worker_connections = 100
+timeout = 30
+keepalive = 2
+```
+
+#### 7. Nginx Configuration
+Create `/etc/nginx/sites-available/chatbot`:
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    
+    # Redirect HTTP to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+    
+    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    
+    client_max_body_size 50M;
+    
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
 }
 ```
 
-### **Get Session History**
+Enable site:
 ```bash
-curl -X GET 'http://localhost:5000/api/chat/history?site_id=1&session_id=session-abc123'
+sudo ln -s /etc/nginx/sites-available/chatbot /etc/nginx/sites-enabled/
+sudo systemctl restart nginx
+```
+
+#### 8. Systemd Service
+Create `/etc/systemd/system/chatbot.service`:
+```ini
+[Unit]
+Description=AI Chatbot SaaS
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/opt/chatbot
+Environment="PATH=/opt/chatbot/venv/bin"
+ExecStart=/opt/chatbot/venv/bin/gunicorn \
+    --config gunicorn.conf.py \
+    --access-logfile /var/log/chatbot/access.log \
+    --error-logfile /var/log/chatbot/error.log \
+    app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable chatbot
+sudo systemctl start chatbot
+sudo systemctl status chatbot
+```
+
+#### 9. SSL Certificate (Let's Encrypt)
+```bash
+sudo apt-get install certbot python3-certbot-nginx
+sudo certbot certonly --nginx -d your-domain.com
 ```
 
 ---
 
-## ✨ What's Different From Single-Tenant
+## Monitoring & Maintenance
 
-| Aspect | Old | New |
-|--------|-----|-----|
-| **Entry Point** | 1 admin, 1 bot | N sites, N admins, N bots |
-| **Data Isolation** | Global FAQ | Per-site Intents |
-| **Chat Logs** | Global | Scoped by site_id |
-| **Widget** | Hardcoded URL | Data attributes |
-| **Domain Security** | None | Whitelist checking |
-| **Scalability** | Limited | Multi-tenant |
+### Logs
+```bash
+# Application logs
+sudo journalctl -u chatbot -f
+
+# Nginx logs
+sudo tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/error.log
+
+# Application error logs
+tail -f /var/log/chatbot/error.log
+```
+
+### Database Backups
+```bash
+# Daily backup script
+#!/bin/bash
+BACKUP_DIR="/backups/chatbot"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+pg_dump chatbot_db | gzip > $BACKUP_DIR/chatbot_$TIMESTAMP.sql.gz
+
+# Keep last 30 days
+find $BACKUP_DIR -name "*.sql.gz" -mtime +30 -delete
+```
+
+### Health Checks
+```bash
+# Check API status
+curl https://your-domain.com/admin/api/health
+
+# Check database connection
+python -c "from app import app, db; app.app_context().push(); print(db.engine.execute('SELECT 1'))"
+```
 
 ---
 
-## 🎯 Success Criteria Achieved
+## Scaling Considerations
 
-✅ One backend serves unlimited sites  
-✅ No per-client code changes  
-✅ Widget works on any whitelisted domain  
-✅ Intent-driven automation (AUTO/LEAD/HUMAN)  
-✅ Complete data isolation  
-✅ Production-grade error handling  
+### Horizontal Scaling
+1. Use load balancer (HAProxy, AWS ALB)
+2. Run multiple Gunicorn instances
+3. Use shared database (PostgreSQL)
+4. Share session store (Redis)
+5. Use CDN for static assets
+
+### Caching Strategy
+- Enable Redis for session storage
+- Cache LLM responses for common queries
+- Use ChromaDB for semantic search caching
+
+### Database Optimization
+- Add indexes on frequently queried columns
+- Use connection pooling (pgBouncer)
+- Implement query logging and monitoring
 
 ---
 
-## 🚀 You're Ready!
+## Free Tier LLM Options
 
-Your multi-tenant SaaS platform is live. Open a test file and start chatting! 🎉
+Since OpenAI requires billing, alternatives for development:
 
-For detailed testing instructions, see `TESTING_GUIDE.md`
+### Option 1: OpenRouter (Recommended)
+```bash
+# In .env
+OPENROUTER_API_KEY=your_key_here
+# Uses models: Mistral, Claude 3.5 Sonnet, Llama 2, etc.
+```
+
+### Option 2: Google Gemini (Free Tier)
+```bash
+# In .env
+GOOGLE_API_KEY=your_key_here
+# Uses Gemini 1.5 Flash (generous free tier)
+```
+
+### Option 3: Hugging Face (Always Free)
+```bash
+# In .env
+HF_API_KEY=your_key_here
+# Uses community models (rate limited but always available)
+```
+
+---
+
+## Support & Issues
+
+- Check application logs: `systemctl status chatbot`
+- Review configuration: `cat .env` (redact sensitive values)
+- Verify database: `psql -d chatbot_db -c "\dt"`
+- Test LLM: Navigate to admin panel and test intent fallback
+
+---
+
+## Version Info
+- **Python**: 3.8+
+- **Flask**: 2.3+
+- **SQLAlchemy**: 2.0+
+- **PostgreSQL**: 12+ (recommended)
+- **ChromaDB**: Latest
+
+Last Updated: March 1, 2026

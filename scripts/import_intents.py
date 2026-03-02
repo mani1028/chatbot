@@ -1,3 +1,33 @@
+# AUTOMATED LEAD CAPTURE INTENT CREATION
+if __name__ == "__main__":
+    import sys
+    import os
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from models.intent import Intent, IntentPhrase
+    from database import db
+    from flask import session
+    from app import app
+    with app.app_context():
+        # Get current site_id (default to 1 if not set)
+        site_id = 1
+        # Check if already exists
+        existing = Intent.query.filter_by(site_id=site_id, intent_name="capture_lead").first()
+        if not existing:
+            intent = Intent(
+                site_id=site_id,
+                intent_name="capture_lead",
+                intent_type="LEAD",
+                response="I'd be happy to help! Please provide your details below:"
+            )
+            db.session.add(intent)
+            db.session.commit()
+            phrases = ["speak to sales", "contact sales", "book appointment", "get a quote"]
+            for phrase in phrases:
+                db.session.add(IntentPhrase(intent_id=intent.id, phrase=phrase))
+            db.session.commit()
+            print("capture_lead intent created!")
+        else:
+            print("capture_lead intent already exists for this site.")
 """Import intents from a JSON file into the database.
 
 Usage:
@@ -46,7 +76,7 @@ if __name__ == '__main__':
     with open(json_path, 'r', encoding='utf-8') as f:
         payload = json.load(f)
 
-    sector = payload.get('sector')
+    sector = payload.get('sector', 'global')
     intents = payload.get('intents', [])
 
     if not intents:
@@ -56,7 +86,7 @@ if __name__ == '__main__':
     with app.app_context():
 
         for it in intents:
-            name = it.get('name')
+            name = it.get('name') or it.get('intent_name')
             itype = it.get('type', 'info')
             response = it.get('response')
             threshold = it.get('confidence_threshold') or it.get('confidence', 0.7)

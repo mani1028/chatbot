@@ -1,11 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
-# Initialize SQLAlchemy instance
 db = SQLAlchemy()
+limiter = Limiter(key_func=get_remote_address)
 
 def init_db(app):
-    # Import models here to ensure they are known to SQLAlchemy before creation
-    # This prevents circular imports since models import 'db' from this file
     import models
     with app.app_context():
         db.create_all()

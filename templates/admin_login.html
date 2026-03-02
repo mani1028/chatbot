@@ -7,45 +7,54 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body class="admin-page">
-    <div class="login-container">
-        <div class="login-box">
-            <h1>Admin Login</h1>
-            <p class="subtitle">AI Chatbot Management Portal</p>
+    <div class="login-bg">
+        <div class="login-glass">
+            <div class="login-header">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="AI Chatbot Logo" class="login-logo">
+                <h1 style="color:var(--primary-color);font-weight:700;letter-spacing:-1px;">Admin Login</h1>
+                <p class="subtitle" style="color:var(--secondary-color);font-size:1.08rem;">AI Website Assistant & Lead Automation Platform</p>
+            </div>
 
             {% if error %}
             <div class="error-message">
-                {{ error }}
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
             </div>
             {% endif %}
 
             <form method="POST" class="login-form">
                 <div class="form-group">
-                    <label for="username">Username</label>
+                    <label for="username" style="color:var(--primary-color);font-weight:600;"><i class="fas fa-user"></i> Username</label>
                     <input 
                         type="text" 
                         id="username" 
                         name="username" 
                         required
                         placeholder="Enter your username"
+                        autocomplete="username"
+                        style="border-radius:var(--radius-md);border:1px solid var(--primary-color);background:var(--bg-light);font-size:1.05rem;"
                     >
                 </div>
 
                 <div class="form-group">
-                    <label for="password">Password</label>
+                    <label for="password" style="color:var(--primary-color);font-weight:600;"><i class="fas fa-lock"></i> Password</label>
                     <input 
                         type="password" 
                         id="password" 
                         name="password" 
                         required
                         placeholder="Enter your password"
+                        autocomplete="current-password"
+                        style="border-radius:var(--radius-md);border:1px solid var(--primary-color);background:var(--bg-light);font-size:1.05rem;"
                     >
                 </div>
 
-                <button type="submit" class="btn btn-primary">Login</button>
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top:1.5rem;font-size:1.1rem;background:var(--primary-color);color:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);">Login</button>
             </form>
 
             <div class="login-footer">
-                <small>Default credentials: admin / admin123</small>
+                <small style="color:var(--text-muted);">Default credentials: <b>admin / admin123</b></small>
+                <br>
+                <small style="color:var(--text-muted);">Powered by AI Lead & Support Automation Tool</small>
             </div>
         </div>
     </div>

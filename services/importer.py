@@ -7,7 +7,7 @@ def import_sector_template(site_id, json_data):
     Imports intents, phrases, and config from a JSON dictionary into the database for a specific site.
     """
     try:
-        sector = json_data.get('sector')
+        sector = json_data.get('sector', 'global')
         intents = json_data.get('intents', [])
 
         if not intents:
@@ -18,7 +18,7 @@ def import_sector_template(site_id, json_data):
         # For now, we append/update.
 
         for it in intents:
-            name = it.get('name')
+            name = it.get('name') or it.get('intent_name')
             if not name:
                 continue
 
