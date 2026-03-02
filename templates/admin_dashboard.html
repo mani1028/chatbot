@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-site-id="{{ site_id | default(0) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,7 +19,7 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-        body { background-color: var(--bg-base); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        body { background-color: var(--bg-base); color: var(--text-main); display: flex; min-height: 100vh; overflow-y: auto; }
 
         /* Sidebar */
         .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
@@ -89,68 +89,208 @@
             <h2><i class="fas fa-robot"></i> Client Panel</h2>
         </div>
         <nav class="nav-links">
-            <a class="nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-chart-bar"></i> Overview</a>
-            <a class="nav-item" onclick="switchTab('intents', this)"><i class="fas fa-brain"></i> Knowledge Base</a>
-            <a class="nav-item" onclick="switchTab('branding', this)"><i class="fas fa-paint-brush"></i> Branding</a>
-            <a class="nav-item" onclick="switchTab('conversations', this)"><i class="fas fa-comments"></i> Conversations</a>
-            <a class="nav-item" onclick="switchTab('analytics', this)"><i class="fas fa-chart-line"></i> Analytics</a>
-            <a class="nav-item" onclick="switchTab('leads', this)"><i class="fas fa-user-plus"></i> Leads</a>
-            <a class="nav-item" onclick="switchTab('install', this)"><i class="fas fa-code"></i> Installation</a>
-            <a class="nav-item" onclick="switchTab('simulator', this)"><i class="fas fa-mobile-alt"></i> Simulator</a>
-            <a class="nav-item" onclick="switchTab('config', this)"><i class="fas fa-cogs"></i> Business Rules</a>
+            <a class="nav-item active" onclick="switchTab('dashboard', this)">
+                <i class="fas fa-home"></i> Overview
+            </a>
+            <a class="nav-item" onclick="switchTab('conversations', this)">
+                <i class="fas fa-inbox"></i> Inbox
+            </a>
+            <a class="nav-item" onclick="switchTab('intents', this)">
+                <i class="fas fa-book"></i> Knowledge Base
+            </a>
+            <a class="nav-item" onclick="switchTab('config', this)">
+                <i class="fas fa-gavel"></i> Business Rules
+            </a>
+            
+            <a class="nav-item" onclick="switchTab('ai-settings', this)">
+                <i class="fas fa-robot"></i> AI Settings
+            </a>
+            <a class="nav-item" onclick="switchTab('channels', this)">
+                <i class="fas fa-share-alt"></i> Channels
+            </a>
+            
+            <a class="nav-item" onclick="switchTab('leads', this)">
+                <i class="fas fa-user-plus"></i> Leads
+            </a>
+            <a class="nav-item" onclick="switchTab('analytics', this)">
+                <i class="fas fa-chart-bar"></i> Analytics
+            </a>
+            
+            <a class="nav-item" onclick="switchTab('usage', this)">
+                <i class="fas fa-chart-pie"></i> Usage
+            </a>
+            <a class="nav-item" onclick="switchTab('branding', this)">
+                <i class="fas fa-paint-brush"></i> Branding
+            </a>
+            <a class="nav-item" onclick="switchTab('install', this)">
+                <i class="fas fa-code"></i> Installation (Widget Code)
+            </a>
+            <a class="nav-item" onclick="switchTab('simulator', this)">
+                <i class="fas fa-vr-cardboard"></i> Simulator
+            </a>
+
             {% if is_super %}
-            <a class="nav-item" onclick="switchTab('admins', this)"><i class="fas fa-users-cog"></i> Admin Users</a>
+            <!-- Super Admin Items -->
+            <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border);">
+            <a class="nav-item" onclick="switchTab('blueprint-intents', this)">
+                <i class="fas fa-cube"></i> Blueprint Intents
+            </a>
+            <a class="nav-item" onclick="switchTab('intent-assignments', this)">
+                <i class="fas fa-link"></i> Intent Assignments
+            </a>
+            <a class="nav-item" onclick="switchTab('admin-users', this)">
+                <i class="fas fa-users-cog"></i> Admin Users
+            </a>
+            <a class="nav-item" onclick="switchTab('platform-settings', this)">
+                <i class="fas fa-cogs"></i> Platform Settings
+            </a>
             {% endif %}
         </nav>
-                {% if is_super %}
-                <!-- Admin Users Tab -->
-                <div id="admins" class="tab-content">
-                    <div class="header-actions">
+
+        {% if is_super %}
+        <!-- Blueprint Intents Tab -->
+        <div id="blueprint-intents" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1>Blueprint Intents</h1>
+                    <p style="color: var(--text-muted);">Manage reusable intent templates for all clients.</p>
+                </div>
+                <button class="btn btn-primary" onclick="showBlueprintInfo()" title="Blueprints are managed via template files" style="opacity: 0.6;"><i class="fas fa-plus"></i> Add Blueprint (Template-Managed)</button>
+            </div>
+            <div class="card">
+                <div class="card-body" style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Template File</th>
+                                <th>Intents</th>
+                                <th>Count</th>
+                                <th>Response Preview</th>
+                                <th style="width: 120px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blueprintTableBody">
+                            <tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading blueprints...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Users Tab -->
+        <div id="admin-users" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1>Admin Users</h1>
+                    <p style="color: var(--text-muted);">Manage platform administrators and client site admins.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openAdminUserModal()"><i class="fas fa-plus"></i> Add Admin User</button>
+            </div>
+            <div class="card">
+                <div class="card-body" style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Site ID</th>
+                                <th>Super Admin</th>
+                                <th>Created</th>
+                                <th style="width: 120px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody">
+                            <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading admins...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intent Assignments Tab -->
+        <div id="intent-assignments" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1>Intent Assignments</h1>
+                    <p style="color: var(--text-muted);">Assign blueprint intents to client sites and manage their availability.</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                        <!-- Client List -->
                         <div>
-                            <h1 style="font-size: 1.5rem;">Admin Users</h1>
-                            <p style="color: var(--text-muted);">Manage client and super admin accounts. You can edit usernames, reset passwords, or impersonate a client admin.</p>
+                            <h3 style="margin-bottom: 1rem;">Client Sites</h3>
+                            <div style="border: 1px solid var(--border); border-radius: 6px; overflow: hidden; max-height: 400px; overflow-y: auto;">
+                                <div id="clientListContainer">
+                                    <div style="padding: 1rem; text-align: center; color: var(--text-muted);">Loading sites...</div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-body" style="overflow-x:auto;">
-                            <table style="width:100%">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Username</th>
-                                        <th>Site ID</th>
-                                        <th>Super Admin</th>
-                                        <th>Created</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="adminTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <!-- Edit Admin Modal -->
-                    <div class="modal-overlay" id="adminModal">
-                        <div class="modal-content">
-                            <div class="modal-header" id="adminModalTitle">Edit Admin</div>
-                            <form id="adminForm">
-                                <input type="hidden" id="adminId" name="id">
-                                <div class="form-group">
-                                    <label>Username</label>
-                                    <input type="text" id="adminUsername" name="username" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>New Password <span style="color:var(--text-muted); font-size:0.8em;">(leave blank to keep unchanged)</span></label>
-                                    <input type="password" id="adminPassword" name="password" class="form-control" autocomplete="new-password">
-                                </div>
-                                <div class="modal-actions">
-                                    <button type="button" class="btn btn-outline" onclick="closeAdminModal()">Cancel</button>
-                                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                                </div>
-                            </form>
+                        <!-- Intents for Selected Client -->
+                        <div>
+                            <h3 style="margin-bottom: 1rem;">Selected Client: <span id="selectedClientName" style="color: var(--primary);">None</span></h3>
+                            <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem;">
+                                <button class="btn btn-primary" onclick="openAssignIntentModal()" id="assignBtn" disabled><i class="fas fa-plus"></i> Add Intent</button>
+                                <button class="btn btn-outline" onclick="refreshIntentAssignments()" id="refreshBtn" disabled><i class="fas fa-sync"></i> Refresh</button>
+                            </div>
+                            <div style="border: 1px solid var(--border); border-radius: 6px; overflow: hidden;">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="background: var(--bg-base);">
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border);">Intent Name</th>
+                                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); width: 80px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clientIntentsTableBody">
+                                        <tr><td colspan="2" style="text-align: center; padding: 2rem; color: var(--text-muted);">Select a client site to view intents</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
-                {% endif %}
+            </div>
+        </div>
+
+        <!-- Platform Settings Tab -->
+        <div id="platform-settings" class="tab-content">
+            <div class="header-actions">
+                <h1>Platform Settings</h1>
+                <p style="color: var(--text-muted);">Manage global platform configurations, API keys, and integrations.</p>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <form id="platformSettingsForm">
+                        <div class="form-group">
+                            <label>Platform Name</label>
+                            <input type="text" name="platform_name" class="form-control" placeholder="AI Chatbot Platform">
+                        </div>
+                        <div class="form-group">
+                            <label>API Base URL</label>
+                            <input type="url" name="api_base_url" class="form-control" placeholder="https://api.example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Sites Per Plan</label>
+                            <input type="number" name="max_sites" class="form-control" min="1" placeholder="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Enable Registration</label>
+                            <select name="enable_registration" class="form-control">
+                                <option value="true">Enabled</option>
+                                <option value="false">Disabled</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Support Email</label>
+                            <input type="email" name="support_email" class="form-control" placeholder="support@example.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Platform Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <div class="sidebar-footer">
             <span style="font-size: 0.85rem; color: var(--text-muted); text-align: center;">Site ID: <b>{{ site_id }}</b></span>
             <a href="/admin/logout" class="btn btn-outline" style="width: 100%; justify-content: center;"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -192,6 +332,17 @@
                             <div><b>Success Rate:</b> <span id="analyticsSuccess">-</span>%</div>
                         </div>
                     </div>
+                    <div class="card" style="max-width: 700px;">
+                        <div class="card-body">
+                            <h3>Trending Questions</h3>
+                            <canvas id="trendingChart" height="180"></canvas>
+                            <ul id="trendingQuestions"></ul>
+                            <h3 style="margin-top:2em;">Frequent Failure Points</h3>
+                            <canvas id="failureChart" height="180"></canvas>
+                            <ul id="failurePoints"></ul>
+                        </div>
+                    </div>
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                 </div>
 
                 <!-- Leads Tab -->
@@ -209,6 +360,7 @@
                                         <th>Email</th>
                                         <th>Phone</th>
                                         <th>User Message</th>
+                                        <th style="width: 120px;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="leadsTableBody"></tbody>
@@ -216,6 +368,116 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- AI Settings Tab -->
+                <div id="ai-settings" class="tab-content">
+                    <div class="header-actions">
+                        <h1>AI Settings</h1>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <h3 style="margin-bottom: 1rem;">AI Configuration</h3>
+                            <form id="aiSettingsForm">
+                                <div class="form-group">
+                                    <label>Model Type</label>
+                                    <select name="model_type" class="form-control">
+                                        <option value="gpt-4">GPT-4</option>
+                                        <option value="gpt-3.5">GPT-3.5</option>
+                                        <option value="claude">Claude</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Temperature (0.0 - 2.0)</label>
+                                    <input type="number" name="temperature" class="form-control" min="0" max="2" step="0.1" value="0.7" placeholder="0.7">
+                                </div>
+                                <div class="form-group">
+                                    <label>Max Tokens</label>
+                                    <input type="number" name="max_tokens" class="form-control" min="10" value="500" placeholder="500">
+                                </div>
+                                <div class="form-group">
+                                    <label>Enable Semantic Search</label>
+                                    <select name="semantic_search" class="form-control">
+                                        <option value="true">Enabled</option>
+                                        <option value="false">Disabled</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Preserve Chat History</label>
+                                    <select name="preserve_chat_history" class="form-control" id="preserveChatHistorySelect">
+                                        <option value="off">Start Fresh (New Conversation Each Visit)</option>
+                                        <option value="on">Keep History (Show Previous Messages)</option>
+                                    </select>
+                                    <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+                                        <strong>Start Fresh:</strong> Clears chat history when user returns. Good for privacy.<br>
+                                        <strong>Keep History:</strong> Remembers previous messages. Better for support conversations.
+                                    </small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save AI Settings</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channels Tab -->
+                <div id="channels" class="tab-content">
+                    <div class="header-actions">
+                        <div>
+                            <h1>Channels</h1>
+                            <p style="color: var(--text-muted);">Manage your bot's communication channels.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openChannelModal()"><i class="fas fa-plus"></i> Add Channel</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body" style="overflow-x:auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Channel Name</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th style="width: 100px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="channelsTableBody">
+                                    <tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">No channels configured. Add one to get started.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Usage Tab -->
+                <div id="usage" class="tab-content">
+                    <div class="header-actions">
+                        <h1>Usage Statistics</h1>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                                <div style="padding: 1rem; background: #F3F4F6; border-radius: 8px;">
+                                    <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Total Messages</div>
+                                    <div style="font-size: 1.875rem; font-weight: 700;" id="usageTotalMessages">-</div>
+                                </div>
+                                <div style="padding: 1rem; background: #F3F4F6; border-radius: 8px;">
+                                    <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">This Month</div>
+                                    <div style="font-size: 1.875rem; font-weight: 700;" id="usageThisMonth">-</div>
+                                </div>
+                                <div style="padding: 1rem; background: #F3F4F6; border-radius: 8px;">
+                                    <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">API Calls</div>
+                                    <div style="font-size: 1.875rem; font-weight: 700;" id="usageApiCalls">-</div>
+                                </div>
+                                <div style="padding: 1rem; background: #F3F4F6; border-radius: 8px;">
+                                    <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem;">Storage Used</div>
+                                    <div style="font-size: 1.875rem; font-weight: 700;" id="usageStorage">-</div>
+                                </div>
+                            </div>
+                            <h3 style="margin: 2rem 0 1rem 0;">Usage Breakdown</h3>
+                            <canvas id="usageChart" height="100"></canvas>
+                            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                        </div>
+                    </div>
+                </div>
+
         <!-- Dynamic Business Rules Tab -->
         <div id="config" class="tab-content">
             <div class="header-actions">
@@ -255,7 +517,7 @@
                                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem;">Loading...</td></tr>';
                                     try {
                                         const url = new URL('/admin/api/client/conversations', window.location.origin);
-                                        const siteId = new URLSearchParams(window.location.search).get('site_id');
+                                        const siteId = getSiteId();
                                         if (siteId) url.searchParams.append('site_id', siteId);
                                         const res = await fetch(url);
                                         const data = await res.json();
@@ -282,28 +544,83 @@
                                 async function loadAnalytics() {
                                     const totalSpan = document.getElementById('analyticsTotal');
                                     const successSpan = document.getElementById('analyticsSuccess');
+                                    const trendingList = document.getElementById('trendingQuestions');
+                                    const failureList = document.getElementById('failurePoints');
+                                    const trendingChart = document.getElementById('trendingChart');
+                                    const failureChart = document.getElementById('failureChart');
                                     totalSpan.textContent = '-';
                                     successSpan.textContent = '-';
+                                    trendingList.innerHTML = '<li>Loading...</li>';
+                                    failureList.innerHTML = '<li>Loading...</li>';
+                                    if(window.trendingChartObj) { window.trendingChartObj.destroy(); }
+                                    if(window.failureChartObj) { window.failureChartObj.destroy(); }
                                     try {
                                         const url = new URL('/admin/api/client/analytics', window.location.origin);
-                                        const siteId = new URLSearchParams(window.location.search).get('site_id');
+                                        const siteId = getSiteId();
                                         if (siteId) url.searchParams.append('site_id', siteId);
                                         const res = await fetch(url);
                                         const data = await res.json();
                                         if(res.ok) {
                                             totalSpan.textContent = data.total_messages;
                                             successSpan.textContent = data.success_rate;
+                                            trendingList.innerHTML = '';
+                                            let trendLabels = [];
+                                            let trendCounts = [];
+                                            (data.trending_questions || []).forEach(q => {
+                                                trendingList.innerHTML += `<li>${q.question} <span style='color:#888'>(x${q.count})</span></li>`;
+                                                trendLabels.push(q.question);
+                                                trendCounts.push(q.count);
+                                            });
+                                            if (!data.trending_questions || data.trending_questions.length === 0) trendingList.innerHTML = '<li>No trending questions.</li>';
+                                            window.trendingChartObj = new Chart(trendingChart, {
+                                                type: 'bar',
+                                                data: {
+                                                    labels: trendLabels,
+                                                    datasets: [{
+                                                        label: 'Trending Questions',
+                                                        data: trendCounts,
+                                                        backgroundColor: 'rgba(79,70,229,0.7)'
+                                                    }]
+                                                },
+                                                options: {responsive:true, plugins:{legend:{display:false}}}
+                                            });
+                                            failureList.innerHTML = '';
+                                            let failLabels = [];
+                                            let failCounts = [];
+                                            (data.failure_points || []).forEach(q => {
+                                                failureList.innerHTML += `<li>${q.question} <span style='color:#888'>(x${q.count})</span></li>`;
+                                                failLabels.push(q.question);
+                                                failCounts.push(q.count);
+                                            });
+                                            if (!data.failure_points || data.failure_points.length === 0) failureList.innerHTML = '<li>No frequent failures.</li>';
+                                            window.failureChartObj = new Chart(failureChart, {
+                                                type: 'bar',
+                                                data: {
+                                                    labels: failLabels,
+                                                    datasets: [{
+                                                        label: 'Failure Points',
+                                                        data: failCounts,
+                                                        backgroundColor: 'rgba(239,68,68,0.7)'
+                                                    }]
+                                                },
+                                                options: {responsive:true, plugins:{legend:{display:false}}}
+                                            });
                                         }
-                                    } catch(e) { totalSpan.textContent = 'Error'; successSpan.textContent = 'Error'; }
+                                    } catch(e) {
+                                        totalSpan.textContent = 'Error';
+                                        successSpan.textContent = 'Error';
+                                        trendingList.innerHTML = '<li>Error loading data.</li>';
+                                        failureList.innerHTML = '<li>Error loading data.</li>';
+                                    }
                                 }
 
                                 // --- Leads Loader ---
                                 async function loadLeads() {
                                     const tbody = document.getElementById('leadsTableBody');
-                                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem;">Loading...</td></tr>';
+                                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem;">Loading...</td></tr>';
                                     try {
                                         const url = new URL('/admin/api/client/leads', window.location.origin);
-                                        const siteId = new URLSearchParams(window.location.search).get('site_id');
+                                        const siteId = getSiteId();
                                         if (siteId) url.searchParams.append('site_id', siteId);
                                         const res = await fetch(url);
                                         const data = await res.json();
@@ -311,19 +628,23 @@
                                         if(data.leads && data.leads.length > 0) {
                                             data.leads.forEach(lead => {
                                                 const tr = document.createElement('tr');
+                                                const messagePreview = (lead.user_message || 'N/A').substring(0, 50);
                                                 tr.innerHTML = `
                                                     <td>${lead.created_at ? new Date(lead.created_at).toLocaleString() : ''}</td>
-                                                    <td>${lead.lead_name || ''}</td>
-                                                    <td>${lead.lead_email || ''}</td>
-                                                    <td>${lead.lead_phone || ''}</td>
-                                                    <td>${lead.user_message || ''}</td>
+                                                    <td><strong>${lead.lead_name || 'N/A'}</strong></td>
+                                                    <td>${lead.lead_email || 'N/A'}</td>
+                                                    <td>${lead.lead_phone || 'N/A'}</td>
+                                                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${lead.user_message || ''}"><small>${messagePreview}${(lead.user_message || '').length > 50 ? '...' : ''}</small></td>
+                                                    <td style="text-align: center;">
+                                                        <button class="btn btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="alert('Full conversation history feature coming soon!\\n\\nLead: ${lead.lead_name}\\nEmail: ${lead.lead_email}')">View Chat</button>
+                                                    </td>
                                                 `;
                                                 tbody.appendChild(tr);
                                             });
                                         } else {
-                                            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No leads found.</td></tr>';
+                                            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No leads found.</td></tr>';
                                         }
-                                    } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--danger);">Failed to load leads.</td></tr>'; }
+                                    } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--danger);">Failed to load leads.</td></tr>'; }
                                 }
                         // --- All JS moved here to ensure function order and scope ---
                         // --- Admin Users Logic ---
@@ -371,28 +692,32 @@
                             document.getElementById('adminModalTitle').textContent = 'Edit Admin';
                             document.getElementById('adminModal').style.display = 'flex';
                         }
-                        document.getElementById('adminForm').addEventListener('submit', async (e) => {
-                            e.preventDefault();
-                            const btn = e.target.querySelector('button[type="submit"]');
-                            btn.innerHTML = "Saving...";
-                            btn.disabled = true;
-                            const id = document.getElementById('adminId').value;
-                            const payload = {
-                                username: document.getElementById('adminUsername').value,
-                                password: document.getElementById('adminPassword').value
-                            };
-                            try {
-                                const res = await fetch(`/admin/api/super/admins/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                                if(res.ok) {
-                                    showToast('Admin updated successfully!');
-                                    closeAdminModal();
-                                    loadAdmins();
-                                } else {
-                                    showToast('Failed to update admin', 'error');
-                                }
-                            } catch(err) { showToast('Network error occurred', 'error'); }
-                            finally { btn.innerHTML = "Save Changes"; btn.disabled = false; }
-                        });
+                        const adminForm = document.getElementById('adminForm');
+                        if (adminForm) {
+                            adminForm.addEventListener('submit', async (e) => {
+                                e.preventDefault();
+                                const btn = e.target.querySelector('button[type="submit"]');
+                                btn.innerHTML = "Saving...";
+                                btn.disabled = true;
+                                const id = document.getElementById('adminId').value;
+                                const payload = {
+                                    username: document.getElementById('adminUsername').value,
+                                    password: document.getElementById('adminPassword').value
+                                };
+                                try {
+                                    const res = await fetch(`/admin/api/super/admins/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                                    if(res.ok) {
+                                        showToast('Admin updated successfully!');
+                                        closeAdminModal();
+                                        loadAdmins();
+                                    } else {
+                                        showToast('Failed to update admin', 'error');
+                                    }
+                                } catch(err) { showToast('Network error occurred', 'error'); }
+                                finally { btn.innerHTML = "Save Changes"; btn.disabled = false; }
+                            });
+                        }
+
                         async function impersonateAdmin(siteId) {
                             if(!confirm('Impersonate this client admin?')) return;
                             try {
@@ -407,18 +732,21 @@
                             } catch(err) { showToast('Network error occurred', 'error'); }
                         }
                         // --- Site Status Toggle ---
-                        document.getElementById('toggleStatusBtn').addEventListener('click', async () => {
-                            try {
-                                const res = await fetch(`/admin/api/super/sites/${site_id}/status`, { method: 'PUT' });
-                                const data = await res.json();
-                                if(res.ok && data.success) {
-                                    showToast('Site status updated!');
-                                    loadStats();
-                                } else {
-                                    showToast('Failed to update status', 'error');
-                                }
-                            } catch(err) { showToast('Network error occurred', 'error'); }
-                        });
+                        const toggleStatusBtn = document.getElementById('toggleStatusBtn');
+                        if (toggleStatusBtn) {
+                            toggleStatusBtn.addEventListener('click', async () => {
+                                try {
+                                    const res = await fetch(`/admin/api/super/sites/${site_id}/status`, { method: 'PUT' });
+                                    const data = await res.json();
+                                    if(res.ok && data.success) {
+                                        showToast('Site status updated!');
+                                        loadStats();
+                                    } else {
+                                        showToast('Failed to update status', 'error');
+                                    }
+                                } catch(err) { showToast('Network error occurred', 'error'); }
+                            });
+                        }
                         // --- Tab Loader ---
                         function switchTab(tabId, element) {
                             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -428,7 +756,9 @@
                             if (tabId === 'dashboard') loadStats();
                             if (tabId === 'intents') loadIntents();
                             if (tabId === 'config') loadDynamicConfig();
-                            if (tabId === 'admins') loadAdmins();
+                            if (tabId === 'conversations') loadConversations();
+                            if (tabId === 'analytics') loadAnalytics();
+                            if (tabId === 'leads') loadLeads();
                             if(tabId === 'simulator') {
                                 const iframe = document.getElementById('sim-frame');
                                 if(iframe) iframe.src = iframe.src;
@@ -545,13 +875,9 @@
                 <div class="card-body">
                     <div class="code-block">
                         <button class="btn btn-primary" onclick="copyEmbed()" style="position:absolute; top:10px; right:10px; padding: 5px 10px; font-size: 0.8rem;">Copy Code</button>
-        <pre id="embedCode" style="margin:0;">&lt;script&gt;
-            window.ChatbotXConfig = {
-                siteKey: "{{ site.public_key }}", // Dynamically rendered
-                apiUrl: "{{ api_url }}" // Dynamic API URL
-            };
-        &lt;/script&gt;
-        &lt;script src="https://cdn.yourchatbot.com/widget.v1.js" defer&gt;&lt;/script&gt;</pre>
+        <pre id="embedCode" style="margin:0;">
+    &lt;!-- ChatbotX Official Installation --&gt;
+    &lt;script src="{{ api_url }}/widget.js" data-site-key="{{ site.public_key }}" defer&gt;&lt;/script&gt;</pre>
                     </div>
                 </div>
             </div>
@@ -584,6 +910,14 @@
                     <input type="text" id="intentPhrases" name="phrases" class="form-control" placeholder="e.g. what is the cost, pricing, fee" required>
                 </div>
                 <div class="form-group">
+                    <label>Intent Type</label>
+                    <select id="intentType" name="intent_type" class="form-control">
+                        <option value="INFO">Standard Text Reply</option>
+                        <option value="LEAD">Lead Capture Form</option>
+                        <option value="HUMAN">Live Agent Handoff</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Bot Response Text</label>
                     <textarea id="intentResponse" name="response" class="form-control" rows="4" required></textarea>
                 </div>
@@ -595,12 +929,83 @@
         </div>
     </div>
 
+    <!-- Assign Intent Modal (Super Admin) -->
+    <div class="modal-overlay" id="assignIntentModal">
+        <div class="modal-content">
+            <div class="modal-header">Assign Intent to Client</div>
+            <form id="assignIntentForm">
+                <div class="form-group">
+                    <label>Select Blueprint Intent</label>
+                    <select id="blueprintIntentSelect" class="form-control" required>
+                        <option value="">Loading blueprints...</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeAssignIntentModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign Intent</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Blueprint CRUD Modal -->
+    <div class="modal-overlay" id="blueprintModal">
+        <div class="modal-content" style="width: 600px;">
+            <div class="modal-header" id="blueprintModalTitle">Create Blueprint Intent</div>
+            <form id="blueprintForm">
+                <input type="hidden" id="blueprintId" name="id">
+                <div class="form-group">
+                    <label>Blueprint Name</label>
+                    <input type="text" id="blueprintName" name="intent_name" class="form-control" placeholder="e.g. pricing, hours, policies" required>
+                </div>
+                <div class="form-group">
+                    <label>Sector/Category (optional)</label>
+                    <input type="text" id="blueprintSector" name="sector" class="form-control" placeholder="e.g. hospital, retail, tech">
+                </div>
+                <div class="form-group">
+                    <label>Training Phrases (one per line)</label>
+                    <textarea id="blueprintPhrases" name="phrases" class="form-control" rows="4" placeholder="what is the cost&#10;how much&#10;pricing information" required></textarea>
+                    <small style="color: var(--text-muted);">Enter one phrase per line</small>
+                </div>
+                <div class="form-group">
+                    <label>Intent Type</label>
+                    <select id="blueprintType" name="intent_type" class="form-control">
+                        <option value="info">📝 Standard Text Reply</option>
+                        <option value="action">⚙️ Action/Workflow</option>
+                        <option value="lead">📋 Lead Capture Form</option>
+                        <option value="human">👤 Live Agent Handoff</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Bot Response Text</label>
+                    <textarea id="blueprintResponse" name="response" class="form-control" rows="4" placeholder="The bot's response to this intent" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Confidence Threshold (0.0 - 1.0)</label>
+                    <input type="number" id="blueprintThreshold" name="confidence_threshold" class="form-control" min="0" max="1" step="0.01" value="0.7">
+                    <small style="color: var(--text-muted);">Minimum confidence score to trigger (0.7 = 70%)</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeBlueprintModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><span id="blueprintSubmitText">Create Blueprint</span></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="toast" class="toast">
         <i class="fas fa-check-circle" style="color: var(--primary);"></i>
         <span id="toastMessage">Success</span>
     </div>
 
     <script>
+        // Global site_id from server session — no URL param needed
+        // Read from HTML data attribute set by server template rendering
+        const SITE_ID = parseInt(document.documentElement.getAttribute('data-site-id')) || 0;
+        function getSiteId() {
+            return new URLSearchParams(window.location.search).get('site_id') || SITE_ID;
+        }
+
         // --- Navigation ---
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -618,6 +1023,13 @@
             if (tabId === 'conversations') loadConversations();
             if (tabId === 'analytics') loadAnalytics();
             if (tabId === 'leads') loadLeads();
+            if (tabId === 'ai-settings') loadAISettings();
+            if (tabId === 'channels') loadChannels();
+            if (tabId === 'usage') loadUsage();
+            if (tabId === 'blueprint-intents') loadBlueprints();
+            if (tabId === 'intent-assignments') loadIntentAssignments();
+            if (tabId === 'admin-users') loadAdmins();
+            if (tabId === 'platform-settings') loadPlatformSettings();
             if(tabId === 'simulator') {
                 const iframe = document.getElementById('sim-frame');
                 if(iframe) iframe.src = iframe.src;
@@ -627,9 +1039,8 @@
         async function loadDynamicConfig() {
             const container = document.getElementById('dynamicConfigContainer');
             container.innerHTML = '<p>Loading settings...</p>';
-            // Ensure site_id is passed if available
             const url = new URL('/admin/api/client/config', window.location.origin);
-            const siteId = new URLSearchParams(window.location.search).get('site_id');
+            const siteId = getSiteId();
             if (siteId) url.searchParams.append('site_id', siteId);
             try {
                 const res = await fetch(url);
@@ -813,8 +1224,9 @@
 
             const payload = {
                 intent_name: document.getElementById('intentName').value,
+                intent_type: document.getElementById('intentType').value, // <-- ADD THIS LINE
                 response: document.getElementById('intentResponse').value,
-                phrases: phrasesArray  // <--- THIS IS THE MISSING PIECE
+                phrases: phrasesArray
             };
             const url = id ? `/admin/api/client/intents/${id}` : '/admin/api/client/intents';
             const method = id ? 'PUT' : 'POST';
@@ -910,6 +1322,575 @@
             const code = document.getElementById('embedCode').innerText;
             navigator.clipboard.writeText(code);
             showToast("Embed Code copied to clipboard!");
+        }
+
+        // --- AI Settings ---
+        async function loadAISettings() {
+            const form = document.getElementById('aiSettingsForm');
+            if (!form) return;
+            try {
+                const res = await fetch('/admin/api/client/ai-settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.settings) {
+                        Object.keys(data.settings).forEach(key => {
+                            const field = form.elements[key];
+                            if (field) field.value = data.settings[key];
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading AI settings", e);
+            }
+        }
+        
+        // Load AI settings when page loads
+        document.addEventListener('DOMContentLoaded', loadAISettings);
+
+        const aiSettingsForm = document.getElementById('aiSettingsForm');
+        if (aiSettingsForm) {
+            aiSettingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                btn.innerHTML = "Saving...";
+                btn.disabled = true;
+                const payload = Object.fromEntries(new FormData(aiSettingsForm));
+                try {
+                    const res = await fetch('/admin/api/client/ai-settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        showToast('AI Settings saved successfully!');
+                    } else {
+                        showToast('Failed to save AI Settings', 'error');
+                    }
+                } catch (e) {
+                    showToast('Network error', 'error');
+                }
+                btn.innerHTML = "Save AI Settings";
+                btn.disabled = false;
+            });
+        }
+
+        // --- Channels ---
+        async function loadChannels() {
+            const tbody = document.getElementById('channelsTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Loading...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/client/channels');
+                if (res.ok) {
+                    const data = await res.json();
+                    tbody.innerHTML = '';
+                    if (data.channels && data.channels.length > 0) {
+                        data.channels.forEach(channel => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${channel.name || ''}</td>
+                                <td>${channel.type || ''}</td>
+                                <td><span class="badge ${channel.status === 'active' ? 'active' : 'suspended'}">${channel.status || 'inactive'}</span></td>
+                                <td>
+                                    <button class="btn-icon" title="Edit" onclick="editChannel('${channel.id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon" style="color: var(--danger);" title="Delete" onclick="deleteChannel('${channel.id}')"><i class="fas fa-trash"></i></button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">No channels configured.</td></tr>';
+                    }
+                }
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Failed to load channels.</td></tr>';
+            }
+        }
+
+        function openChannelModal() {
+            showToast('Channel creation panel coming soon!');
+        }
+
+        function editChannel(id) {
+            showToast('Channel editing coming soon!');
+        }
+
+        function deleteChannel(id) {
+            if (!confirm('Are you sure you want to delete this channel?')) return;
+            showToast('Channel deletion coming soon!');
+        }
+
+        // --- Usage ---
+        async function loadUsage() {
+            try {
+                const res = await fetch('/admin/api/client/usage');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('usageTotalMessages').textContent = data.total_messages || '0';
+                    document.getElementById('usageThisMonth').textContent = data.messages_this_month || '0';
+                    document.getElementById('usageApiCalls').textContent = data.api_calls || '0';
+                    document.getElementById('usageStorage').textContent = data.storage_used || '0 MB';
+                    
+                    // Create usage chart if data is available
+                    if (data.usage_breakdown) {
+                        const ctx = document.getElementById('usageChart');
+                        if (ctx && window.usageChartObj) {
+                            window.usageChartObj.destroy();
+                        }
+                        if (ctx) {
+                            window.usageChartObj = new Chart(ctx, {
+                                type: 'pie',
+                                data: {
+                                    labels: data.usage_breakdown.labels || ['Messages', 'API Calls', 'Storage'],
+                                    datasets: [{
+                                        data: data.usage_breakdown.data || [60, 30, 10],
+                                        backgroundColor: ['#4F46E5', '#10B981', '#F59E0B']
+                                    }]
+                                },
+                                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                            });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading usage data", e);
+                document.getElementById('usageTotalMessages').textContent = 'Error';
+                document.getElementById('usageThisMonth').textContent = 'Error';
+                document.getElementById('usageApiCalls').textContent = 'Error';
+                document.getElementById('usageStorage').textContent = 'Error';
+            }
+        }
+
+        // --- Blueprint Intents (Super Admin) ---
+        async function loadBlueprints() {
+            const tbody = document.getElementById('blueprintTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem;">Loading blueprints...</td></tr>';
+            try {
+                console.log('[LOAD_BLUEPRINTS] Starting fetch...');
+                const res = await fetch('/admin/api/super/blueprints');
+                console.log('[LOAD_BLUEPRINTS] Response status:', res.status);
+                
+                if (!res.ok) {
+                    const error = await res.json().catch(() => ({}));
+                    console.error('[LOAD_BLUEPRINTS] API error:', error);
+                    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--danger); text-align:center; padding:2rem;">API Error: ' + (error.error || res.status) + '</td></tr>';
+                    return;
+                }
+                
+                const data = await res.json();
+                console.log('[LOAD_BLUEPRINTS] API Response:', data);
+                
+                tbody.innerHTML = '';
+                
+                if (!data.blueprints || !Array.isArray(data.blueprints) || data.blueprints.length === 0) {
+                    console.warn('[LOAD_BLUEPRINTS] No blueprints or invalid format');
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">No blueprint intents found.</td></tr>';
+                    return;
+                }
+                
+                console.log('[LOAD_BLUEPRINTS] Rendering', data.blueprints.length, 'template groups');
+                
+                data.blueprints.forEach((templateGroup, idx) => {
+                    try {
+                        if (!templateGroup || typeof templateGroup !== 'object') {
+                            console.warn('[LOAD_BLUEPRINTS] Invalid template group at index', idx, templateGroup);
+                            return;
+                        }
+                        
+                        const tr = document.createElement('tr');
+                        const intents = templateGroup.intents || [];
+                        const templateFile = templateGroup.template_file || 'unknown.json';
+                        const intentCount = templateGroup.intent_count || intents.length || 0;
+                        
+                        // Safely build intent names
+                        let intentNames = '(no intents)';
+                        if (intents.length > 0) {
+                            const names = intents
+                                .filter(i => i && i.name)
+                                .map(i => i.name)
+                                .slice(0, 5);
+                            intentNames = names.join(', ');
+                        }
+                        const moreCount = intents.length > 5 ? ` <strong>+${intents.length - 5}</strong> more` : '';
+                        
+                        // Get response from first intent
+                        const response = (intents[0] && intents[0].response) ? intents[0].response : '';
+                        
+                        console.log(`[LOAD_BLUEPRINTS] Group ${idx}: "${templateFile}" with ${intentCount} intents`);
+                        
+                        const responsePreview = response ? response.substring(0, 50) + '...' : '-';
+                        
+                        tr.innerHTML = `
+                            <td><strong style="font-size:1rem;">${templateFile}</strong></td>
+                            <td style="font-size:0.85rem; color:var(--text-muted);">${intentNames}${moreCount}</td>
+                            <td><span class="badge" style="background: var(--primary); color: white; padding: 0.3rem 0.6rem; border-radius: 3px; display:inline-block; font-weight: bold;">${intentCount}</span></td>
+                            <td style="font-size:0.85rem; color:var(--text-muted);">${responsePreview}</td>
+                            <td style="text-align:center;">
+                                <button class="btn-icon" title="View ${templateFile}" data-template="${templateFile}" onclick="viewTemplateDetails(this)" style="cursor:pointer;"><i class="fas fa-eye"></i></button>
+                            </td>
+                        `;
+                        
+                        tbody.appendChild(tr);
+                        console.log('[LOAD_BLUEPRINTS] Added row for', templateFile);
+                    } catch (err) {
+                        console.error('[LOAD_BLUEPRINTS] Error rendering row at index', idx, ':', err, 'group:', templateGroup);
+                    }
+                });
+                
+                console.log('[LOAD_BLUEPRINTS] Completed. Rows rendered:', tbody.rows.length);
+                
+            } catch (e) {
+                console.error('[LOAD_BLUEPRINTS] Fatal error:', e);
+                tbody.innerHTML = '<tr><td colspan="5" style="color:var(--danger); text-align:center; padding:2rem;"><strong>Error:</strong> ' + e.message + '</td></tr>';
+            }
+        }
+
+        function viewTemplateDetails(btn) {
+            const template = btn.getAttribute('data-template');
+            console.log('[VIEW_TEMPLATE] Opening:', template);
+            showToast(`To edit intents in ${template}, modify intent_templates/${template} and run: python manage_blueprints.py --force`, 'info');
+        }
+
+        function openBlueprintModal() {
+            showToast('Blueprints are managed via template files. Edit intent_templates/*.json and run: python manage_blueprints.py --force', 'info');
+        }
+
+        function closeBlueprintModal() {
+            document.getElementById('blueprintModal').style.display = 'none';
+        }
+
+        function showBlueprintInfo() {
+            showToast('Blueprints are managed via template files. Edit intent_templates/*.json files and run: python manage_blueprints.py --force', 'info');
+        }
+
+        function editBlueprint(id) {
+            showToast('Blueprint editing is managed via template files. Edit the source JSON and reload.', 'info');
+            return;
+            // Old code - disabled since blueprints are now template-driven
+            /*
+            fetch(`/admin/api/super/blueprints/${id}`)
+                .then(res => res.ok ? res.json() : Promise.reject('Not found'))
+                .then(data => {
+                    const bp = data.blueprint;
+                    document.getElementById('blueprintId').value = id;
+                    document.getElementById('blueprintName').value = bp.name || '';
+                    document.getElementById('blueprintSector').value = bp.sector || '';
+                    document.getElementById('blueprintPhrases').value = (bp.phrases || []).join('\n');
+                    document.getElementById('blueprintType').value = (bp.intent_type || 'info').toLowerCase();
+                    document.getElementById('blueprintResponse').value = bp.response || '';
+                    document.getElementById('blueprintThreshold').value = bp.confidence_threshold || 0.7;
+                    document.getElementById('blueprintModalTitle').textContent = 'Edit Blueprint Intent';
+                    document.getElementById('blueprintSubmitText').textContent = 'Update Blueprint';
+                    document.getElementById('blueprintModal').style.display = 'flex';
+                })
+                .catch(e => showToast('Failed to load blueprint', 'error'));
+            */
+        }
+
+        function deleteBlueprint(id) {
+            showToast('Blueprint deletion is managed via template files.', 'info');
+            return;
+            // Old code - disabled since blueprints are now template-driven
+            /*
+            if (!confirm('Are you sure you want to delete this blueprint? This will not affect existing assignments.')) return;
+            fetch(`/admin/api/super/blueprints/${id}`, { method: 'DELETE' })
+                .then(res => res.ok ? res.json() : Promise.reject('Delete failed'))
+                .then(data => {
+                    showToast(data.message || 'Blueprint deleted successfully');
+                    loadBlueprints();
+                })
+                .catch(e => showToast('Failed to delete blueprint', 'error'));
+            */
+        }
+
+        // Blueprint Form Submission - DISABLED (Blueprints are template-driven)
+        if (document.getElementById('blueprintForm')) {
+            document.getElementById('blueprintForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                showToast('Blueprint management is now template-driven. Edit intent_templates/*.json files and run: python manage_blueprints.py --force', 'warning');
+            });
+        }
+
+        // --- Admin Users (Super Admin) ---
+        async function loadAdmins() {
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem;">Loading admins...</td></tr>';
+            try {
+                const res = await fetch('/admin/api/super/admins');
+                if (res.ok) {
+                    const data = await res.json();
+                    tbody.innerHTML = '';
+                    if (data.admins && data.admins.length > 0) {
+                        data.admins.forEach(admin => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${admin.id}</td>
+                                <td>${admin.username}</td>
+                                <td>${admin.site_id || 'N/A'}</td>
+                                <td>${admin.is_super ? '<span class="badge active">Yes</span>' : '<span class="badge">No</span>'}</td>
+                                <td>${admin.created_at || ''}</td>
+                                <td>
+                                    <button class="btn-icon" title="Edit" onclick="editAdmin('${admin.id}', '${admin.username}')"><i class="fas fa-edit"></i></button>
+                                    ${!admin.is_super ? `<button class="btn-icon" title="Impersonate" onclick="impersonateAdmin(${admin.site_id})"><i class="fas fa-user-secret"></i></button>` : ''}
+                                    <button class="btn-icon" style="color: var(--danger);" title="Delete" onclick="deleteAdmin('${admin.id}')"><i class="fas fa-trash"></i></button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">No admins found.</td></tr>';
+                    }
+                }
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="6" style="color:var(--danger);">Failed to load admins.</td></tr>';
+            }
+        }
+
+        function openAdminUserModal() {
+            showToast('Admin user creation coming soon!');
+        }
+
+        function deleteAdmin(id) {
+            if (!confirm('Are you sure you want to delete this admin?')) return;
+            showToast('Admin deletion coming soon!');
+        }
+
+        // --- Intent Assignments (Super Admin) ---
+        let selectedClientId = null;
+        let allBlueprints = [];
+        
+        async function loadIntentAssignments() {
+            // Load all client sites
+            await loadClientList();
+        }
+
+        async function loadClientList() {
+            const container = document.getElementById('clientListContainer');
+            try {
+                const res = await fetch('/admin/api/super/sites');
+                if (res.ok) {
+                    const data = await res.json();
+                    container.innerHTML = '';
+                    if (data.sites && data.sites.length > 0) {
+                        data.sites.forEach(site => {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn btn-outline';
+                            btn.style.cssText = 'display: block; width: 100%; text-align: left; padding: 0.75rem; border: none; border-bottom: 1px solid var(--border); background: transparent; color: var(--text-main); cursor: pointer;';
+                            btn.textContent = `${site.name} (ID: ${site.id})`;
+                            btn.onclick = () => selectClient(site.id, site.name);
+                            container.appendChild(btn);
+                        });
+                    } else {
+                        container.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-muted);">No sites found.</div>';
+                    }
+                }
+            } catch (e) {
+                container.innerHTML = '<div style="padding: 1rem; color: var(--danger);">Failed to load sites.</div>';
+            }
+        }
+
+        function selectClient(siteId, siteName) {
+            selectedClientId = siteId;
+            document.getElementById('selectedClientName').textContent = siteName;
+            document.getElementById('assignBtn').disabled = false;
+            document.getElementById('refreshBtn').disabled = false;
+            loadClientIntents(siteId);
+        }
+
+        async function loadClientIntents(siteId) {
+            const tbody = document.getElementById('clientIntentsTableBody');
+            tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; padding: 2rem;">Loading intents...</td></tr>';
+            try {
+                const res = await fetch(`/admin/api/super/sites/${siteId}/intents`);
+                if (res.ok) {
+                    const data = await res.json();
+                    tbody.innerHTML = '';
+                    if (data.intents && data.intents.length > 0) {
+                        data.intents.forEach(intent => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">${intent.intent_name}</td>
+                                <td style="padding: 0.75rem; border-bottom: 1px solid var(--border);">
+                                    <button class="btn-icon" title="Remove" onclick="removeIntentFromClient(${siteId}, '${intent.intent_name}')"><i class="fas fa-trash" style="color: var(--danger);"></i></button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; padding: 2rem; color: var(--text-muted);">No intents assigned. Add one using the "Add Intent" button.</td></tr>';
+                    }
+                }
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="2" style="color: var(--danger);">Failed to load intents.</td></tr>';
+            }
+        }
+
+        function refreshIntentAssignments() {
+            if (selectedClientId) {
+                loadClientIntents(selectedClientId);
+            }
+        }
+
+        function openAssignIntentModal() {
+            if (!selectedClientId) {
+                showToast('Please select a client first', 'error');
+                return;
+            }
+            
+            const select = document.getElementById('blueprintIntentSelect');
+            select.innerHTML = '<option value="">Loading blueprints...</option>';
+            
+            fetch('/admin/api/super/blueprints')
+                .then(res => {
+                    if (!res.ok) throw new Error('Failed to fetch blueprints');
+                    return res.json();
+                })
+                .then(data => {
+                    select.innerHTML = '<option value="">-- Select Intent --</option>';
+                    
+                    if (!data.blueprints || !Array.isArray(data.blueprints)) {
+                        select.innerHTML = '<option value="">Error: Invalid data format</option>';
+                        return;
+                    }
+                    
+                    data.blueprints.forEach(templateGroup => {
+                        if (!templateGroup) return;
+                        
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = `${templateGroup.template_file} (${templateGroup.intent_count} intents)`;
+                        
+                        if (templateGroup.intents && Array.isArray(templateGroup.intents)) {
+                            templateGroup.intents.forEach(intent => {
+                                if (!intent || !intent.id || !intent.name) return;
+                                
+                                const opt = document.createElement('option');
+                                opt.value = intent.id;
+                                opt.textContent = intent.name;
+                                optgroup.appendChild(opt);
+                            });
+                        }
+                        
+                        select.appendChild(optgroup);
+                    });
+                    
+                    document.getElementById('assignIntentModal').style.display = 'flex';
+                })
+                .catch(e => {
+                    select.innerHTML = '<option value="">Error loading blueprints</option>';
+                    showToast('Failed to load blueprints', 'error');
+                });
+        }
+
+        function closeAssignIntentModal() {
+            document.getElementById('assignIntentModal').style.display = 'none';
+        }
+
+        document.getElementById('assignIntentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const blueprintId = document.getElementById('blueprintIntentSelect').value;
+            
+            if (!blueprintId) {
+                showToast('Please select an intent', 'error');
+                return;
+            }
+            
+            if (!selectedClientId) {
+                showToast('Please select a client', 'error');
+                return;
+            }
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = 'Assigning...';
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch(`/admin/api/super/sites/${selectedClientId}/assign-intent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ blueprint_id: blueprintId })
+                });
+                
+                const responseData = await res.json();
+                
+                if (res.ok) {
+                    showToast('Intent assigned successfully!');
+                    closeAssignIntentModal();
+                    loadClientIntents(selectedClientId);
+                } else {
+                    showToast('Failed to assign intent: ' + (responseData.error || 'Unknown error'), 'error');
+                }
+            } catch (e) {
+                showToast('Network error: ' + e.message, 'error');
+            } finally {
+                btn.innerHTML = 'Assign Intent';
+                btn.disabled = false;
+            }
+        });
+
+        async function removeIntentFromClient(siteId, intentName) {
+            if (!confirm(`Remove intent "${intentName}" from this client?`)) return;
+            
+            try {
+                const res = await fetch(`/admin/api/super/sites/${siteId}/intents/${intentName}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    showToast('Intent removed successfully!');
+                    loadClientIntents(siteId);
+                } else {
+                    showToast('Failed to remove intent', 'error');
+                }
+            } catch (e) {
+                showToast('Network error', 'error');
+            }
+        }
+
+        // --- Platform Settings (Super Admin) ---
+        async function loadPlatformSettings() {
+            const form = document.getElementById('platformSettingsForm');
+            if (!form) return;
+            try {
+                const res = await fetch('/admin/api/super/platform-settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.settings) {
+                        Object.keys(data.settings).forEach(key => {
+                            const field = form.elements[key];
+                            if (field) field.value = data.settings[key];
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading platform settings", e);
+            }
+        }
+
+        const platformSettingsForm = document.getElementById('platformSettingsForm');
+        if (platformSettingsForm) {
+            platformSettingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                btn.innerHTML = "Saving...";
+                btn.disabled = true;
+                const payload = Object.fromEntries(new FormData(platformSettingsForm));
+                try {
+                    const res = await fetch('/admin/api/super/platform-settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        showToast('Platform Settings saved successfully!');
+                    } else {
+                        showToast('Failed to save Platform Settings', 'error');
+                    }
+                } catch (e) {
+                    showToast('Network error', 'error');
+                }
+                btn.innerHTML = "Save Platform Settings";
+                btn.disabled = false;
+            });
         }
 
         // Init App Data

@@ -40,11 +40,13 @@ with app.app_context():
         admin = Admin(username=args.admin, site_id=site.id, is_super=True)
         admin.set_password(args.password)
         db.session.add(admin)
+        db.session.commit()
         print(f"Created admin: {admin.username} (site_id: {site.id})")
     else:
         # Link admin to site if not already
         if not admin.site_id:
             admin.site_id = site.id
+            db.session.commit()
             print(f"Linked admin {admin.username} to site {site.id}")
         print(f"Admin already exists: {admin.username} (site_id: {admin.site_id})")
 

@@ -1,0 +1,83 @@
+<!-- Live Agent Dashboard for Human Handoff -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Agent Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7fa; }
+        .handoff-table { width: 100%; border-collapse: collapse; margin-top: 2em; }
+        .handoff-table th, .handoff-table td { border: 1px solid #ddd; padding: 8px; }
+        .handoff-table th { background: #6366f1; color: #fff; }
+        .takeover-btn { background: #6366f1; color: #fff; border: none; padding: 6px 12px; cursor: pointer; border-radius: 4px; }
+        .chat-window { border: 1px solid #ccc; background: #fff; padding: 1em; margin-top: 1em; }
+    </style>
+</head>
+<body>
+    <h2>Live Agent Handoff Dashboard</h2>
+    <table class="handoff-table" id="handoff-table">
+        <thead>
+            <tr>
+                <th>Session ID</th>
+                <th>User Message</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="handoff-body">
+            <!-- Populated by JS -->
+        </tbody>
+    </table>
+    <div id="chat-window" class="chat-window" style="display:none;"></div>
+    <script>
+    async function fetchHandoffs() {
+        const res = await fetch('/api/human-handoffs');
+        const data = await res.json();
+        const body = document.getElementById('handoff-body');
+        body.innerHTML = '';
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.session_id}</td>
+                <td>${item.user_message}</td>
+                <td>${item.created_at}</td>
+                <td>${item.status}</td>
+                <td><button class="takeover-btn" onclick="takeOver('${item.session_id}')">Take Over</button></td>
+            `;
+            body.appendChild(tr);
+        });
+    }
+    async function takeOver(sessionId) {
+        // Show chat window for this session
+        document.getElementById('chat-window').style.display = 'block';
+        document.getElementById('chat-window').innerHTML = `<b>Chat with Session: ${sessionId}</b><div id='messages'></div><input id='agent-input'><button onclick='sendAgentMsg("${sessionId}")'>Send</button>`;
+        fetchMessages(sessionId);
+    }
+    async function fetchMessages(sessionId) {
+        const res = await fetch(`/api/session-history?session_id=${sessionId}`);
+        const data = await res.json();
+        const msgDiv = document.getElementById('messages');
+        msgDiv.innerHTML = '';
+        data.forEach(msg => {
+            msgDiv.innerHTML += `<div><b>${msg.sender}:</b> ${msg.text}</div>`;
+        });
+    }
+    async function sendAgentMsg(sessionId) {
+        const input = document.getElementById('agent-input');
+        const text = input.value;
+        if (!text) return;
+        await fetch('/api/agent-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, text })
+        });
+        input.value = '';
+        fetchMessages(sessionId);
+    }
+    setInterval(fetchHandoffs, 3000);
+    fetchHandoffs();
+    </script>
+</body>
+</html>

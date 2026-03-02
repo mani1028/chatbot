@@ -1,0 +1,102 @@
+{
+  "sector": "global",
+  "template_name": "SaaS Global Master Intents",
+  "description": "Comprehensive conversational foundation. Includes small talk, utility, and standard business intents for all tenants.",
+  "intents": [
+    {
+      "name": "greetings",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["hi", "hello", "hey", "good morning", "good afternoon", "greetings", "start", "yo", "hi there", "howdy", "hiya"],
+      "response": "Hello! How can I help you today?"
+    },
+    {
+      "name": "goodbye",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["bye", "goodbye", "thank you", "thanks", "have a good day", "that is all", "see you later", "cya", "farewell", "take care"],
+      "response": "You're very welcome! Have a wonderful day. Feel free to reach out if you need anything else."
+    },
+    {
+      "name": "gratitude",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["thank you", "thanks", "appreciate it", "thanks a lot", "perfect thanks"],
+      "response": "Happy to help! Let me know if you need anything else."
+    },
+    {
+      "name": "bot_identity",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["who are you", "are you a robot", "are you human", "what are you", "is this a bot"],
+      "response": "I am an AI virtual assistant here to help you navigate our services and get you the answers you need quickly!"
+    },
+    {
+      "name": "capabilities_help",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["what can you do", "help me", "how can you help", "show menu", "what are my options"],
+      "response": "I can help answer questions about our pricing, business hours, and services. I can also connect you with our live support team or help you book an appointment. What do you need help with?"
+    },
+    {
+      "name": "human_handoff",
+      "type": "HUMAN",
+      "confidence_threshold": 0.85,
+      "phrases": ["speak to agent", "talk to a human", "real person", "customer service", "operator", "i need help from a person", "live agent"],
+      "response": "Let me connect you with a live team member right away. Please wait a moment."
+    },
+    {
+      "name": "lead_capture",
+      "type": "LEAD",
+      "confidence_threshold": 0.85,
+      "phrases": ["get a quote", "book appointment", "contact sales", "request pricing", "schedule a demo", "call me", "hire you"],
+      "response": "I would be happy to help you with that! Please provide your contact details below so our team can reach out to you:"
+    },
+    {
+      "name": "business_hours",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["when are you open", "business hours", "what time do you close", "are you open today", "working hours", "timings","hours","opening","schedule", "opening hours"],
+      "response": "Our standard working hours are from {open_time} to {close_time}. We look forward to assisting you!",
+      "config_required": ["open_time", "close_time"]
+    },
+    {
+      "name": "pricing_general",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["how much does it cost", "what is the price", "pricing", "fees", "cost", "how much is it", "charges", "rates"],
+      "response": "Our standard consultation or starting fee is {consultation_price}. For a customized quote, I can connect you with our sales team!",
+      "config_required": ["consultation_price"]
+    },
+    {
+      "name": "location_address",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["where are you located", "what is your address", "how do i get there", "location", "office address", "directions", "place"],
+      "response": "You can visit us at {office_address}. Let us know if you need directions!",
+      "config_required": ["office_address"]
+    },
+    {
+      "name": "contact_info",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["what is your phone number", "how do i call you", "what is your email", "contact info", "support email"],
+      "response": "You can reach our support team directly at {support_email} or call us at {support_phone}.",
+      "config_required": ["support_email", "support_phone"]
+    },
+    {
+      "name": "affirmation",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["yes", "yeah", "yep", "correct", "that is right", "sure", "ok", "okay"],
+      "response": "Great! How would you like to proceed?"
+    },
+    {
+      "name": "negation",
+      "type": "INFO",
+      "confidence_threshold": 0.85,
+      "phrases": ["no", "nope", "wrong", "not right", "cancel", "stop", "nevermind"],
+      "response": "Understood. Let's try something else. How can I assist you today?"
+    }
+  ]
+}

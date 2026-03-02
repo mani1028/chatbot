@@ -1,159 +1,105 @@
-# AI-Powered Chatbot for College / Company Websites (Phase-1)
+# 🤖 AI-Powered Multi-Tenant Chatbot SaaS Platform
 
-A simple, production-ready Flask chatbot that answers FAQs with AI-powered semantic matching.
+**Status**: ✅ Core Features | 🔄 Advanced Features In Progress
 
-## Features
-
-### User Features
-- ✅ **Simple Chat UI** - Clean, responsive popup chat interface
-- ✅ **Real-time Responses** - Instant bot replies to user messages
-- ✅ **Semantic Matching** - AI finds best-matching FAQ answers
-- ✅ **Confidence Scoring** - Shows whether answer is reliable
-
-# SaaS Conversation Automation Platform
-
-## Overview
-
-This project is a modular, multi-tenant SaaS chatbot platform for rapid deployment of sector-specific conversational bots (e.g., Hospital, Travel, etc.). It features intent detection, workflow automation, dynamic response building, and multi-tenancy support.
+A production-ready Flask-based SaaS chatbot platform with multi-tenancy, AI intent detection, semantic search, LLM fallback, and comprehensive admin/super-admin dashboards.
 
 ---
 
-## 🏗️ Architecture
+## 📊 Quick Feature Status
 
-| Component             | Location                        | Description                                                      |
-|-----------------------|----------------------------------|------------------------------------------------------------------|
-| **Intent Engine**     | core/intent_engine.py            | Fuzzy matching, confidence scoring for user messages.             |
-| **Decision Layer**    | services/intent_service.py       | Routes between Info, Action (Workflows), and Handoff.             |
-| **Workflow System**   | workflows/handler.py             | Dynamic logic (e.g., get_price) called by intents.                |
-| **Response Builder**  | services/response_builder.py     | Replaces {placeholders} using ClientConfig.                       |
-| **Config/Data**       | models/intent.py, models/site.py | DB supports sector, site_id, client_config.                       |
-| **JSON Importer**     | scripts/import_intents.py        | Loads sector packs (e.g., Hospital) into the DB.                  |
-| **Multi-Tenant API**  | routes/chat_routes.py            | Endpoints require site_id, enforce domain whitelisting.           |
+| Category | Status | Details |
+|----------|--------|---------|
+| **Chat & Intent** | ✅ Complete | Multi-tenant chat, intent detection, confidence scoring |
+| **LLM Fallback** | ✅ Complete | OpenAI integration working (with free alternatives available) |
+| **Admin Dashboard** | ✅ Complete | 7 tabs: Intents, Logs, Branding, Analytics, Settings, Channels, Usage |
+| **Super Admin** | ✅ Partial | Dashboard complete + **Intent Assignments fully working** |
+| **Security** | ✅ Complete | Domain whitelisting, role-based access, SQL injection prevention |
+| **Blueprint CRUD** | ⚠️ Partial | View works, Create/Edit/Delete UI "coming soon" |
+| **Vector Search** | ✅ Complete | ChromaDB integration for semantic search |
+| **Analytics** | ✅ Complete | Usage tracking, message counts, charts |
+
+**For detailed feature inventory with implementation status, see [README_FEATURES.md](README_FEATURES.md)**
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Quick Start (5 Minutes)
 
-### 1. Clone & Install
-
+### 1. Setup
 ```bash
-git clone <repo-url>
-cd chatbot
+git clone <repo> && cd chatbot
+python -m venv .venv && .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Reset & Initialize Database
-
-**Delete old DB (if exists):**
-
-- On Windows:
-    ```
-    del instance\chatbot.db
-    ```
-- On Linux/Mac:
-    ```
-    rm instance/chatbot.db
-    ```
-
-**Create tables:**
-
-```bash
-python app.py
-# Wait for 'AI Chatbot Server Starting...' then stop (CTRL+C)
+### 2. Configure
+Create `.env`:
+```dotenv
+SECRET_KEY=your-secret-key
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin123
+DATABASE_URL=sqlite:///chatbot.db
+OPENAI_API_KEY=sk-proj-YOUR_KEY  # Or use free alternatives (see below)
 ```
 
-### 3. Create a Tenant (Site)
-
+### 3. Initialize
 ```bash
-python init_site.py
-# Should print: Successfully created Site ID 1
-```
-
-### 4. Import Sector Template (e.g., Hospital)
-
-```bash
+python app.py  # Creates DB, then CTRL+C
+python scripts/init_site.py  # Create tenant
 python scripts/import_intents.py intent_templates/hospital_intents.json --client 1
 ```
 
-**Expected Output:**
-```
-Created intent: VISITING_HOURS (site 1)
-    + phrase: hospital timings
-Created intent: CHECK_PRICE (site 1)
-    + phrase: what is consultation fee
-    + workflow: get_price
-    + client_config key: consultation_price (empty)
-Import complete
-```
-
-### 5. Configure Client Data
-
-Set config values (e.g., consultation price):
-
-```bash
-python
-```
-
-```python
-from app import app
-from database import db
-from models import ClientConfig
-
-with app.app_context():
-        conf = ClientConfig.query.filter_by(site_id=1, key='consultation_price').first()
-        if conf:
-                conf.value = "500"
-                db.session.commit()
-                print("Price updated!")
-exit()
-```
-
-### 6. Run the Server
-
+### 4. Run
 ```bash
 python app.py
-```
-
-### 7. Test the API
-
-```bash
-curl -X POST http://localhost:5000/api/chat \
-    -H "Content-Type: application/json" \
-    -H "Referer: http://localhost/" \
-    -d '{
-        "site_id": 1,
-        "message": "What is the consultation fee?"
-    }'
-```
-
-**Expected Response:**
-```json
-{
-    "reply": "Consultation fee is ₹500",
-    "intent": "CHECK_PRICE",
-    "intent_type": "action"
-}
+# Admin: http://localhost:5000/admin/login (admin/admin123)
+# Chat: http://localhost:5000
 ```
 
 ---
 
-## 🧩 Extending the Platform
+## 💰 Free LLM Alternatives (No Billing Required)
 
-- **Add a New Sector:**
-    - Create a new JSON template (e.g., travel_intents.json).
-    - Import with `python scripts/import_intents.py intent_templates/travel_intents.json --client 2`.
-- **Add/Change Workflows:**
-    - Edit workflows/handler.py to add new logic.
-- **Multi-Tenancy:**
-    - Each site (tenant) is isolated by site_id.
-    - API endpoints require site_id and validate domain.
+| Option | Best For | Setup |
+|--------|----------|-------|
+| **OpenRouter** ⭐ RECOMMENDED | Multiple models, generous free tier | `OPENROUTER_API_KEY` from openrouter.ai |
+| **Google Gemini** | Fast, reliable free tier | `GOOGLE_API_KEY` from ai.google.dev |
+| **Hugging Face** | Open-source models, self-hosting | `HF_API_KEY` from huggingface.co |
+
+[See full integration examples in README_FEATURES.md](README_FEATURES.md#-free-ai-api-integration-options)
 
 ---
 
-## 🔮 Roadmap
+## 🎯 Key Features
 
-- **Phase 4:** Super Admin UI to upload JSONs and create Sites (no CLI needed).
-- **Phase 5:** Client Admin UI for clients to update their config (e.g., prices, timings) without seeing intent logic.
+### Core Capabilities
+- ✅ Intent detection with fuzzy matching & confidence scoring
+- ✅ LLM-powered fallback for complex queries  
+- ✅ Semantic search via ChromaDB vector database
+- ✅ Multi-tenant architecture with complete isolation
+- ✅ Domain whitelisting & security decorators
+- ✅ Conversation history tracking
+
+### Admin Interfaces
+- **Client Admin** (`/admin`) - 7 tabs for intent/branding/analytics management
+- **Super Admin** (`/super-admin`) - Platform-wide management including:
+  - Blueprint intent viewing & distribution
+  - Intent assignment across client sites
+  - Admin user management (UI in progress)
+  - Platform settings & configuration
+
+### API Endpoints
+```
+POST   /api/chat                    Chat API (requires site_id)
+GET    /api/chat/history            Conversation history
+GET    /admin/api/super/blueprints  Get template intents
+POST   /admin/api/super/sites/{id}/assign-intent   Assign intent to client
+DELETE /admin/api/super/sites/{id}/intents/{name}  Remove intent
+[... 50+ admin/super-admin endpoints]
+```
+
+### Data Models (17+ models)
+Site, Intent, IntentPhrase, ChatLog, User, Admin, ClientConfig, Webhook, Booking, Announcement, Form, Usage, Plan, Billing, and more.
 
 ---
 
@@ -161,149 +107,139 @@ curl -X POST http://localhost:5000/api/chat \
 
 ```
 chatbot/
-├── app.py
-├── config.py
-├── database.py
-├── core/
-│   ├── intent_engine.py
-│   ├── synonyms.py
-│   └── tokenizer.py
-├── models/
-│   ├── __init__.py
-│   ├── chat_log.py
-│   ├── intent.py
-│   └── site.py
-├── routes/
-│   └── chat_routes.py
-├── scripts/
-│   ├── apply_migration.py
-│   ├── import_intents.py
-│   └── migrations/
-├── services/
-│   ├── chat_service.py
-│   ├── intent_service.py
-│   └── response_builder.py
-├── workflows/
-│   └── handler.py
-├── static/
-├── templates/
-├── instance/
-│   └── chatbot.db
-└── intent_templates/
-        └── hospital_intents.json
+├── app.py                    # Flask entry point
+├── config.py & .env         # Configuration
+├── requirements.txt         # Dependencies
+├── core/                    # Intent detection engine
+├── models/                  # SQLAlchemy ORM (17+ models)
+├── routes/                  # API endpoints (chat, admin, super-admin)
+├── services/                # Business logic (chat, intent, LLM, search)
+├── scripts/                 # CLI utilities
+├── templates/               # Admin dashboards & chat UI
+├── static/                  # Frontend assets (JS, CSS)
+├── intent_templates/        # 30+ pre-built intent packs
+└── instance/chatbot.db      # SQLite database
 ```
 
 ---
 
-## 🛠️ Troubleshooting
+## 🛠️ Common Tasks
 
-- **DB Errors:** Delete instance/chatbot.db and re-run steps 2-4.
-- **Import Errors:** Ensure your JSON matches the schema in intent_templates/hospital_intents.json.
-- **API 400/403:** Check site_id and Referer header.
+### Create New Intent Pack
+```bash
+# Edit JSON following schema in intent_templates/hospital_intents.json
+python scripts/import_intents.py intent_templates/yourfile.json --client 1
+```
+
+### Assign Blueprint Intent to Client
+1. Super Admin → Intent Assignments tab
+2. Select client site
+3. Click "Add Intent"
+4. Choose blueprint → Confirm
+5. Intent copied with all phrases
+
+### Update Client Configuration
+```python
+from app import app
+from models.client_config import ClientConfig
+db.session.query(ClientConfig).filter_by(
+    site_id=1, key='consultation_price'
+).first().value = "500"
+db.session.commit()
+```
+
+### Check System Health
+```bash
+python verify_intent_endpoints.py     # Full verification
+python scripts/quick_test_llm.py       # LLM connectivity
+```
+
+---
+
+## ⚠️ Known Limitations
+
+- Blueprint create/edit UI not available (use CLI import scripts)
+- Admin user CRUD UI in progress (database/CLI available)
+- No real-time collaboration features
+- Mobile app not built yet
+
+---
+
+## 🔒 Production Checklist
+
+- [ ] Change SECRET_KEY in config.py
+- [ ] Set strong ADMIN_PASSWORD
+- [ ] Use HTTPS (Nginx reverse proxy)
+- [ ] Switch to PostgreSQL (production DB)
+- [ ] Add rate limiting
+- [ ] Enable request logging
+- [ ] Set up automated backups
+- [ ] Use Gunicorn (not Flask dev server)
+
+[Full security guide in SECURITY.md](SECURITY.md)
+
+---
+
+## 🐛 Troubleshooting
+
+**Flask won't start?**
+```bash
+pip install -r requirements.txt --force-reinstall
+python --version  # Require 3.8+
+```
+
+**Admin login fails?**
+```bash
+rm instance/chatbot.db && python app.py  # Reset DB
+```
+
+**LLM not responding?**
+```bash
+python verify_intent_endpoints.py  # Check status
+grep OPENAI_API_KEY .env  # Verify key
+```
+
+---
+
+## 📚 Documentation
+
+- **[README_FEATURES.md](README_FEATURES.md)** - Detailed feature inventory with implementation status
+- **[SECURITY.md](SECURITY.md)** - Security guidelines
+- **[DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md)** - Deployment information
+
+---
+
+## 🚀 Next Steps
+
+**High Priority**:
+- [ ] Implement Blueprint CRUD UI
+- [ ] Complete Admin Users management UI
+- [ ] Switch from OpenAI to free LLM provider
+
+**Medium Priority**:
+- [ ] Multi-language support
+- [ ] Advanced analytics
+- [ ] Webhook UI management
+
+**Lower Priority**:
+- [ ] Mobile app
+- [ ] Real-time WebSocket features
+- [ ] Email/SMS integration
+
+---
+
+## 📞 Support
+
+Check:
+1. [README_FEATURES.md](README_FEATURES.md) - Detailed troubleshooting
+2. Browser console (F12) - Frontend errors
+3. Flask console output - Backend errors
+4. [SECURITY.md](SECURITY.md) - Security issues
 
 ---
 
 ## 📝 License
 
-This project is for demonstration and prototyping. For production, review security, scalability, and compliance requirements.
-- id, question, times_asked, first_asked, last_asked
+Open source - modify and deploy freely.
 
-## Security Notes
-
-⚠️ **Important for Production**:
-1. Change `SECRET_KEY` in config.py
-2. Change default admin password
-3. Use HTTPS (reverse proxy like Nginx)
-4. Add rate limiting
-5. Add CSRF protection
-6. Use environment variables for secrets
-7. Enable database backups
-
-## Performance Tips
-
-1. **FAQ Size**: Works efficiently with 100-1000 FAQs
-2. **Similarity Algorithm**: O(n) complexity, scales well
-3. **Database**: SQLite works for small-medium deployments
-4. **Caching**: Can be added for frequently matched FAQs
-5. **Concurrent Users**: Flask development server handles ~10 concurrent; use Gunicorn for production
-
-## Troubleshooting
-
-### Chatbot not responding?
-- Check if Flask server is running
-- Check browser console for errors (F12)
-- Verify `/api/chat` endpoint is accessible
-
-### Admin login fails?
-- Default credentials: `admin` / `admin123`
-- Check if database file exists (chatbot.db)
-
-### Database issues?
-- Delete `chatbot.db` to reset
-- App will recreate it automatically
-- Sample FAQs will be added
-
-### Port already in use?
-```bash
-# Use different port
-python -c "import app; app.app.run(port=5001)"
-```
-
-## Customization
-
-### Change Confidence Threshold
-```python
-# In config.py
-CONFIDENCE_THRESHOLD = 0.6  # More lenient (0.0-1.0)
-```
-
-### Add Fallback Messages
-```python
-# In config.py
-FALLBACK_MESSAGES = [
-    "Your custom message 1",
-    "Your custom message 2",
-]
-```
-
-### Improve Matching Algorithm
-Edit `AIService.calculate_similarity()` in `ai_service.py` for:
-- Different tokenization
-- Advanced NLP (spaCy, NLTK)
-- Word embeddings (gensim)
-- Phrase matching
-
-## Deployment
-
-### Local/Development
-```bash
-python app.py
-```
-
-### Production (Gunicorn)
-```bash
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 app:app
-```
-
-### Docker (Optional)
-```bash
-docker build -t ai-chatbot .
-docker run -p 5000:5000 ai-chatbot
-```
-
-## License
-
-Open source - Feel free to use and modify
-
-## Support
-
-For issues or questions:
-1. Check README troubleshooting section
-2. Review admin dashboard statistics
-3. Check browser console for errors
-4. Review Flask server logs
-
----
-
-**Ready to chat!** 🚀 Open http://localhost:5000 and start testing.
+**Latest Update**: March 1, 2026
