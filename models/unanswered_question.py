@@ -4,6 +4,7 @@ from datetime import datetime
 class UnansweredQuestion(db.Model):
     __tablename__ = 'unanswered_questions'
     id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.Integer, db.ForeignKey('sites.id'), nullable=False, index=True)
     question = db.Column(db.Text, nullable=False)
     times_asked = db.Column(db.Integer, default=1)
     last_asked = db.Column(db.DateTime, default=datetime.utcnow)

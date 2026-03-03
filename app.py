@@ -43,7 +43,7 @@ def create_app():
     # Register Blueprints
     app.register_blueprint(chat_bp)
     app.register_blueprint(admin_api, url_prefix="/admin/api")
-    app.register_blueprint(super_admin_api, url_prefix='/api/super')
+    app.register_blueprint(super_admin_api, url_prefix='/admin/api/super')
 
     return app
 
@@ -80,6 +80,20 @@ def index():
 @app.route("/favicon.ico")
 def favicon():
     return "", 204
+
+@app.route("/health")
+def health():
+    """Health check endpoint - exposes telemetry system status"""
+    from services.message_orchestrator import get_metrics_health
+    
+    health_status = get_metrics_health()
+    status_code = 200 if health_status['telemetry_healthy'] else 200  # Always 200, but status field indicates health
+    
+    return jsonify({
+        'status': 'ok',
+        'telemetry': health_status,
+        'timestamp': datetime.utcnow().isoformat()
+    }), status_code
 
 @app.route("/widget.js")
 def widget_embed():

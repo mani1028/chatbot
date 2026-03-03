@@ -291,3 +291,381 @@
         right: 15px;
     }
 }
+
+/* ============================================
+   WORKFLOW CARD STYLING
+   ============================================ */
+.workflow-card {
+    background: linear-gradient(135deg, #F0F4FF 0%, #F5F3FF 100%);
+    border: 1px solid #DDD6FE;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 0;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.workflow-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #E5E0FF;
+}
+
+.workflow-title {
+    font-weight: 600;
+    color: #4F46E5;
+    font-size: 14px;
+}
+
+.workflow-progress {
+    font-size: 12px;
+    background: #DDD6FE;
+    color: #4F46E5;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.workflow-bar {
+    width: 100%;
+    height: 6px;
+    background: #E5E0FF;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.workflow-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.workflow-state {
+    font-size: 13px;
+    color: #374151;
+}
+
+.workflow-state strong {
+    color: #1F2937;
+    font-weight: 600;
+}
+
+.workflow-collected {
+    background: rgba(16, 185, 129, 0.05);
+    border-left: 3px solid #10B981;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.workflow-collected strong {
+    color: #10B981;
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.collected-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.collected-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.collected-list li:last-child {
+    border-bottom: none;
+}
+
+.field-name {
+    font-weight: 500;
+    color: #065F46;
+    min-width: 100px;
+}
+
+.field-value {
+    color: #047857;
+    word-break: break-word;
+    text-align: right;
+    max-width: 150px;
+}
+
+#chat-widget.dark-mode .workflow-card {
+    background: linear-gradient(135deg, #1E293B 0%, #2D3B4F 100%);
+    border-color: #3D4A63;
+}
+
+#chat-widget.dark-mode .workflow-header {
+    border-bottom-color: #3D4A63;
+}
+
+#chat-widget.dark-mode .workflow-title {
+    color: #A78BFA;
+}
+
+#chat-widget.dark-mode .workflow-progress {
+    background: #3D4A63;
+    color: #A78BFA;
+}
+
+#chat-widget.dark-mode .workflow-bar {
+    background: #3D4A63;
+}
+
+#chat-widget.dark-mode .workflow-state,
+#chat-widget.dark-mode .workflow-collected {
+    color: #E5E7EB;
+}
+
+#chat-widget.dark-mode .workflow-collected {
+    background: rgba(34, 197, 94, 0.1);
+    border-left-color: #22C55E;
+}
+
+#chat-widget.dark-mode .workflow-collected strong {
+    color: #4ADE80;
+}
+
+/* ============================================
+   PHASE 2: CONTEXT INDICATORS & ESCALATION
+   ============================================ */
+
+/* Context Indicator - Show frustration/confusion status */
+.context-indicator {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #FEF3C7;
+    border-bottom: 1px solid #FCD34D;
+    font-size: 13px;
+    color: #92400E;
+}
+
+.context-indicator .indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #F59E0B;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.context-indicator .indicator-text {
+    flex: 1;
+    font-weight: 500;
+}
+
+#chat-widget.dark-mode .context-indicator {
+    background: rgba(245, 158, 11, 0.1);
+    border-bottom-color: rgba(245, 158, 11, 0.3);
+    color: #FCD34D;
+}
+
+/* Escalation Button - in widget footer */
+.widget-escalate {
+    padding: 8px 12px;
+    background-color: #EF4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
+.widget-escalate:hover {
+    background-color: #DC2626;
+}
+
+.widget-escalate:active {
+    transform: scale(0.95);
+}
+
+#chat-widget.dark-mode .widget-escalate {
+    background-color: #B91C1C;
+}
+
+#chat-widget.dark-mode .widget-escalate:hover {
+    background-color: #A71616;
+}
+
+/* Escalation Offer - displayed in chat */
+.escalation-offer {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #DBEAFE;
+    border-left: 4px solid #3B82F6;
+    border-radius: 6px;
+    margin: 8px 0;
+}
+
+.escalation-yes,
+.escalation-no {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.escalation-yes {
+    background-color: #3B82F6;
+    color: white;
+}
+
+.escalation-yes:hover {
+    background-color: #2563EB;
+}
+
+.escalation-no {
+    background-color: #E5E7EB;
+    color: #374151;
+}
+
+.escalation-no:hover {
+    background-color: #D1D5DB;
+}
+
+#chat-widget.dark-mode .escalation-offer {
+    background: rgba(59, 130, 246, 0.1);
+    border-left-color: #60A5FA;
+}
+
+#chat-widget.dark-mode .escalation-no {
+    background-color: #4B5563;
+    color: #E5E7EB;
+}
+
+#chat-widget.dark-mode .escalation-no:hover {
+    background-color: #5A6578;
+}
+
+/* Plan Badge - optional display (can be added to header) */
+.plan-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 8px;
+}
+
+.plan-badge.free {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.plan-badge.pro {
+    background-color: rgba(34, 197, 94, 0.3);
+    color: #ECFDF5;
+}
+
+.plan-badge.enterprise {
+    background-color: rgba(168, 85, 247, 0.3);
+    color: #FAF5FF;
+}
+
+/* Feature Gate - Hide unavailable features */
+.feature-locked {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: not-allowed;
+    position: relative;
+}
+
+.feature-locked::after {
+    content: '🔒 Pro Feature';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+/* Widget footer with escalation button */
+.widget-footer {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 12px;
+    border-top: 1px solid #E5E7EB;
+    background: var(--bg-white);
+}
+
+.widget-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.widget-input:focus {
+    border-color: var(--primary-color);
+}
+
+.widget-send {
+    padding: 10px 16px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+}
+
+.widget-send:hover {
+    filter: brightness(1.1);
+}
+
+#chat-widget.dark-mode .widget-footer {
+    background: #1E293B;
+    border-top-color: #334155;
+}
+
+#chat-widget.dark-mode .widget-input {
+    background: #2D3B4F;
+    border-color: #475569;
+    color: #E5E7EB;
+}
+
+#chat-widget.dark-mode .widget-input::placeholder {
+    color: #94A3B8;
+}
