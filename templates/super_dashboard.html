@@ -190,6 +190,9 @@
             <a class="nav-item" onclick="switchTab('blueprint-intents', this)">
                 <i class="fas fa-cube"></i> Blueprints & Templates
             </a>
+            <a class="nav-item" onclick="switchTab('unknown-intelligence', this)">
+                <i class="fas fa-brain"></i> Unknown Intelligence
+            </a>
             <a class="nav-item" onclick="switchTab('settings', this)">
                 <i class="fas fa-cogs"></i> Settings
             </a>
@@ -1015,33 +1018,73 @@
 
                 <!-- BLUEPRINTS SECTION -->
                 <div id="blueprints-section" class="blueprint-tab-content" style="display: block;">
+                    <!-- Step 1: Select Client -->
                     <div class="card">
                         <div class="card-header">
-                            <h3><i class="fas fa-link" style="color: var(--primary);"></i> Assign to Client</h3>
+                            <h3><i class="fas fa-building" style="color: var(--primary);"></i> Step 1: Select Client</h3>
                         </div>
                         <div class="card-body">
                             <div class="form-group">
-                                <label>Select Template File</label>
-                                <select id="templateFileSelectForAssign" class="form-control" onchange="onTemplateFileSelectedForAssign()">
+                                <label>Select Client</label>
+                                <select id="clientSelectForBlueprint" class="form-control" onchange="onBlueprintClientSelected()">
+                                    <option value="">-- Choose a Client --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Select Template (appears after client selection) -->
+                    <div class="card" style="margin-top: 1.5rem; display: none;" id="templateSelectionCard">
+                        <div class="card-header">
+                            <h3><i class="fas fa-file-alt" style="color: var(--primary);"></i> Step 2: Select Template</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Choose Template File</label>
+                                <select id="templateFileSelectForAssign" class="form-control" onchange="onBlueprintTemplateSelected()">
                                     <option value="">-- Choose a Template File --</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label>Select Client</label>
-                                <select id="clientSelectForBlueprint" class="form-control" onchange="onClientSelectedForAssign()">
-                                    <option value="">-- Choose Client --</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="assignBlueprintToClient()">
+                            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="assignBlueprintToClient()" id="assignBlueprintBtn" disabled>
                                 <i class="fas fa-check"></i> Assign All Intents
                             </button>
                         </div>
                     </div>
 
-                    <!-- Already Assigned Intents Section -->
+                    <!-- Step 3: Show Assigned File Info -->
+                    <div class="card" style="margin-top: 1.5rem; display: none;" id="fileInfoCard">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3><i class="fas fa-info-circle" style="color: var(--success);"></i> <span id="assignedFileNameDisplay">Template File Info</span></h3>
+                            <button class="btn btn-sm" id="toggleIntentsBtn" style="background: var(--primary); color: white; border: none;" onclick="toggleIntentsVisibility()">
+                                <i class="fas fa-eye-slash"></i> <span id="toggleIntentsText">Show</span> Intents
+                            </button>
+                        </div>
+                        <div class="card-body" style="background: var(--bg-light); padding: 1rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div>
+                                    <small style="color: var(--text-secondary);">File Name:</small>
+                                    <p style="font-weight: 600; margin: 0.5rem 0 0 0;" id="fileNameDisplay">—</p>
+                                </div>
+                                <div>
+                                    <small style="color: var(--text-secondary);">Total Intents:</small>
+                                    <p style="font-weight: 600; margin: 0.5rem 0 0 0;" id="intentCountDisplay">0</p>
+                                </div>
+                                <div>
+                                    <small style="color: var(--text-secondary);">Assigned Date:</small>
+                                    <p style="font-weight: 600; margin: 0.5rem 0 0 0;" id="assignedDateDisplay">—</p>
+                                </div>
+                                <div>
+                                    <small style="color: var(--text-secondary);">Status:</small>
+                                    <p style="font-weight: 600; margin: 0.5rem 0 0 0; color: var(--success);">✓ Active</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Assigned Intents Section (Hidden by default) -->
                     <div class="card" style="margin-top: 1.5rem; display: none;" id="assignedIntentsCard">
                         <div class="card-header">
-                            <h3><i class="fas fa-check-circle" style="color: var(--success);"></i> Already Assigned Intents</h3>
+                            <h3><i class="fas fa-check-circle" style="color: var(--success);"></i> Assigned Intents</h3>
                         </div>
                         <div class="card-body no-padding">
                             <table id="assignedIntentsTable">
@@ -1058,6 +1101,94 @@
                                     <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No intents assigned yet</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UNKNOWN INTELLIGENCE TAB (LEARNING CONSOLE) -->
+            <div id="unknown-intelligence" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1><i class="fas fa-brain" style="color: var(--primary);"></i> Unknown Intelligence</h1>
+                        <p style="color:var(--text-secondary);">Teach the engine: map unmapped user queries to real intents.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="loadUnknownQueries()" style="margin-left: auto;">
+                        <i class="fas fa-sync"></i> Refresh Data
+                    </button>
+                </div>
+
+                <!-- Overview Cards -->
+                <div class="stats-grid" style="margin: 2rem 0;">
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Total Unknown</h3>
+                            <p id="totalUnknownCount" style="font-size: 2rem; color: var(--danger);">0</p>
+                        </div>
+                        <div class="stat-icon" style="background: #FEE2E2; color: var(--danger);"><i class="fas fa-exclamation-triangle"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Unique Patterns</h3>
+                            <p id="uniquePatternCount" style="font-size: 2rem; color: var(--warning);">0</p>
+                        </div>
+                        <div class="stat-icon" style="background: #FEF3C7; color: var(--warning);"><i class="fas fa-filter"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>Most Frequent</h3>
+                            <p id="mostFrequentQuery" style="font-size: 1.1rem; font-weight: 500;">—</p>
+                        </div>
+                        <div class="stat-icon" style="background: #DBEAFE; color: var(--primary);"><i class="fas fa-chart-bar"></i></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <h3>LLM Fallback Rate</h3>
+                            <p id="llmFallbackRate" style="font-size: 2rem; color: var(--text-main);">—</p>
+                        </div>
+                        <div class="stat-icon" style="background: #E0E7FF; color: #6366F1;"><i class="fas fa-percentage"></i></div>
+                    </div>
+                </div>
+
+                <!-- Main Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-list"></i> Unmapped Queries (Sorted by Frequency)</h3>
+                    </div>
+                    <div class="card-body no-padding" style="max-height: 600px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Query Text</th>
+                                    <th style="width: 80px;">Count</th>
+                                    <th style="width: 120px;">Last Seen</th>
+                                    <th style="width: 150px;">Suggested Intent</th>
+                                    <th style="width: 80px; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="unknownQueriesTableBody">
+                                <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Loading queries...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Learning Stats (Optional) -->
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-line"></i> Learning Progress</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">Mapped queries improve LLM efficiency by reducing fallback calls and improving confidence bands.</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <div>
+                                <small style="color: var(--text-secondary);">Queries Mapped This Session:</small>
+                                <p style="font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0 0 0;" id="mappedThisSession">0</p>
+                            </div>
+                            <div>
+                                <small style="color: var(--text-secondary);">Estimated LLM Savings:</small>
+                                <p style="font-size: 1.5rem; font-weight: 700; color: var(--success); margin: 0.5rem 0 0 0;" id="estimatedSavings">$0.00</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1166,6 +1297,217 @@
                         </div>
                         <div class="stat-icon" style="background: #DBEAFE; color: var(--primary);"><i class="fas fa-database"></i></div>
                     </div>
+                </div>
+
+                <!-- ============================= -->
+                <!-- LEARNING ANALYTICS DASHBOARD -->
+                <!-- ============================= -->
+                <div id="learning-analytics-section" style="margin-top: 3rem;">
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4>Learning Analytics</h4>
+
+                        <div style="display: flex; gap: 1rem;">
+                            <select id="learning-range" class="form-select" style="width: 140px;">
+                                <option value="24h">Last 24h</option>
+                                <option value="7d" selected>Last 7 Days</option>
+                                <option value="30d">Last 30 Days</option>
+                            </select>
+
+                            <select id="learning-tenant" class="form-select" style="width: 160px;">
+                                <option value="">Global (All Tenants)</option>
+                            </select>
+
+                            <button class="btn btn-primary" onclick="loadLearningMetrics()" style="white-space: nowrap;">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- KPI CARDS -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;">
+
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <small style="color: var(--text-secondary);">Total Messages</small>
+                                <h4 id="metric-total" style="margin: 0.5rem 0; font-size: 1.8rem;">0</h4>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <small style="color: var(--text-secondary);">LLM Rate</small>
+                                <h4 id="metric-llm-rate" style="margin: 0.5rem 0; font-size: 1.8rem; color: var(--primary);">0%</h4>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <small style="color: var(--text-secondary);">Unknown Rate</small>
+                                <h4 id="metric-unknown-rate" style="margin: 0.5rem 0; font-size: 1.8rem; color: var(--accent);">0%</h4>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <small style="color: var(--text-secondary);">Estimated LLM Cost</small>
+                                <h4 id="metric-cost" style="margin: 0.5rem 0; font-size: 1.8rem; color: #10b981;">$0.00</h4>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- CONFIDENCE DISTRIBUTION -->
+                    <div class="card shadow-sm" style="margin-bottom: 2rem;">
+                        <div class="card-body">
+                            <h6>Confidence Distribution</h6>
+                            <canvas id="confidenceChart" height="100"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- UNKNOWN FUNNEL -->
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <small style="color: var(--text-secondary);">Unknown Logged</small>
+                                <h5 id="metric-unknown-logged" style="margin: 0.5rem 0; font-size: 1.5rem;">0</h5>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <small style="color: var(--text-secondary);">Unknown Mapped</small>
+                                <h5 id="metric-unknown-mapped" style="margin: 0.5rem 0; font-size: 1.5rem; color: #10b981;">0</h5>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <small style="color: var(--text-secondary);">Mapping Conversion</small>
+                                <h5 id="metric-mapping-rate" style="margin: 0.5rem 0; font-size: 1.5rem; color: var(--primary);">0%</h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 7-DAY TREND GRAPH -->
+                    <div class="card shadow-sm" style="margin-top: 2rem;">
+                        <div class="card-body">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h6>7-Day LLM Rate Trend</h6>
+                                <small style="color: var(--text-secondary);">Shows daily % of messages requiring LLM calls</small>
+                            </div>
+                            <canvas id="trendChart" height="80"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- TENANT COMPARISON TABLE -->
+                    <div class="card shadow-sm" style="margin-top: 2rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 1.5rem 0 1.5rem;">
+                            <h6>Tenant Comparison (Sorted by LLM Rate)</h6>
+                            <button class="btn-sm" onclick="loadTenantComparison()" style="padding: 0.4rem 0.8rem;">
+                                <i class="fas fa-sync-alt"></i> Reload
+                            </button>
+                        </div>
+                        <div style="overflow-x: auto; margin-top: 1rem;">
+                            <table style="width: 100%; font-size: 0.9rem;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--border-color);">
+                                        <th style="padding: 0.75rem; text-align: left;">Tenant Name</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Total Messages</th>
+                                        <th style="padding: 0.75rem; text-align: center;">LLM Rate</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Unknown Rate</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Mapping Conv.</th>
+                                        <th style="padding: 0.75rem; text-align: center;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tenantComparisonBody">
+                                    <tr style="text-align: center;"><td colspan="6" style="padding: 2rem;">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- COST SIMULATOR -->
+                    <div class="card shadow-sm" style="margin-top: 2rem;">
+                        <div class="card-body">
+                            <h6>Cost Simulator - "What If" Analysis</h6>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">See how much you'd save if you mapped more unknown intents</p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">
+                                        Mapping Target: <span id="simulatorPercent" style="color: var(--primary); font-weight: 600;">50%</span>
+                                    </label>
+                                    <input type="range" id="simulatorSlider" min="0" max="100" value="50" 
+                                           style="width: 100%; cursor: pointer; height: 6px;"
+                                           oninput="updateCostSimulator(this.value)">
+                                    <small style="display: block; margin-top: 0.5rem; color: var(--text-secondary);">Drag to adjust target % of unknowns to map</small>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+                                        <small style="color: var(--text-secondary);">Current Monthly Cost</small>
+                                        <h5 id="simulatorCurrentCost" style="margin: 0.5rem 0; color: #ef4444;">$0.00</h5>
+                                    </div>
+                                    <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+                                        <small style="color: var(--text-secondary);">Projected Cost at Target</small>
+                                        <h5 id="simulatorProjectedCost" style="margin: 0.5rem 0; color: #10b981;">$0.00</h5>
+                                    </div>
+                                    <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem; grid-column: 1/-1;">
+                                        <small style="color: var(--text-secondary);">Monthly Savings Potential</small>
+                                        <h5 id="simulatorSavings" style="margin: 0.5rem 0; color: #3b82f6;">+$0.00</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AUTO-SUGGESTION METRICS -->
+                    <div class="card shadow-sm" style="margin-top: 2rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 1.5rem 0 1.5rem;">
+                            <div>
+                                <h6>Learning Efficiency - Auto-Suggestion Score</h6>
+                                <small style="color: var(--text-secondary);">Phrases that could be auto-matched (appear 2+ times)</small>
+                            </div>
+                            <button class="btn-sm" onclick="loadAutoSuggestionMetrics()" style="padding: 0.4rem 0.8rem;">
+                                <i class="fas fa-sync-alt"></i> Reload
+                            </button>
+                        </div>
+                        
+                        <div style="padding: 1.5rem;">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+                                <div style="background: var(--primary-light); border-radius: 8px; padding: 1rem;">
+                                    <small style="color: var(--text-secondary);">Learning Efficiency %</small>
+                                    <h5 id="autoLearningScore" style="margin: 0.5rem 0; color: var(--primary);">0%</h5>
+                                </div>
+                                <div style="background: #ECFDF5; border-radius: 8px; padding: 1rem;">
+                                    <small style="color: var(--text-secondary);">Auto-Suggestible Phrases</small>
+                                    <h5 id="autoSuggestibleCount" style="margin: 0.5rem 0; color: #10b981;">0</h5>
+                                </div>
+                                <div style="background: #FEF3C7; border-radius: 8px; padding: 1rem;">
+                                    <small style="color: var(--text-secondary);">Daily Savings Potential</small>
+                                    <h5 id="autoDailySavings" style="margin: 0.5rem 0; color: #f59e0b;">$0.00</h5>
+                                </div>
+                            </div>
+
+                            <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+                                <h6 style="margin-bottom: 1rem;">Top Phrases to Auto-Map</h6>
+                                <table style="width: 100%; font-size: 0.85rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--border-color);">
+                                            <th style="padding: 0.5rem; text-align: left;">Phrase</th>
+                                            <th style="padding: 0.5rem; text-align: center;">Count</th>
+                                            <th style="padding: 0.5rem; text-align: right;">Potential Savings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="autoPhrasesBody">
+                                        <tr style="text-align: center;"><td colspan="3" style="padding: 1rem;">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -2675,79 +3017,68 @@
             }
         };
 
-        window.onClientSelectedForAssign = async function() {
+        // Blueprint client selection handler
+        window.onBlueprintClientSelected = async function() {
             const clientId = document.getElementById('clientSelectForBlueprint').value;
-            const card = document.getElementById('assignedIntentsCard');
+            const templateCard = document.getElementById('templateSelectionCard');
+            const fileInfoCard = document.getElementById('fileInfoCard');
+            const assignedIntentsCard = document.getElementById('assignedIntentsCard');
             
-            if (!clientId) {
-                card.style.display = 'none';
-                return;
-            }
+            // Reset all cards
+            templateCard.style.display = 'none';
+            fileInfoCard.style.display = 'none';
+            assignedIntentsCard.style.display = 'none';
+            
+            if (!clientId) return;
+            
+            // Show template selection
+            templateCard.style.display = 'block';
             
             try {
-                console.log('[DEBUG] Loading assigned intents for client:', clientId);
-                const res = await fetch(`/admin/api/super/sites/${clientId}`);
-                
+                // Load available templates
+                const res = await fetch('/admin/api/super/blueprint-files');
                 if (res.ok) {
                     const data = await res.json();
-                    const site = data.site || {};
-                    const intents = site.intents || [];
+                    const select = document.getElementById('templateFileSelectForAssign');
+                    select.innerHTML = '<option value="">-- Choose a Template File --</option>';
                     
-                    console.log('[DEBUG] Client has', intents.length, 'assigned intents');
-                    
-                    const tbody = document.getElementById('assignedIntentsTableBody');
-                    
-                    if (intents.length === 0) {
-                        card.style.display = 'none';
-                        return;
-                    }
-                    
-                    // Group intents by source file
-                    const groupedByFile = {};
-                    intents.forEach(intent => {
-                        const sourceFile = intent.template_file || 'Unknown';
-                        if (!groupedByFile[sourceFile]) {
-                            groupedByFile[sourceFile] = [];
-                        }
-                        groupedByFile[sourceFile].push(intent);
-                    });
-                    
-                    console.log('[DEBUG] Grouped intents by file:', Object.keys(groupedByFile));
-                    
-                    // Show card with intents
-                    card.style.display = 'block';
-                    tbody.innerHTML = '';
-                    
-                    // Display intents grouped by file
-                    Object.keys(groupedByFile).sort().forEach(fileName => {
-                        const fileIntents = groupedByFile[fileName];
-                        
-                        fileIntents.forEach((intent, idx) => {
-                            const createdDate = new Date(intent.created_at).toLocaleDateString() || 'N/A';
-                            const tr = document.createElement('tr');
-                            // Show source file only on first intent of each file
-                            const fileDisplay = idx === 0 ? `<strong>${fileName}</strong>` : '';
-                            tr.innerHTML = `
-                                <td>${fileDisplay}</td>
-                                <td><strong>${intent.intent_name}</strong></td>
-                                <td>${intent.intent_type || 'N/A'}</td>
-                                <td><small>${createdDate}</small></td>
-                                <td style="text-align: right;">
-                                    <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="deleteAssignedIntent(${clientId}, '${intent.intent_name}')">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </td>
-                            `;
-                            tbody.appendChild(tr);
+                    if (data.files && data.files.length > 0) {
+                        data.files.forEach(file => {
+                            const opt = document.createElement('option');
+                            opt.value = file.filename;
+                            opt.textContent = file.filename;
+                            select.appendChild(opt);
                         });
-                    });
-                } else {
-                    console.error('[ERROR] Failed to load client data:', res.status);
-                    card.style.display = 'none';
+                    }
                 }
             } catch (err) {
-                console.error('[ERROR] onClientSelectedForAssign exception:', err);
+                console.error('[ERROR] Failed to load templates:', err);
+            }
+        };
+
+        // Blueprint template selection handler
+        window.onBlueprintTemplateSelected = async function() {
+            const templateFile = document.getElementById('templateFileSelectForAssign').value;
+            const assignBtn = document.getElementById('assignBlueprintBtn');
+            
+            // Enable assign button
+            assignBtn.disabled = !templateFile;
+        };
+
+        // Toggle intents visibility
+        window.toggleIntentsVisibility = function() {
+            const card = document.getElementById('assignedIntentsCard');
+            const btn = document.getElementById('toggleIntentsBtn');
+            const text = document.getElementById('toggleIntentsText');
+            
+            if (card.style.display === 'none') {
+                card.style.display = 'block';
+                btn.innerHTML = '<i class="fas fa-eye"></i> <span id="toggleIntentsText">Hide</span> Intents';
+                text.textContent = 'Hide';
+            } else {
                 card.style.display = 'none';
+                btn.innerHTML = '<i class="fas fa-eye-slash"></i> <span id="toggleIntentsText">Show</span> Intents';
+                text.textContent = 'Show';
             }
         };
 
@@ -2941,79 +3272,101 @@
         };
 
         window.assignBlueprintToClient = async function() {
-            console.log('[DEBUG] assignBlueprintToClient called');
-            const intents = window.currentIntents || [];
             const clientId = document.getElementById('clientSelectForBlueprint').value;
             const templateFileName = document.getElementById('templateFileSelectForAssign').value;
+            const fileInfoCard = document.getElementById('fileInfoCard');
+            const assignedIntentsCard = document.getElementById('assignedIntentsCard');
+            const tbody = document.getElementById('assignedIntentsTableBody');
             
-            console.log('[DEBUG] intents count:', intents.length, 'clientId:', clientId, 'templateFile:', templateFileName);
-            
-            if (intents.length === 0 || !clientId) {
-                showToast('Please select both template file and client', 'error');
-                console.warn('[WARN] Missing template file or client selection');
+            if (!clientId || !templateFileName) {
+                showToast('Please select both client and template file', 'error');
                 return;
             }
 
             try {
-                console.log('[DEBUG] Assigning', intents.length, 'intents from', templateFileName, 'to client:', clientId);
+                // Load template file to get intents
+                const res = await fetch(`/admin/api/super/blueprint-files/${templateFileName}`);
                 
+                if (!res.ok) {
+                    showToast('Failed to load template file', 'error');
+                    return;
+                }
+                
+                const data = await res.json();
+                const intents = data.intents || [];
+                
+                if (intents.length === 0) {
+                    showToast('No intents in template file', 'error');
+                    return;
+                }
+                
+                // Assign all intents
                 let successCount = 0;
                 let failedCount = 0;
-                const failedIntents = [];
                 
-                // Loop through all intents and assign each one
                 for (const intent of intents) {
                     try {
-                        const intentName = intent.name;
-                        console.log('[DEBUG] Assigning intent:', intentName);
-                        
-                        const res = await fetch(`/admin/api/super/sites/${clientId}/assign-intent`, {
+                        const postRes = await fetch(`/admin/api/super/sites/${clientId}/assign-intent`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
-                                intent_name: intentName,
-                                intent_type: intent.type,
+                                intent_name: intent.name || intent.intent_name,
+                                intent_type: intent.type || 'INFO',
                                 sector: intent.sector || 'general',
                                 phrases: intent.phrases || [],
                                 response: intent.response || '',
-                                confidence_threshold: intent.confidence_threshold || 0.8,
                                 template_file: templateFileName
                             })
                         });
 
-                        const data = await res.json();
-                        
-                        if (res.ok) {
+                        if (postRes.ok) {
                             successCount++;
-                            console.log('[DEBUG] Successfully assigned:', intentName);
                         } else {
                             failedCount++;
-                            failedIntents.push(intentName);
-                            console.warn('[WARN] Failed to assign:', intentName, data.error);
                         }
-                    } catch (itemErr) {
+                    } catch (err) {
                         failedCount++;
-                        failedIntents.push(intent.name);
-                        console.error('[ERROR] Exception assigning', intent.name, itemErr);
                     }
                 }
                 
-                // Show summary message
-                if (successCount > 0 && failedCount === 0) {
-                    showToast(`✓ All ${successCount} intents from ${templateFileName} assigned successfully!`);
-                    // Refresh the assigned intents list
-                    onClientSelectedForAssign();
-                } else if (successCount > 0 && failedCount > 0) {
-                    showToast(`✓ ${successCount} intents assigned, ${failedCount} failed`, 'warning');
-                    onClientSelectedForAssign();
-                } else {
-                    showToast(`✗ Failed to assign intents: ${failedIntents.join(', ')}`, 'error');
-                }
+                // Show file info card
+                fileInfoCard.style.display = 'block';
+                document.getElementById('fileNameDisplay').textContent = templateFileName;
+                document.getElementById('intentCountDisplay').textContent = successCount + ' / ' + intents.length;
+                document.getElementById('assignedDateDisplay').textContent = new Date().toLocaleDateString();
+                document.getElementById('assignedFileNameDisplay').textContent = templateFileName;
                 
-                console.log('[DEBUG] Assignment complete - Success:', successCount, 'Failed:', failedCount);
+                // Populate intents table
+                tbody.innerHTML = '';
+                intents.forEach((intent, idx) => {
+                    const intentName = intent.name || intent.intent_name;
+                    const createdDate = new Date().toLocaleDateString();
+                    const tr = document.createElement('tr');
+                    const fileDisplay = idx === 0 ? `<strong>${templateFileName}</strong>` : '';
+                    
+                    tr.innerHTML = `
+                        <td>${fileDisplay}</td>
+                        <td><strong>${intentName}</strong></td>
+                        <td>${intent.type || 'N/A'}</td>
+                        <td><small>${createdDate}</small></td>
+                        <td style="text-align: right;">
+                            <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="deleteAssignedIntent(${clientId}, '${intentName}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                // Show success message
+                if (successCount === intents.length) {
+                    showToast(`✓ All ${successCount} intents assigned successfully!`);
+                } else {
+                    showToast(`✓ ${successCount} intents assigned, ${failedCount} failed`, 'warning');
+                }
             } catch (err) {
-                showToast('Network error: ' + err.message, 'error');
-                console.error('[ERROR] assignBlueprintToClient exception:', err);
+                showToast('Error assigning template: ' + err.message, 'error');
+                console.error('[ERROR] assignBlueprintToClient:', err);
             }
         };
 
@@ -3346,6 +3699,579 @@
             }
         };
 
+        // ========================================
+        // UNKNOWN INTELLIGENCE FUNCTIONS
+        // ========================================
+
+        window.loadUnknownQueries = async function() {
+            const tbody = document.getElementById('unknownQueriesTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+            
+            try {
+                const res = await fetch('/admin/api/unknown/list');
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                
+                const data = await res.json();
+                const unknownQueries = data.unknowns || [];
+                
+                if (unknownQueries.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--success);"><i class="fas fa-check-circle"></i> No unknown queries! All user messages are mapped.</td></tr>';
+                    
+                    // Update stats
+                    document.getElementById('totalUnknownCount').textContent = '0';
+                    document.getElementById('uniquePatternCount').textContent = '0';
+                    document.getElementById('mostFrequentQuery').textContent = '✓ Perfect';
+                    document.getElementById('llmFallbackRate').textContent = '0%';
+                    document.getElementById('mappedThisSession').textContent = '0';
+                    document.getElementById('estimatedSavings').textContent = '$0.00';
+                    return;
+                }
+                
+                // Sort by count descending
+                unknownQueries.sort((a, b) => (b.count || 0) - (a.count || 0));
+                
+                // Calculate stats
+                const totalCount = unknownQueries.reduce((sum, q) => sum + (q.count || 0), 0);
+                const mostFrequent = unknownQueries[0];
+                const uniqueCount = unknownQueries.length;
+                
+                // Update stat cards
+                document.getElementById('totalUnknownCount').textContent = totalCount;
+                document.getElementById('uniquePatternCount').textContent = uniqueCount;
+                document.getElementById('mostFrequentQuery').textContent = mostFrequent.query?.substring(0, 40) || '(N/A)';
+                document.getElementById('llmFallbackRate').textContent = '~' + Math.round((totalCount / (totalCount + 50)) * 100) + '%';
+                
+                // Render table rows
+                tbody.innerHTML = '';
+                unknownQueries.forEach((q, idx) => {
+                    const lastSeen = q.last_seen ? new Date(q.last_seen).toLocaleString() : 'Unknown';
+                    const suggestedIntent = q.suggested_intent || '(No suggestion)';
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${escapeHtml(q.query)}</strong></td>
+                        <td style="text-align: center; font-weight: 600; color: var(--danger);">${q.count || 0}</td>
+                        <td><small>${lastSeen}</small></td>
+                        <td><small style="background: var(--primary-light); padding: 0.25rem 0.5rem; border-radius: 4px;">${suggestedIntent}</small></td>
+                        <td style="text-align: right;">
+                            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="openUnknownMapModal('${escapeHtml(q.query)}', ${q.count})">
+                                <i class="fas fa-link"></i> Map
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                showToast(`✓ Loaded ${uniqueCount} unknown patterns from ${totalCount} total messages`, 'info');
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);"><i class="fas fa-exclamation-circle"></i> Failed to load queries: ' + err.message + '</td></tr>';
+                console.error('[ERROR] loadUnknownQueries:', err);
+            }
+        };
+
+        window.openUnknownMapModal = async function(query, count) {
+            const modal = document.getElementById('unknownMapModal');
+            if (!modal) {
+                createUnknownMapModal();
+            }
+            
+            document.getElementById('unknownMapQuery').textContent = query;
+            document.getElementById('unknownMapCount').textContent = count;
+            document.getElementById('unknownMapQueryInput').value = query;
+            document.getElementById('unknownMapCount_display').textContent = count;
+            
+            // Load available intents for dropdown (from template files or recent intents)
+            try {
+                const intentSelect = document.getElementById('unknownMapIntentSelect');
+                intentSelect.innerHTML = '<option value="">-- Select Intent --</option>';
+                
+                // Fetch available intents from template files (for discovery)
+                const templateRes = await fetch('/admin/api/super/template_files');
+                if (templateRes.ok) {
+                    const templatesData = await templateRes.json();
+                    if (Array.isArray(templatesData.files)) {
+                        const intentsLoaded = [];
+                        templatesData.files.forEach(file => {
+                            const intentName = file.replace('.json', '').toUpperCase().replace(/_/g, ' ');
+                            // Extract actual intent name (first word or phrase)
+                            const actualIntentName = file.replace('.json', '').toUpperCase();
+                            if (actualIntentName && !intentsLoaded.includes(actualIntentName)) {
+                                const option = document.createElement('option');
+                                option.value = actualIntentName;
+                                option.textContent = intentName;
+                                intentSelect.appendChild(option);
+                                intentsLoaded.push(actualIntentName);
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load intent templates:', e);
+            }
+            
+            document.getElementById('unknownMapModal').style.display = 'flex';
+        };
+
+        window.closeUnknownMapModal = function() {
+            const modal = document.getElementById('unknownMapModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        window.confirmUnknownMapping = async function() {
+            const query = document.getElementById('unknownMapQueryInput').value;
+            const intentSelect = document.getElementById('unknownMapIntentSelect');
+            const intentName = intentSelect.value || document.getElementById('unknownMapIntentManual').value;
+            
+            if (!query || !intentName) {
+                showToast('Please select both query and intent', 'error');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/admin/api/unknown/map', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        intent_name: intentName
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showToast(`✓ Mapped "${query}" to ${intentName}. Future similar queries will match correctly.`, 'success');
+                    
+                    // Update estimated savings
+                    const savedCount = parseInt(document.getElementById('unknownMapCount_display').textContent) || 1;
+                    const currentSaved = parseFloat(document.getElementById('mappedThisSession').textContent) || 0;
+                    document.getElementById('mappedThisSession').textContent = (currentSaved + 1);
+                    
+                    // Estimate: ~$0.0006 per LLM call
+                    const estimatedCost = savedCount * 0.0006;
+                    const currentSavings = parseFloat(document.getElementById('estimatedSavings').textContent.replace('$', '')) || 0;
+                    document.getElementById('estimatedSavings').textContent = '$' + (currentSavings + estimatedCost).toFixed(4);
+                    
+                    closeUnknownMapModal();
+                    await loadUnknownQueries(); // Refresh table
+                } else {
+                    showToast(data.error || 'Mapping failed', 'error');
+                }
+            } catch (err) {
+                showToast('Network error: ' + err.message, 'error');
+                console.error('[ERROR] confirmUnknownMapping:', err);
+            }
+        };
+
+        function createUnknownMapModal() {
+            if (document.getElementById('unknownMapModal')) return;
+            
+            const modal = document.createElement('div');
+            modal.id = 'unknownMapModal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <button onclick="closeUnknownMapModal()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5rem;color:#888;cursor:pointer;">&times;</button>
+                    <h2 style="margin-bottom:1.5rem;color:var(--primary);font-weight:700;">Map Unknown Query</h2>
+                    
+                    <div class="form-group">
+                        <label>Query</label>
+                        <div style="padding: 0.75rem; background: var(--bg-body); border-radius: 8px; border-left: 3px solid var(--danger);">
+                            <strong><span id="unknownMapQuery">(loading...)</span></strong>
+                            <small style="display: block; margin-top: 0.5rem; color: var(--text-secondary);">
+                                Frequency: <span id="unknownMapCount">0</span> occurrences
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Map To Intent</label>
+                        <select id="unknownMapIntentSelect" class="form-control">
+                            <option value="">-- Loading intents... --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Or Enter New Intent Name</label>
+                        <input id="unknownMapIntentManual" type="text" class="form-control" placeholder="e.g., PRICING_INFO, HR_POLICY">
+                    </div>
+                    
+                    <div style="background: var(--primary-light); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <small style="color: var(--primary); display: block; font-weight: 500;">
+                            <i class="fas fa-lightbulb"></i> Impact: Mapping will improve LLM efficiency and reduce cost by ~$${(parseInt(document.getElementById('unknownMapCount_display')?.textContent || 0) * 0.0006).toFixed(4)}.
+                        </small>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-outline" onclick="closeUnknownMapModal()" style="flex: 1;">Cancel</button>
+                        <button class="btn btn-primary" onclick="confirmUnknownMapping()" style="flex: 1;">
+                            <i class="fas fa-check"></i> Confirm Mapping
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Hidden fields for data
+            modal.innerHTML += `
+                <input type="hidden" id="unknownMapQueryInput" value="">
+                <input type="hidden" id="unknownMapCount_display" value="">
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text ? text.replace(/[&<>"']/g, m => map[m]) : text;
+        }
+
+        // Auto-load Unknown Intelligence data when tab is shown
+        const originalSwitchTab = window.switchTab;
+        window.switchTab = function(tabName, element) {
+            if (originalSwitchTab) {
+                originalSwitchTab(tabName, element);
+            }
+            if (tabName === 'unknown-intelligence') {
+                loadUnknownQueries();
+            }
+            if (tabName === 'health') {
+                loadLearningMetrics();
+            }
+        };
+
+        // ==============================
+        // LEARNING ANALYTICS JS
+        // ==============================
+
+        let confidenceChartInstance = null;
+
+        async function loadLearningMetrics() {
+
+            const range = document.getElementById('learning-range').value;
+            const siteId = document.getElementById('learning-tenant').value;
+
+            let url = `/admin/api/super/learning-metrics?range=${range}`;
+            if (siteId) {
+                url += `&site_id=${siteId}`;
+            }
+
+            const res = await fetch(url, { credentials: "include" });
+            if (!res.ok) {
+                console.error('Failed to load learning metrics:', res.status);
+                return;
+            }
+
+            const data = await res.json();
+
+            // --- KPI Updates ---
+            document.getElementById('metric-total').innerText = data.total_messages;
+            document.getElementById('metric-llm-rate').innerText =
+                (data.llm_rate * 100).toFixed(2) + "%";
+
+            document.getElementById('metric-unknown-rate').innerText =
+                (data.unknown_rate * 100).toFixed(2) + "%";
+
+            document.getElementById('metric-cost').innerText =
+                "$" + data.estimated_llm_cost.toFixed(4);
+
+            document.getElementById('metric-unknown-logged').innerText =
+                data.unknown_logged;
+
+            document.getElementById('metric-unknown-mapped').innerText =
+                data.unknown_mapped;
+
+            document.getElementById('metric-mapping-rate').innerText =
+                (data.mapping_conversion_rate * 100).toFixed(2) + "%";
+
+            renderConfidenceChart(data.confidence_distribution);
+        }
+
+        function renderConfidenceChart(distribution) {
+
+            const ctx = document.getElementById('confidenceChart');
+
+            if (confidenceChartInstance) {
+                confidenceChartInstance.destroy();
+            }
+
+            confidenceChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['LOW', 'MID', 'HIGH'],
+                    datasets: [{
+                        label: 'Confidence Count',
+                        data: [
+                            distribution.LOW,
+                            distribution.MID,
+                            distribution.HIGH
+                        ],
+                        backgroundColor: ['#ef4444', '#eab308', '#10b981']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // ==============================
+        // TREND CHART
+        // ==============================
+
+        let trendChartInstance = null;
+
+        async function loadTrendChart() {
+            const siteId = document.getElementById('learning-tenant').value;
+            let url = `/admin/api/super/learning-metrics-trend`;
+            if (siteId) {
+                url += `?site_id=${siteId}`;
+            }
+
+            try {
+                const res = await fetch(url, { credentials: "include" });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                renderTrendChart(data.trend);
+            } catch (e) {
+                console.error('Failed to load trend:', e);
+            }
+        }
+
+        function renderTrendChart(trendData) {
+            const ctx = document.getElementById('trendChart');
+
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: trendData.map(d => d.date),
+                    datasets: [{
+                        label: 'LLM Rate %',
+                        data: trendData.map(d => d.llm_rate),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: true } },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: function(v) { return v + '%'; } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==============================
+        // TENANT COMPARISON
+        // ==============================
+
+        async function loadTenantComparison() {
+            const range = document.getElementById('learning-range').value;
+
+            let url = `/admin/api/super/tenant-comparison?range=${range}`;
+
+            try {
+                const res = await fetch(url, { credentials: "include" });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                renderTenantComparison(data.tenants);
+            } catch (e) {
+                console.error('Failed to load tenant comparison:', e);
+            }
+        }
+
+        function renderTenantComparison(tenants) {
+            const tbody = document.getElementById('tenantComparisonBody');
+            tbody.innerHTML = '';
+
+            if (tenants.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No tenant data</td></tr>';
+                return;
+            }
+
+            tenants.forEach(tenant => {
+                const statusBadge = tenant.status === 'active' 
+                    ? '<span style="color:#10b981;">✓ Active</span>'
+                    : '<span style="color:#ef4444;">✗ Suspended</span>';
+
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border-color)';
+                tr.innerHTML = `
+                    <td style="padding: 0.75rem; font-weight: 500;">${tenant.name}</td>
+                    <td style="padding: 0.75rem; text-align: center;">${tenant.total_messages}</td>
+                    <td style="padding: 0.75rem; text-align: center; font-weight: 500; color: #3b82f6;">${tenant.llm_rate}%</td>
+                    <td style="padding: 0.75rem; text-align: center; font-weight: 500; color: #f59e0b;">${tenant.unknown_rate}%</td>
+                    <td style="padding: 0.75rem; text-align: center; font-weight: 500; color: #10b981;">${tenant.mapping_conversion}%</td>
+                    <td style="padding: 0.75rem; text-align: center;">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ==============================
+        // COST SIMULATOR
+        // ==============================
+
+        let currentCostData = null;
+
+        function updateCostSimulator(value) {
+            if (!currentCostData) return;
+
+            const percent = parseInt(value);
+            document.getElementById('simulatorPercent').innerText = percent + '%';
+
+            const currentMonthly = currentCostData.current_monthly_cost || 0;
+            const unknown_msgs = currentCostData.unknown_count || 0;
+            const LLM_COST = 0.0006;
+
+            // Calculate savings potential for 30 days
+            const can_save_per_msg = LLM_COST;
+            const percent_to_map = percent / 100;
+            const msgs_to_map = unknown_msgs * percent_to_map;
+            const potential_savings = msgs_to_map * LLM_COST * 30;
+            const projected_cost = currentMonthly - potential_savings;
+
+            document.getElementById('simulatorCurrentCost').innerText = '$' + currentMonthly.toFixed(2);
+            document.getElementById('simulatorProjectedCost').innerText = '$' + Math.max(0, projected_cost).toFixed(2);
+            document.getElementById('simulatorSavings').innerText = '+$' + potential_savings.toFixed(2);
+        }
+
+        // ==============================
+        // AUTO-SUGGESTION METRICS
+        // ==============================
+
+        async function loadAutoSuggestionMetrics() {
+            const siteId = document.getElementById('learning-tenant').value;
+
+            let url = `/admin/api/super/auto-suggestion-metrics`;
+            if (siteId) {
+                url += `?site_id=${siteId}`;
+            }
+
+            try {
+                const res = await fetch(url, { credentials: "include" });
+                if (!res.ok) return;
+
+                const data = await res.json();
+                renderAutoSuggestionMetrics(data);
+            } catch (e) {
+                console.error('Failed to load auto-suggestion metrics:', e);
+            }
+        }
+
+        function renderAutoSuggestionMetrics(data) {
+            document.getElementById('autoLearningScore').innerText = data.learning_efficiency + '%';
+            document.getElementById('autoSuggestibleCount').innerText = data.auto_suggestible_phrases;
+            document.getElementById('autoDailySavings').innerText = '$' + data.potential_daily_savings.toFixed(4);
+
+            const tbody = document.getElementById('autoPhrasesBody');
+            tbody.innerHTML = '';
+
+            if (!data.top_phrases || data.top_phrases.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;">No high-frequency phrases yet</td></tr>';
+                return;
+            }
+
+            data.top_phrases.forEach(phrase => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border-color)';
+                tr.innerHTML = `
+                    <td style="padding: 0.5rem; font-family: monospace; color: var(--primary);">"${phrase.phrase}"</td>
+                    <td style="padding: 0.5rem; text-align: center; font-weight: 500;">${phrase.count}×</td>
+                    <td style="padding: 0.5rem; text-align: right; color: #10b981;">$${phrase.potential_savings.toFixed(4)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ==============================
+        // ENHANCED LEARNING METRICS LOADER
+        // ==============================
+
+        async function loadLearningMetricsWithTrend() {
+            // Load main metrics
+            const range = document.getElementById('learning-range').value;
+            const siteId = document.getElementById('learning-tenant').value;
+            let url = `/admin/api/super/learning-metrics?range=${range}`;
+            if (siteId) {
+                url += `&site_id=${siteId}`;
+            }
+
+            try {
+                const res = await fetch(url, { credentials: "include" });
+                if (!res.ok) {
+                    console.error('Failed to load learning metrics:', res.status);
+                    return;
+                }
+
+                const data = await res.json();
+
+                // Store cost data for simulator
+                currentCostData = {
+                    current_monthly_cost: data.estimated_llm_cost * 30,
+                    unknown_count: data.unknown_count,
+                    llm_calls: data.llm_calls,
+                    total_messages: data.total_messages
+                };
+
+                // Update KPI cards
+                document.getElementById('metric-total').innerText = data.total_messages;
+                document.getElementById('metric-llm-rate').innerText = (data.llm_rate * 100).toFixed(2) + "%";
+                document.getElementById('metric-unknown-rate').innerText = (data.unknown_rate * 100).toFixed(2) + "%";
+                document.getElementById('metric-cost').innerText = "$" + data.estimated_llm_cost.toFixed(4);
+                document.getElementById('metric-unknown-logged').innerText = data.unknown_logged;
+                document.getElementById('metric-unknown-mapped').innerText = data.unknown_mapped;
+                document.getElementById('metric-mapping-rate').innerText = (data.mapping_conversion_rate * 100).toFixed(2) + "%";
+
+                renderConfidenceChart(data.confidence_distribution);
+
+                // Load additional metrics
+                loadTrendChart();
+                loadTenantComparison();
+                loadAutoSuggestionMetrics();
+
+                // Initialize simulator
+                document.getElementById('simulatorSlider').value = 50;
+                updateCostSimulator(50);
+
+            } catch (e) {
+                console.error('Error loading learning metrics:', e);
+            }
+        }
+
+        // Override original loadLearningMetrics to call new version
+        window.loadLearningMetrics = loadLearningMetricsWithTrend;
+
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
