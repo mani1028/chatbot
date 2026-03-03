@@ -65,6 +65,79 @@ def get_request_domain():
         return domain
     return request.headers.get('Host', '').split(':')[0]
 
+@chat_bp.route('/test', methods=['POST'])
+def send_message_test():
+    """
+    INTERNAL TESTING ENDPOINT (no rate limiting).
+    Use this endpoint only for deployment validation tests.
+    This endpoint bypasses rate limiting to measure raw server performance.
+    
+    In production, this endpoint should be removed or restricted to localhost.
+    """
+    from app import socketio
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No JSON data provided'}), 400
+
+    public_key = data.get('site_key')
+    message = data.get('message')
+    session_id = data.get('session_id')
+    page_url = data.get('page_url')
+
+    if not public_key:
+        return jsonify({'error': 'Missing site_key parameter'}), 400
+    if not message:
+        return jsonify({'error': 'Message cannot be empty'}), 400
+
+    site = Site.query.filter_by(public_key=public_key).first()
+    if not site:
+        return jsonify({'error': 'Invalid Site Key'}), 403
+
+    from models.client_config import ClientConfig
+    config_map = {c.key: c.value for c in ClientConfig.query.filter_by(site_id=site.id).all()}
+
+    usage_limit = int(config_map.get('max_monthly_chats', site.plan.max_monthly_chats if site.plan else 1000))
+    now = datetime.utcnow()
+    month_str = now.strftime('%Y-%m')
+    usage = Usage.query.filter_by(site_id=site.id, month=month_str).first()
+    if not usage:
+        usage = Usage(site_id=site.id, month=month_str, messages=1)
+        db.session.add(usage)
+    else:
+        usage.messages += 1
+    db.session.commit()
+
+    # ⚠️ TEST ENDPOINT: Skip domain validation for internal testing
+    # This allows load testing without full production validation
+    # In production deployment, REMOVE THIS ENDPOINT
+
+    try:
+        response = process_message(site.id, message, session_id, page_url=page_url)
+        # Emit Socket.IO events for live agent handoff
+        handoff = False
+        if hasattr(response, 'handoff'):
+            handoff = response.handoff
+        elif isinstance(response, dict) and response.get('handoff'):
+            handoff = response.get('handoff')
+        if handoff:
+            # Notify the agent dashboard room for this specific site
+            socketio.emit('agent_alert', {
+                'site_id': site.id,
+                'session_id': session_id,
+                'message': 'A user is requesting human assistance!',
+                'page_url': page_url
+            }, room=f"admin_site_{site.id}")
+            # Notify the user's widget that a human was pinged
+            socketio.emit('agent_handoff', {
+                'status': 'connecting'
+            }, room=session_id)
+        if hasattr(response, 'to_dict'):
+            return jsonify(response.to_dict()), 200
+        return jsonify(response), 200
+    except Exception as e:
+        print(f"Error processing message: {e}")
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 @chat_bp.route('', methods=['POST'])
 @limiter.limit("10/minute;100/hour")
 def send_message():
@@ -147,6 +220,24 @@ def get_chat_history():
 
     # Fetch the last 50 messages for this session, ordered chronologically
     logs = ChatLog.query.filter_by(session_id=session_id).order_by(ChatLog.created_at.asc()).limit(50).all()
+
+    # If no logs, return empty list
+    if not logs:
+        return jsonify([]), 200
+    
+    # Get site_id from the first log entry
+    site_id = logs[0].site_id
+    
+    # Check if chat history preservation is enabled for this site
+    from models.client_config import ClientConfig
+    preserve_chat_history = ClientConfig.query.filter_by(
+        site_id=site_id,
+        key='preserve_chat_history'
+    ).first()
+    
+    # If preserve_chat_history is "off", return empty list (no history shown)
+    if preserve_chat_history and preserve_chat_history.value == 'off':
+        return jsonify([]), 200
 
     history = []
     for log in logs:

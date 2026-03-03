@@ -11,7 +11,7 @@ import threading
 
 # Core imports
 from database import db
-from config import CONFIDENCE_THRESHOLD, FALLBACK_MESSAGES, CRM_WEBHOOK_URL, CRM_WEBHOOK_KEY
+from config import classify_confidence, HIGH_CONFIDENCE_THRESHOLD, MEDIUM_CONFIDENCE_THRESHOLD, FALLBACK_MESSAGES, CRM_WEBHOOK_URL, CRM_WEBHOOK_KEY
 from core.tokenizer import tokenize, STOP_WORDS
 from core.synonyms import canonical, normalize_text
 
@@ -29,18 +29,48 @@ except ImportError:
         def ratio(a, b): return 100 if a == b else 0
 
 # Optional sentence-transformers support
-USE_EMBEDDINGS = False
-MODEL = None
+_USE_EMBEDDINGS = False
+_MODEL = None
+_MODEL_LOAD_ATTEMPTED = False
+
+# Import st_util separately (no model loading here)
 try:
-    from sentence_transformers import SentenceTransformer, util as st_util
-    MODEL = SentenceTransformer('all-MiniLM-L6-v2')
-    USE_EMBEDDINGS = True
-except Exception:
-    USE_EMBEDDINGS = False
+    from sentence_transformers import util as st_util
+except ImportError:
+    st_util = None
+
+def get_embedding_model():
+    """Lazy-load SentenceTransformer model. Returns (model, available) tuple."""
+    global _MODEL, _USE_EMBEDDINGS, _MODEL_LOAD_ATTEMPTED
+    
+    # Check if embeddings are disabled via environment variable
+    import os
+    if os.getenv('DISABLE_EMBEDDINGS', 'false').lower() == 'true':
+        _USE_EMBEDDINGS = False
+        return None, False
+    
+    if _MODEL is not None:
+        return _MODEL, True
+    
+    if _MODEL_LOAD_ATTEMPTED:
+        return None, False
+    
+    _MODEL_LOAD_ATTEMPTED = True
+    
+    try:
+        from sentence_transformers import SentenceTransformer
+        _MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+        _USE_EMBEDDINGS = True
+        logging.info("SentenceTransformer model loaded successfully")
+        return _MODEL, True
+    except Exception as e:
+        logging.error(f"Failed to load SentenceTransformer model: {e}")
+        _USE_EMBEDDINGS = False
+        return None, False
+
 
 # Configuration Constants
 FUZZY_TOKEN_THRESHOLD = 80
-HIGH_CONFIDENCE = 0.85
 
 class IntentEngine:
     """
@@ -124,23 +154,24 @@ class IntentEngine:
         phrase_embeddings = None
         msg_emb = None
         
-        if USE_EMBEDDINGS and intents:
+        model, embeddings_available = get_embedding_model()
+        if embeddings_available and intents:
             for intent in intents:
-                for phrase_obj in intent.phrases:
+                for phrase_obj in intent.phrases.all():
                     text = (phrase_obj.phrase or '').strip()
                     if text:
                         phrase_items.append((intent, phrase_obj, text))
             try:
                 texts = [p[2] for p in phrase_items]
                 if texts:
-                    phrase_embeddings = MODEL.encode(texts, convert_to_tensor=True)
-                    msg_emb = MODEL.encode(message, convert_to_tensor=True)
+                    phrase_embeddings = model.encode(texts, convert_to_tensor=True)
+                    msg_emb = model.encode(message, convert_to_tensor=True)
             except Exception as e:
                 self.logger.error(f"Embedding error: {e}")
 
         # Primary Scoring Loop
         for intent in intents:
-            for phrase_obj in intent.phrases:
+            for phrase_obj in intent.phrases.all():
                 phrase_text = phrase_obj.phrase or ''
                 p_tokens = tokenize(phrase_text)
                 if not p_tokens:
@@ -176,7 +207,7 @@ class IntentEngine:
 
                 # Semantic score integration
                 embedding_score = 0.0
-                if USE_EMBEDDINGS and phrase_embeddings is not None and msg_emb is not None:
+                if embeddings_available and phrase_embeddings is not None and msg_emb is not None:
                     try:
                         # Find index for this specific phrase
                         item_idx = next((i for i, it in enumerate(phrase_items) 
@@ -206,8 +237,11 @@ class IntentEngine:
             intent_conf_multiplier = getattr(best['intent'], 'confidence', 0.8) or 0.8
             final_confidence = round(min(1.0, best['score'] * intent_conf_multiplier), 3)
 
+            # Use single classify_confidence() authority (GATE 2 ENFORCEMENT)
+            confidence_class = classify_confidence(final_confidence)
+
             # High Confidence: Direct Answer + Action Hooks
-            if final_confidence >= HIGH_CONFIDENCE:
+            if confidence_class == "HIGH":
                 # RUN IN BACKGROUND THREAD TO PREVENT 2-SECOND BLOCKING
                 threading.Thread(
                     target=lambda: asyncio.run(self._handle_handoffs(
@@ -227,7 +261,7 @@ class IntentEngine:
                 }
 
             # Medium Confidence: Suggestion
-            if final_confidence >= CONFIDENCE_THRESHOLD:
+            if confidence_class == "MEDIUM":
                 # Clean up the snake_case name for the user
                 clean_name = best['intent'].intent_name.replace('_', ' ').title()
                 

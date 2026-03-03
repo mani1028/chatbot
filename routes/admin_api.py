@@ -9,6 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from database import db
+from config import CONFIDENCE_THRESHOLD
 from models import (
     Admin, Site, Plan, ClientConfig, BrandingSettings, Intent, IntentPhrase,
     ChatLog, UnansweredQuestion, Usage, Billing, Bot, Announcement, Integration
@@ -917,7 +918,7 @@ def client_intents():
             intent_name=data.get("intent_name"),
             response=data.get("response"),
             intent_type=data.get("intent_type", "INFO"),
-            confidence_threshold=0.7
+            confidence_threshold=CONFIDENCE_THRESHOLD
         )
         db.session.add(new_intent)
         db.session.flush() 
@@ -1396,7 +1397,7 @@ def super_assign_intent_to_site(site_id):
         intent_type = data.get('intent_type', 'info')
         sector = data.get('sector', 'general')
         confidence = data.get('confidence', 0.8)
-        confidence_threshold = data.get('confidence_threshold', 0.7)
+        confidence_threshold = data.get('confidence_threshold', CONFIDENCE_THRESHOLD)
         response = data.get('response')
         phrases = data.get('phrases', [])
         template_file = data.get('template_file')  # NEW: Capture template file name
@@ -1510,7 +1511,7 @@ def create_blueprint():
             intent_type=intent_type,
             response=response,
             sector=sector,
-            confidence_threshold=data.get('confidence_threshold', 0.7)
+            confidence_threshold=data.get('confidence_threshold', CONFIDENCE_THRESHOLD)
         )
         db.session.add(new_blueprint)
         db.session.flush()  # Get the new intent ID
@@ -1822,3 +1823,245 @@ def import_intent_template(filename):
             return jsonify({"error": result.get('message')}), 400
     except Exception as e:
         return jsonify({"error": f"Import failed: {str(e)}"}), 500
+
+
+# --- CLIENT: CHANNELS ---
+@admin_api.route("/client/channels", methods=["GET"])
+def get_client_channels():
+    """Get all channels for the current site"""
+    site_id = session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    # Get channels (integrations) for this site
+    integrations = Integration.query.filter_by(site_id=site_id).all()
+    channels = []
+    for integration in integrations:
+        channels.append({
+            "id": integration.id,
+            "name": integration.name,
+            "type": integration.integration_type,
+            "status": "active" if integration.is_active else "inactive"
+        })
+    
+    return jsonify({"channels": channels})
+
+
+@admin_api.route("/client/channels", methods=["POST"])
+def create_client_channel():
+    """Create a new channel for the site"""
+    site_id = session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    data = request.get_json()
+    name = data.get("name")
+    channel_type = data.get("type")
+    
+    if not name or not channel_type:
+        return jsonify({"error": "Name and type are required"}), 400
+    
+    new_channel = Integration(
+        site_id=site_id,
+        name=name,
+        integration_type=channel_type,
+        is_active=True
+    )
+    db.session.add(new_channel)
+    db.session.commit()
+    
+    return jsonify({"success": True, "id": new_channel.id}), 201
+
+
+# --- CLIENT: USAGE ---
+@admin_api.route("/client/usage", methods=["GET"])
+def get_client_usage():
+    """Get usage statistics for the current site"""
+    site_id = session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    # Get total messages
+    total_messages = ChatLog.query.filter_by(site_id=site_id).count()
+    
+    # Get this month's messages
+    from datetime import datetime
+    current_month = datetime.utcnow().strftime('%Y-%m')
+    usage_record = Usage.query.filter_by(site_id=site_id, month=current_month).first()
+    messages_this_month = usage_record.messages if usage_record else 0
+    
+    # Mock API calls and storage (can be enhanced)
+    api_calls = ChatLog.query.filter_by(site_id=site_id).count()
+    storage_used = "0 MB"
+    
+    return jsonify({
+        "total_messages": total_messages,
+        "messages_this_month": messages_this_month,
+        "api_calls": api_calls,
+        "storage_used": storage_used,
+        "usage_breakdown": {
+            "labels": ["Messages", "API Calls", "Storage"],
+            "data": [messages_this_month, api_calls, 0]
+        }
+    })
+
+
+# ===== PHASE 1: FALLBACK REDUCTION - UNKNOWN INTENT MAPPING (SEMANTIC API) =====
+
+@admin_api.route('/unknown/map', methods=['POST'])
+def map_unknown_to_intent():
+    """
+    Map unknown queries to an intent (semantic API).
+    
+    Accepts human-readable strings (not IDs).
+    Handles ALL occurrences of the query.
+    Adds phrase to IntentPhrase table (native learning).
+    
+    Request: {
+        "query": "pricing insurance",      # The unmapped user query
+        "intent_name": "PRICING_INFO"      # Target intent name
+    }
+    
+    Response: {
+        "success": true,
+        "message": "Mapped X occurrences...",
+        "count_mapped": int,
+        "intent_id": int
+    }
+    """
+    site_id = session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    data = request.get_json() or {}
+    query = data.get('query', '').strip()
+    intent_name = data.get('intent_name', '').strip()
+    
+    if not query or not intent_name:
+        return jsonify({"error": "Missing query or intent_name"}), 400
+    
+    try:
+        from models import UnknownIntentLog
+        
+        # Find intent by name (flexible to support any intent)
+        intent = Intent.query.filter_by(
+            intent_name=intent_name,
+            site_id=site_id
+        ).first()
+        
+        if not intent:
+            return jsonify({"error": f"Intent '{intent_name}' not found for your tenant"}), 404
+        
+        # Find ALL unknown logs matching this query for this tenant
+        unknowns = UnknownIntentLog.query.filter(
+            UnknownIntentLog.message == query,
+            UnknownIntentLog.site_id == site_id,
+            UnknownIntentLog.resolved == False
+        ).all()
+        
+        if not unknowns:
+            return jsonify({
+                "success": False,
+                "message": f"No unmapped queries found for: '{query}'",
+                "count_mapped": 0
+            }), 404
+        
+        # Add phrase to IntentPhrase table (native learning for intent_engine)
+        existing_phrase = IntentPhrase.query.filter_by(
+            intent_id=intent.id,
+            phrase=query
+        ).first()
+        
+        if not existing_phrase:
+            phrase = IntentPhrase(
+                intent_id=intent.id,
+                phrase=query
+            )
+            db.session.add(phrase)
+        
+        # Mark ALL occurrences as resolved
+        for unknown in unknowns:
+            unknown.resolved = True
+        
+        db.session.commit()
+        
+        count_mapped = len(unknowns)
+        
+        return jsonify({
+            "success": True,
+            "message": f"✓ Mapped {count_mapped} occurrences of '{query}' to {intent_name}. Phrase added to training set.",
+            "count_mapped": count_mapped,
+            "intent_id": intent.id,
+            "intent_name": intent.intent_name,
+            "query": query
+        }), 200
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_api.route('/unknown/list', methods=['GET'])
+def list_unknowns():
+    """
+    List unmapped unknown queries for this site.
+    
+    Response:
+    {
+        "success": true,
+        "unknowns": [
+            {
+                "query": "what is pricing",
+                "count": 5,
+                "last_seen": "2026-03-03T12:34:56",
+                "suggested_intent": "PRICING_INFO"
+            }
+        ]
+    }
+    """
+    site_id = session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    
+    try:
+        from models import UnknownIntentLog
+        
+        # Get unmapped unknowns, grouped by message (top 30)
+        # Query: message, count, latest timestamp
+        unknowns = db.session.query(
+            UnknownIntentLog.message,
+            func.count(UnknownIntentLog.id).label('count'),
+            func.max(UnknownIntentLog.created_at).label('last_seen')
+        ).filter(
+            UnknownIntentLog.site_id == site_id,
+            UnknownIntentLog.resolved == False
+        ).group_by(
+            UnknownIntentLog.message
+        ).order_by(
+            func.count(UnknownIntentLog.id).desc()
+        ).limit(30).all()
+        
+        result = []
+        for u_message, u_count, u_last_seen in unknowns:
+            # Optional: suggest intent (could enhance this later with similarity scoring)
+            suggested_intent = None
+            if u_message:
+                # Try to find similar existing intents
+                # For now, leave as None (UI will show as "(No suggestion)")
+                pass
+            
+            result.append({
+                "query": u_message,
+                "count": u_count,
+                "last_seen": u_last_seen.isoformat() if u_last_seen else None,
+                "suggested_intent": suggested_intent
+            })
+        
+        return jsonify({
+            "success": True,
+            "unknowns": result,
+            "total": len(result)
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -25,8 +25,68 @@ DB_PATH = os.path.join(INSTANCE_DIR, 'chatbot.db')
 SQLALCHEMY_DATABASE_URI = "sqlite:///chatbot.db"
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 # AI Service configuration
-# CHANGED: Lowered to 0.65 to be more friendly in the simulator
-CONFIDENCE_THRESHOLD = 0.65 
+# === GATE 2: CENTRALIZED THRESHOLD AUTHORITY ===
+# All numerical thresholds defined here. No magic numbers scattered in code.
+
+# Confidence classification thresholds
+HIGH_CONFIDENCE_THRESHOLD = 0.85       # Confident match - use intent response directly
+MEDIUM_CONFIDENCE_THRESHOLD = 0.65     # Suggested match - ask for confirmation
+LOW_CONFIDENCE_THRESHOLD = 0.0         # No match - escalate to LLM
+ACTION_CONFIDENCE_THRESHOLD = 0.3      # Threshold for intent action eligibility
+DEFAULT_INTENT_THRESHOLD = 0.65        # Default when importing/creating intents
+
+# Emotional state thresholds
+FRUSTRATION_ESCALATION_THRESHOLD = 0.7  # Frustration score that triggers escalation
+
+CONFIDENCE_THRESHOLD = MEDIUM_CONFIDENCE_THRESHOLD  # For backwards compatibility
+
+def classify_confidence(confidence_score: float) -> str:
+    """
+    Single authoritative function for confidence classification.
+    
+    GATE 2 ENFORCEMENT: All confidence decisions must go through this function.
+    This ensures consistent threshold application across entire system.
+    
+    Args:
+        confidence_score: Raw confidence value (0.0-1.0)
+    
+    Returns:
+        "HIGH" - Use intent response directly (confidence >= 0.85)
+        "MEDIUM" - Suggest intent, ask for confirmation (confidence >= 0.65)
+        "LOW" - Unknown intent, escalate to LLM (confidence < 0.65)
+    """
+    if confidence_score >= HIGH_CONFIDENCE_THRESHOLD:
+        return "HIGH"
+    elif confidence_score >= MEDIUM_CONFIDENCE_THRESHOLD:
+        return "MEDIUM"
+    else:
+        return "LOW"
+
+def ensure_thread_integrity(thread):
+    """
+    GATE 4 ENFORCEMENT: Ensure all threads have valid state.
+    
+    Protects against NULL fields from old database rows.
+    Call this immediately after loading a thread from database.
+    
+    Args:
+        thread: ConversationThread instance
+    
+    Guarantees:
+        - thread.short_term_messages is list (never None)
+        - thread.structured_data is dict (never None)
+        - thread.execution_trace is list (never None)
+    """
+    if not hasattr(thread, 'short_term_messages') or thread.short_term_messages is None:
+        thread.short_term_messages = []
+    
+    if not hasattr(thread, 'structured_data') or thread.structured_data is None:
+        thread.structured_data = {}
+    
+    if not hasattr(thread, 'execution_trace') or thread.execution_trace is None:
+        thread.execution_trace = []
+    
+    return thread
 
 # Session configuration
 PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
@@ -84,10 +144,17 @@ WIDGET_MIN_HEIGHT = 400
 import logging
 _llm_logger = logging.getLogger(__name__)
 _openai_key = os.getenv('OPENAI_API_KEY', '').strip()
-if not _openai_key or not _openai_key.startswith('sk-'):
-    _llm_logger.warning("⚠️  LLM FALLBACK NOT CONFIGURED: OPENAI_API_KEY is missing or invalid")
-    _llm_logger.warning("   1. Get a key from: https://platform.openai.com/account/api-keys")
-    _llm_logger.warning("   2. Update .env: OPENAI_API_KEY=sk-your-key")
+if not _openai_key:
+    _llm_logger.warning("⚠️  LLM FALLBACK NOT CONFIGURED: OPENAI_API_KEY is missing")
+    _llm_logger.warning("   Supports both OpenAI and OpenRouter API keys:")
+    _llm_logger.warning("   ✓ OpenAI: sk-... (https://platform.openai.com/api-keys)")
+    _llm_logger.warning("   ✓ OpenRouter: sk-or-... (https://openrouter.ai/keys)")
+    _llm_logger.warning("   Update .env: OPENAI_API_KEY=your-key-here")
     _llm_logger.warning("   3. Restart the app")
+elif not _openai_key.startswith(('sk-', 'sk-or-')):
+    _llm_logger.warning("⚠️  LLM FALLBACK: API key format not recognized")
+    _llm_logger.warning(f"   Key starts with: {_openai_key[:15]}...")
+    _llm_logger.warning("   Expected: sk-... (OpenAI) or sk-or-... (OpenRouter)")
 else:
-    _llm_logger.debug("✓ LLM Fallback configured successfully")
+    key_type = "OpenRouter" if _openai_key.startswith('sk-or-') else "OpenAI"
+    _llm_logger.debug(f"✓ LLM Fallback configured successfully ({key_type})")

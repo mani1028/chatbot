@@ -5,6 +5,7 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     from models.intent import Intent, IntentPhrase
     from database import db
+    from config import CONFIDENCE_THRESHOLD
     from flask import session
     from app import app
     with app.app_context():
@@ -89,7 +90,7 @@ if __name__ == '__main__':
             name = it.get('name') or it.get('intent_name')
             itype = it.get('type', 'info')
             response = it.get('response')
-            threshold = it.get('confidence_threshold') or it.get('confidence', 0.7)
+            threshold = it.get('confidence_threshold') or it.get('confidence', CONFIDENCE_THRESHOLD)
             phrases = it.get('phrases', [])
             workflow = it.get('workflow')
             config_required = it.get('config_required', [])

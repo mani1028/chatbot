@@ -26,8 +26,13 @@ from .booking_request import BookingRequest
 
 # Stage 2 models
 from .conversation_state import ConversationState
+from .conversation_thread import ConversationThread
 from .form import FormDefinition, FormSubmission
 from .webhook import WebhookConfig, WebhookLog
+
+# Phase 1: Fallback Reduction
+from .unknown_intent_log import UnknownIntentLog
+from .phase1_metrics import Phase1Metrics
 
 # 2. Define what is accessible when someone does "from models import *"
 __all__ = [
@@ -57,9 +62,13 @@ __all__ = [
     'SiteFile',
     # Stage 2
     'ConversationState',
+    'ConversationThread',
     'FormDefinition',
     'FormSubmission',
     'WebhookConfig',
     'WebhookLog',
+    # Phase 1: Fallback Reduction
+    'UnknownIntentLog',
+    'Phase1Metrics',
 ]
 

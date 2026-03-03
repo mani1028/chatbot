@@ -1,5 +1,6 @@
 import json
 from database import db
+from config import CONFIDENCE_THRESHOLD
 from models import Intent, IntentPhrase, Workflow, ClientConfig
 
 def import_sector_template(site_id, json_data):
@@ -31,7 +32,7 @@ def import_sector_template(site_id, json_data):
                     intent_type=it.get('type', 'info'), 
                     response=it.get('response'), 
                     sector=sector, 
-                    confidence_threshold=it.get('confidence_threshold', 0.7)
+                    confidence_threshold=it.get('confidence_threshold', CONFIDENCE_THRESHOLD)
                 )
                 db.session.add(intent)
                 db.session.flush() # Get ID
@@ -39,7 +40,7 @@ def import_sector_template(site_id, json_data):
             else:
                 # Update existing
                 intent.response = it.get('response')
-                intent.confidence_threshold = it.get('confidence_threshold', 0.7)
+                intent.confidence_threshold = it.get('confidence_threshold', CONFIDENCE_THRESHOLD)
 
             # 2. Add Phrases
             existing_phrases = [p.phrase for p in intent.phrases]

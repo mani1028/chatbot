@@ -27,6 +27,14 @@
         initial_message: 'Hello! I am AlinaX How can I help?'
     };
 
+    let siteFeatures = {
+        plan: 'free',  // free, pro, enterprise
+        analytics_enabled: false,
+        context_engine_enabled: false,
+        escalation_enabled: false,
+        compression_enabled: false
+    };
+
     // 2. LOAD RESOURCES
     function loadResources() {
         // Load CSS
@@ -52,6 +60,18 @@
             const res = await fetch(`${API_BASE}/api/widget-settings?site_key=${SITE_KEY}`);
             const data = await res.json();
             config = { ...config, ...data };
+            
+            // Phase 2: Load site features/plan
+            const planRes = await fetch(`${API_BASE}/api/site-features?site_key=${SITE_KEY}`);
+            const planData = await planRes.json();
+            siteFeatures = {
+                plan: planData.plan || 'free',
+                analytics_enabled: planData.plan === 'pro' || planData.plan === 'enterprise',
+                context_engine_enabled: planData.plan === 'pro' || planData.plan === 'enterprise',
+                escalation_enabled: planData.plan === 'pro' || planData.plan === 'enterprise',
+                compression_enabled: planData.plan === 'pro' || planData.plan === 'enterprise'
+            };
+            
             buildUI();
             // NEW: Only load chat history if admin enabled it
             if (config.preserve_chat_history) {
@@ -126,6 +146,21 @@
         wrapper.id = 'chat-widget-wrapper';
         wrapper.style.setProperty('--primary', config.primary_color);
 
+        // Phase 2: Add escalation button if enabled
+        const escalationBtn = siteFeatures.escalation_enabled ? `
+            <button class="widget-escalate" title="Connect to Human Agent">
+                👤 Escalate
+            </button>
+        ` : '';
+
+        // Phase 2: Add context indicator if context engine enabled
+        const contextIndicator = siteFeatures.context_engine_enabled ? `
+            <div class="context-indicator" id="context-indicator" style="display: none;">
+                <span class="indicator-dot"></span>
+                <span class="indicator-text">Support available</span>
+            </div>
+        ` : '';
+
         wrapper.innerHTML = `
             <!-- Launcher -->
             <div id="chat-launcher" style="background-color: ${config.primary_color}">
@@ -138,11 +173,13 @@
                     <span>${config.bot_name}</span>
                     <button class="widget-close">×</button>
                 </div>
+                ${contextIndicator}
                 <div class="widget-body" id="chat-body">
                 </div>
                 <div class="widget-footer">
                     <input type="text" class="widget-input" id="chat-input" placeholder="Type a message...">
                     <button class="widget-send" style="background-color: ${config.primary_color}">➤</button>
+                    ${escalationBtn}
                 </div>
             </div>
         `;
@@ -155,6 +192,8 @@
         if (widgetClose) widgetClose.onclick = toggleChat;
         const widgetSend = wrapper.querySelector('.widget-send');
         if (widgetSend) widgetSend.onclick = sendMessage;
+        const escalateBtn = wrapper.querySelector('.widget-escalate');
+        if (escalateBtn) escalateBtn.onclick = escalateToHuman;
         const chatInput = document.getElementById('chat-input');
         if (chatInput) {
             chatInput.onkeypress = (e) => {
@@ -174,6 +213,31 @@
                 const chatInput = document.getElementById('chat-input');
                 if (chatInput) chatInput.focus();
             }
+        }
+    }
+
+    // Phase 2: Escalate to human agent
+    async function escalateToHuman() {
+        appendMessage('Connecting you to a human agent...', 'bot');
+        try {
+            const res = await fetch(`${API_BASE}/api/escalate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    site_key: SITE_KEY,
+                    session_id: sessionId
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                appendMessage('A human agent has been assigned to you.', 'bot agent-message');
+                if (socket && socket.connected) {
+                    socket.emit('escalation_request', { session_id: sessionId });
+                }
+            }
+        } catch(e) {
+            console.error('Escalation failed:', e);
+            appendMessage('Failed to escalate. Please try again.', 'bot error-state');
         }
     }
 
@@ -217,12 +281,30 @@
                 return;
             }
 
+            // Phase 2: Handle context analysis (frustration, confusion)
+            if (siteFeatures.context_engine_enabled && data.context_analysis) {
+                updateContextIndicator(data.context_analysis);
+                
+                // Auto-escalate if context engine detects high frustration
+                if (data.context_analysis.should_escalate) {
+                    appendMessage('I sense you may need additional support. Would you like to speak with a human agent?', 'bot');
+                    showEscalationOffer();
+                    return;
+                }
+            }
+
             let rendered = false;
 
             // FIX: Print the bot's conversational response looking for reply, text, or response keys
             const botMessageText = data.reply || data.text || data.response;
             if (botMessageText) {
                 appendMessage(botMessageText, 'bot');
+                rendered = true;
+            }
+
+            // NEW: Render workflow state and collected data
+            if (data.workflow_state && data.collected_data) {
+                renderWorkflowState(data.workflow_state, data.collected_data, data.intent_name);
                 rendered = true;
             }
 
@@ -365,6 +447,102 @@
         };
     }
 
+    function renderWorkflowState(state, collectedData, intentName) {
+        // Define workflow configurations
+        const workflowConfigs = {
+            'booking': {
+                name: 'Booking',
+                states: ['greeting', 'collecting_service', 'collecting_name', 'collecting_email', 'collecting_phone', 'collecting_date', 'collecting_time', 'confirming', 'completed'],
+                fields: ['service', 'name', 'email', 'phone', 'date', 'time']
+            },
+            'lead_capture': {
+                name: 'Lead Capture',
+                states: ['greeting', 'collecting_name', 'collecting_email', 'collecting_phone', 'collecting_message', 'confirming', 'completed'],
+                fields: ['name', 'email', 'phone', 'message']
+            },
+            'support': {
+                name: 'Support',
+                states: ['greeting', 'collecting_issue', 'collecting_priority', 'collecting_contact', 'confirming', 'escalated'],
+                fields: ['issue', 'priority', 'contact']
+            }
+        };
+
+        // Detect workflow type from intent or state
+        let workflowType = null;
+        if (intentName && intentName.includes('booking')) workflowType = 'booking';
+        else if (intentName && (intentName.includes('lead') || intentName.includes('capture'))) workflowType = 'lead_capture';
+        else if (intentName && intentName.includes('support')) workflowType = 'support';
+        
+        const config = workflowType ? workflowConfigs[workflowType] : null;
+        
+        if (!config) return; // Skip if workflow type unknown
+
+        // Calculate progress
+        const currentStateIndex = config.states.indexOf(state);
+        const totalStates = config.states.length;
+        const progress = currentStateIndex >= 0 ? Math.round((currentStateIndex / totalStates) * 100) : 0;
+
+        // Create workflow card
+        const card = document.createElement('div');
+        card.className = 'workflow-card';
+        card.innerHTML = `
+            <div class="workflow-header">
+                <span class="workflow-title">📋 ${config.name} Workflow</span>
+                <span class="workflow-progress">${currentStateIndex + 1}/${totalStates}</span>
+            </div>
+            <div class="workflow-bar">
+                <div class="workflow-progress-fill" style="width: ${progress}%"></div>
+            </div>
+            <div class="workflow-state">
+                <strong>Current Step:</strong> ${formatStateLabel(state)}
+            </div>
+        `;
+
+        // Add collected data section
+        if (Object.keys(collectedData).length > 0) {
+            const dataSection = document.createElement('div');
+            dataSection.className = 'workflow-collected';
+            dataSection.innerHTML = '<strong>✓ Collected Data:</strong>';
+            
+            const dataList = document.createElement('ul');
+            dataList.className = 'collected-list';
+            
+            config.fields.forEach(field => {
+                if (collectedData[field]) {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="field-name">${capitalizeFirst(field)}:</span> <span class="field-value">${escapeHtml(String(collectedData[field]))}</span>`;
+                    dataList.appendChild(li);
+                }
+            });
+            
+            dataSection.appendChild(dataList);
+            card.appendChild(dataSection);
+        }
+
+        // Append to chat
+        const body = document.getElementById('chat-body');
+        if (body) {
+            body.appendChild(card);
+            body.scrollTop = body.scrollHeight;
+        }
+    }
+
+    function formatStateLabel(state) {
+        return state
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    }
+
+    function capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function escapeHtml(text) {
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
     // 8. HELPERS
     function appendMessage(text, sender) {
         const body = document.getElementById('chat-body');
@@ -390,6 +568,50 @@
     function hideTyping() {
         const el = document.querySelector('.typing-indicator');
         if(el) el.remove();
+    }
+
+    // Phase 2: Context Indicator - show frustration/confusion level
+    function updateContextIndicator(contextAnalysis) {
+        const indicator = document.getElementById('context-indicator');
+        if (!indicator) return;
+
+        const frustration = contextAnalysis.frustration_level || 0;
+        const confusion = contextAnalysis.confusion_level || 0;
+
+        if (frustration > 0.6) {
+            indicator.style.display = 'flex';
+            indicator.innerHTML = `
+                <span class="indicator-dot" style="background-color: #ef4444;"></span>
+                <span class="indicator-text">User frustrated - escalation available</span>
+            `;
+        } else if (confusion > 0.5) {
+            indicator.style.display = 'flex';
+            indicator.innerHTML = `
+                <span class="indicator-dot" style="background-color: #f59e0b;"></span>
+                <span class="indicator-text">User may need clarification</span>
+            `;
+        } else {
+            indicator.style.display = 'none';
+        }
+    }
+
+    // Phase 2: Show escalation offer button
+    function showEscalationOffer() {
+        const body = document.getElementById('chat-body');
+        if (!body) return;
+
+        const offerDiv = document.createElement('div');
+        offerDiv.className = 'escalation-offer';
+        offerDiv.innerHTML = `
+            <button class="escalation-yes" onclick="escalateToHuman(); this.parentElement.remove();">
+                Yes, Connect Me
+            </button>
+            <button class="escalation-no" onclick="this.parentElement.remove();">
+                No, Continue with Bot
+            </button>
+        `;
+        body.appendChild(offerDiv);
+        body.scrollTop = body.scrollHeight;
     }
 
     // 9. EXECUTE
