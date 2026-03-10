@@ -153,14 +153,14 @@ class FallbackOptimizer:
         llm_response: Optional[str] = None
     ) -> UnknownIntentLog:
         """
-        Log a fallback event for tracking and admin mapping.
+        Log a fallback event with full audit trail.
         
         Args:
             site_id: Tenant ID
             session_id: Conversation session
             message: User message that triggered fallback
             fallback_type: 'llm', 'throttle', 'confidence'
-            llm_response: LLM-generated response (if applicable)
+            llm_response: The fallback response shown to user
         
         Returns:
             UnknownIntentLog record
@@ -169,11 +169,12 @@ class FallbackOptimizer:
             site_id=site_id,
             message=message,
             llm_response=llm_response,
-            fallback_type=fallback_type
+            fallback_type=fallback_type,
+            resolved=False  # Admin must map to resolve
         )
         db.session.add(log)
         
-        # Also record throttle event
+        # Also record throttle event for rate limiting
         ConfidenceThrottle.record_fallback(site_id, session_id)
         
         try:
@@ -291,6 +292,7 @@ class FallbackOptimizer:
         """
         Admin maps an unknown message to an intent.
         Optionally auto-trains the phrase.
+        Records full audit trail.
         
         Args:
             unknown_log_id: UnknownIntentLog.id
@@ -313,10 +315,11 @@ class FallbackOptimizer:
             if log.site_id != site_id or intent.site_id != site_id:
                 return False, "Site mismatch"
             
-            # Update log
-            log.mapped_to_intent_id = intent_id
-            log.admin_mapped_at = datetime.utcnow()
-            log.admin_mapped_by = admin_id
+            # Update log with full audit trail
+            log.mapped_intent_id = intent_id
+            log.mapped_by = admin_id
+            log.resolved = True
+            log.mapped_at = datetime.utcnow()
             
             phrase_added = False
             if auto_train_phrases:
@@ -335,6 +338,9 @@ class FallbackOptimizer:
                     db.session.add(new_phrase)
                     log.phrase_auto_trained = True
                     phrase_added = True
+            
+            # Mark as resolved
+            log.resolved = True
             
             db.session.commit()
             
@@ -368,7 +374,7 @@ class FallbackOptimizer:
             db.func.count(UnknownIntentLog.id).label('count')
         ).filter(
             UnknownIntentLog.site_id == site_id,
-            UnknownIntentLog.mapped_to_intent_id == None
+            UnknownIntentLog.mapped_intent_id == None
         ).group_by(
             UnknownIntentLog.message
         ).order_by(
@@ -412,7 +418,7 @@ class FallbackOptimizer:
         total_logs = UnknownIntentLog.query.filter_by(site_id=site_id).count()
         mapped_logs = UnknownIntentLog.query.filter(
             UnknownIntentLog.site_id == site_id,
-            UnknownIntentLog.mapped_to_intent_id != None
+            UnknownIntentLog.mapped_intent_id != None
         ).count()
         
         by_type = db.session.query(

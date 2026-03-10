@@ -33,11 +33,8 @@ _USE_EMBEDDINGS = False
 _MODEL = None
 _MODEL_LOAD_ATTEMPTED = False
 
-# Import st_util separately (no model loading here)
-try:
-    from sentence_transformers import util as st_util
-except ImportError:
-    st_util = None
+# st_util will be imported lazily only when embeddings are actually used
+st_util = None
 
 def get_embedding_model():
     """Lazy-load SentenceTransformer model. Returns (model, available) tuple."""
@@ -156,6 +153,12 @@ class IntentEngine:
         
         model, embeddings_available = get_embedding_model()
         if embeddings_available and intents:
+            from services.embedding_cache import get_embedding_cache
+            import torch
+            import numpy as np
+            
+            cache = get_embedding_cache()
+            
             for intent in intents:
                 for phrase_obj in intent.phrases.all():
                     text = (phrase_obj.phrase or '').strip()
@@ -164,8 +167,46 @@ class IntentEngine:
             try:
                 texts = [p[2] for p in phrase_items]
                 if texts:
-                    phrase_embeddings = model.encode(texts, convert_to_tensor=True)
-                    msg_emb = model.encode(message, convert_to_tensor=True)
+                    # Build final phrase embeddings list by checking cache first
+                    phrase_embeddings_list = []
+                    texts_to_compute = []
+                    
+                    for text in texts:
+                        cache_key = f"phrase_{text}"
+                        cached = cache.get(cache_key)
+                        if cached is not None:
+                            phrase_embeddings_list.append(np.array(cached))
+                        else:
+                            texts_to_compute.append((text, cache_key))
+                            phrase_embeddings_list.append(None)  # Placeholder
+                    
+                    # Compute missing embeddings
+                    if texts_to_compute:
+                        texts_only = [t[0] for t in texts_to_compute]
+                        computed_embeddings = model.encode(texts_only, convert_to_tensor=False)
+                        
+                        # Fill in placeholders and cache
+                        compute_idx = 0
+                        for text_idx, embedding in enumerate(phrase_embeddings_list):
+                            if embedding is None:  # This was a cache miss
+                                text, cache_key = texts_to_compute[compute_idx]
+                                emb = computed_embeddings[compute_idx]
+                                cache.set(cache_key, emb)
+                                phrase_embeddings_list[text_idx] = np.array(emb)
+                                compute_idx += 1
+                    
+                    # Convert to tensor
+                    phrase_embeddings_array = np.array(phrase_embeddings_list)
+                    phrase_embeddings = torch.tensor(phrase_embeddings_array, dtype=torch.float32)
+                    
+                    # Message embedding (cache separately)
+                    msg_cache_key = f"msg_{message}"
+                    msg_cached = cache.get(msg_cache_key)
+                    if msg_cached is not None:
+                        msg_emb = torch.tensor(np.array(msg_cached), dtype=torch.float32)
+                    else:
+                        msg_emb = model.encode(message, convert_to_tensor=True)
+                        cache.set(msg_cache_key, msg_emb.cpu().numpy() if hasattr(msg_emb, 'cpu') else msg_emb.numpy())
             except Exception as e:
                 self.logger.error(f"Embedding error: {e}")
 
@@ -209,6 +250,12 @@ class IntentEngine:
                 embedding_score = 0.0
                 if embeddings_available and phrase_embeddings is not None and msg_emb is not None:
                     try:
+                        # Lazy import st_util only when needed
+                        global st_util
+                        if st_util is None:
+                            from sentence_transformers import util as st_util_import
+                            st_util = st_util_import
+                        
                         # Find index for this specific phrase
                         item_idx = next((i for i, it in enumerate(phrase_items) 
                                        if it[1].id == phrase_obj.id), None)
@@ -282,6 +329,7 @@ class IntentEngine:
         return self._fallback_response(0.0)
 
     def _fallback_response(self, confidence):
+        """Return fallback response - no LLM here, let orchestrator handle it."""
         return {
             'intent_name': 'UNKNOWN',
             'intent_type': 'UNKNOWN',

@@ -119,41 +119,63 @@
 
         .modal-content {
             background: white;
-            width: 500px;
-            max-width: 95%;
             border-radius: var(--radius);
-            padding: 2.5rem;
+            padding: 2rem;
+            width: 500px;
+            max-width: 95vw;
             max-height: 90vh;
             overflow-y: auto;
+            position: relative;
+            box-shadow: var(--shadow-lg);
         }
-        
-        /* Stretch full height without rounded corners */
-        .modal-content.side-panel {
-            height: 100vh;
-            max-height: 100vh;
-            border-radius: 0;
-            margin: 0;
-            animation: slideInRight 0.3s ease;
-        }
-        
-        .toast { position: fixed; bottom: 24px; right: 24px; padding: 1rem 1.5rem; border-radius: 10px; background: white; box-shadow: var(--shadow-lg); display: flex; align-items: center; gap: 0.75rem; transform: translateY(150%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 10000; border-left: 4px solid var(--primary); font-weight: 500; }
-        .toast.show { transform: translateY(0); }
 
-        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .side-panel {
+            width: 420px;
+            max-width: 95vw;
+            height: 100vh;
+            border-radius: 0;
+            max-height: 100vh;
+        }
+
+        .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+        .page-title h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem; }
     </style>
+    <script>
+    window.switchTab = function(tabName, element) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        const el = document.getElementById(tabName);
+        if (el) el.classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(it => it.classList.remove('active'));
+        if (element) element.classList.add('active');
+        const loaders = {
+            'leads': 'loadLeadsData',
+            'bookings':'loadBookingsData',
+            'templates':'loadTemplateFiles',
+            'users':'loadAdminUsers',
+            'health':'loadHealthData',
+            'logs':'loadAuditLogs',
+            'handoffs':'loadHandoffData',
+            'settings':'loadPlatformSettings',
+            'usage':'loadUsageData',
+            'suspensions':'loadSuspensionsData',
+            'blueprint-intents':'loadBlueprints',
+            'conversations':'loadConversationsData',
+            'integrations':'loadIntegrationsData',
+            'announcements':'loadAnnouncementsData',
+            'clients':'loadClientsData',
+            'analytics':'loadAnalyticsData',
+            'bots':'loadBotsData',
+            'billing':'loadBillingData'
+        };
+        const loader = loaders[tabName];
+        if (loader && window[loader]) window[loader]();
+        history.replaceState(null, '', `?tab=${tabName}`);
+    };
+</script>
 </head>
 <body>
-
-    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <h2><i class="fas fa-user-shield"></i> Super Admin Panel</h2>
@@ -698,13 +720,12 @@
                                         <th>Company</th>
                                         <th>Domain</th>
                                         <th>Plan</th>
-                                        <th>Messages</th>
                                         <th>Status</th>
                                         <th style="text-align:right;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="clientsTableBody">
-                                    <tr><td colspan="7" style="text-align:center;padding:2rem;">Loading clients...</td></tr>
+                                    <tr><td colspan="6" style="text-align:center;padding:2rem;">Loading clients...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -721,13 +742,13 @@
                     </div>
                     <button class="btn btn-primary" onclick="openBillingModal()"><i class="fas fa-plus"></i> Add Billing</button>
                 </div>
-                <div class="stats-grid" style="margin-top: 1.5rem;">
+                <div class="stats-grid" style="margin-top:1.5rem;">
                     <div class="stat-card">
                         <div class="stat-content">
                             <h3>Total Plans</h3>
                             <p id="planStatTotal">--</p>
                         </div>
-                        <div class="stat-icon"><i class="fas fa-box"></i></div>
+                        <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-content">
@@ -1018,6 +1039,7 @@
 
                 <!-- BLUEPRINTS SECTION -->
                 <div id="blueprints-section" class="blueprint-tab-content" style="display: block;">
+                    
                     <!-- Step 1: Select Client -->
                     <div class="card">
                         <div class="card-header">
@@ -1036,17 +1058,17 @@
                     <!-- Step 2: Select Template (appears after client selection) -->
                     <div class="card" style="margin-top: 1.5rem; display: none;" id="templateSelectionCard">
                         <div class="card-header">
-                            <h3><i class="fas fa-file-alt" style="color: var(--primary);"></i> Step 2: Select Template</h3>
+                            <h3><i class="fas fa-file-alt" style="color: var(--primary);"></i> Step 2: Select Template File</h3>
                         </div>
                         <div class="card-body">
                             <div class="form-group">
                                 <label>Choose Template File</label>
-                                <select id="templateFileSelectForAssign" class="form-control" onchange="onBlueprintTemplateSelected()">
+                                <select id="blueprintSelectAssign" class="form-control" onchange="onBlueprintTemplateSelected()">
                                     <option value="">-- Choose a Template File --</option>
                                 </select>
                             </div>
                             <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="assignBlueprintToClient()" id="assignBlueprintBtn" disabled>
-                                <i class="fas fa-check"></i> Assign All Intents
+                                <i class="fas fa-check"></i> Assign Template File
                             </button>
                         </div>
                     </div>
@@ -1103,19 +1125,54 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- Assigned Intents for Selected Client -->
+                    <div class="card" style="margin-top: 2rem; border-top: 3px solid var(--primary);">
+                        <div class="card-header">
+                            <h3 id="assignedIntentsHeader"><i class="fas fa-check-circle" style="color: var(--success);"></i> Assigned Template Files</h3>
+                            <button class="btn btn-sm" id="reloadAssignedBtn" onclick="reloadAssignedIntentsForClient()" style="background: var(--primary); color: white; border: none; display: none;">
+                                <i class="fas fa-sync"></i> Reload
+                            </button>
+                        </div>
+                        <div class="card-body no-padding">
+                            <div style="overflow-x: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Template File Name</th>
+                                            <th>Total Intents</th>
+                                            <th>Assigned Date</th>
+                                            <th style="text-align: right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="blueprintTableBody">
+                                        <tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">Select a client above to view assigned files</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- UNKNOWN INTELLIGENCE TAB (LEARNING CONSOLE) -->
             <div id="unknown-intelligence" class="tab-content">
-                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                     <div class="page-title">
                         <h1><i class="fas fa-brain" style="color: var(--primary);"></i> Unknown Intelligence</h1>
                         <p style="color:var(--text-secondary);">Teach the engine: map unmapped user queries to real intents.</p>
                     </div>
-                    <button class="btn btn-outline" onclick="loadUnknownQueries()" style="margin-left: auto;">
-                        <i class="fas fa-sync"></i> Refresh Data
-                    </button>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <div style="min-width: 200px;">
+                            <label style="font-size: 0.9rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Filter by Site:</label>
+                            <select id="unknownSiteFilter" class="form-control" onchange="loadUnknownQueries()" style="font-size: 0.95rem;">
+                                <option value="">-- All Sites --</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-outline" onclick="loadUnknownQueries()" style="margin-top: 1.5rem;">
+                            <i class="fas fa-sync"></i> Refresh Data
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Overview Cards -->
@@ -1281,6 +1338,40 @@
             </div>
 
             <!-- HEALTH TAB -->
+                        <!-- USAGE MONITORING TAB -->
+            <div id="usage" class="tab-content">
+                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="page-title">
+                        <h1>Usage Monitoring</h1>
+                        <p style="color:var(--text-secondary);">Monitor message usage and limits across all tenants.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openUsageModal()"><i class="fas fa-plus"></i> Add Usage</button>
+                </div>
+                <div class="card" style="margin-top: 2rem;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-chart-pie" style="color:var(--primary);"></i> Usage Records</h3>
+                        <button class="btn-icon" onclick="window.loadUsageData()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <div class="card-body no-padding">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tenant</th>
+                                    <th>Bot ID</th>
+                                    <th>Messages</th>
+                                    <th>Period</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usageTableBody">
+                                <tr><td colspan="6" style="text-align:center;padding:2rem;">Loading usage data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div id="health" class="tab-content">
                 <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
                     <div class="page-title">
@@ -1573,46 +1664,21 @@
                     </div>
                 </div>
                 <div class="card" style="margin-top: 2rem;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-cogs" style="color:var(--primary);"></i> Platform Settings</h3>
+                        <button class="btn-icon" onclick="window.loadPlatformSettings()"><i class="fas fa-sync-alt"></i></button>
+                    </div>
                     <div class="card-body no-padding">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Key</th>
+                                    <th>Setting Key</th>
                                     <th>Value</th>
+                                    <th style="text-align:right;">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="platformSettingsBody">
-                                <tr><td colspan="2" style="text-align: center; padding: 2rem;">Loading settings...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Usage Tab -->
-            <div class="tab-content" id="usage">
-                <div class="header-actions" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="page-title">
-                        <h1>Usage Management</h1>
-                        <p style="color:var(--text-secondary);">Manage message limits and usage per tenant.</p>
-                    </div>
-                    <button class="btn btn-primary" onclick="openUsageModal()"><i class="fas fa-plus"></i> Add Usage</button>
-                </div>
-                <div class="card" style="margin-top: 2rem;">
-                    <div class="card-body no-padding">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Tenant (Site ID)</th>
-                                    <th>Bot ID</th>
-                                    <th>Messages</th>
-                                    <th>Period</th>
-                                    <th style="text-align: right;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="usageTableBody">
-                                <tr><td colspan="6" style="text-align: center; padding: 2rem;">Loading usage...</td></tr>
+                            <tbody id="settingsTableBody">
+                                <tr><td colspan="3" style="text-align:center;padding:2rem;">Loading settings...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1774,57 +1840,6 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        // Utilities
-        function showToast(msg, type = 'success') {
-            const toast = document.getElementById('toast');
-            const icon = toast.querySelector('i');
-            document.getElementById('toastMessage').textContent = msg;
-            
-            if (type === 'error') {
-                toast.style.borderLeftColor = 'var(--danger)';
-                icon.className = 'fas fa-exclamation-circle';
-                icon.style.color = 'var(--danger)';
-            } else {
-                toast.style.borderLeftColor = 'var(--primary)';
-                icon.className = 'fas fa-check-circle';
-                icon.style.color = 'var(--primary)';
-            }
-            
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
-
-        // Tab Switching
-        window.switchTab = function(tabId, element) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            
-            const tabEl = document.getElementById(tabId);
-            if (tabEl) tabEl.classList.add('active');
-            if (element) element.classList.add('active');
-
-            // Trigger corresponding data loaders
-            if (tabId === 'clients') window.loadClientsData && window.loadClientsData();
-            if (tabId === 'plans') window.loadPlansData && window.loadPlansData();
-            if (tabId === 'analytics') window.loadAnalyticsData && window.loadAnalyticsData();
-            if (tabId === 'dashboard') window.loadDashboardData && window.loadDashboardData();
-            if (tabId === 'bots') window.loadBotsData && window.loadBotsData();
-            if (tabId === 'billing') window.loadBillingData && window.loadBillingData();
-            if (tabId === 'leads') window.loadLeadsData && window.loadLeadsData();
-            if (tabId === 'bookings') window.loadBookingsData && window.loadBookingsData();
-            if (tabId === 'templates') window.loadTemplateFiles && window.loadTemplateFiles();
-            if (tabId === 'users') window.loadAdminUsers && window.loadAdminUsers();
-            if (tabId === 'health') window.loadHealthData && window.loadHealthData();
-            if (tabId === 'logs') window.loadAuditLogs && window.loadAuditLogs();
-            if (tabId === 'handoffs') window.loadHandoffData && window.loadHandoffData();
-            if (tabId === 'settings') window.loadPlatformSettings && window.loadPlatformSettings();
-            if (tabId === 'usage') window.loadUsageData && window.loadUsageData();
-            if (tabId === 'suspensions') window.loadSuspensionsData && window.loadSuspensionsData();
-            if (tabId === 'blueprint-intents') window.loadBlueprints && window.loadBlueprints();
-            if (tabId === 'conversations') window.loadConversationsData && window.loadConversationsData();
-            if (tabId === 'integrations') window.loadIntegrationsData && window.loadIntegrationsData();
-            if (tabId === 'announcements') window.loadAnnouncementsData && window.loadAnnouncementsData();
-        };
 
         // --- Modals ---
         function openTenantModal() { document.getElementById('tenantModal').style.display = 'flex'; }
@@ -1862,6 +1877,22 @@
         function openAnnouncementModal() { document.getElementById('announcementModal').style.display = 'flex'; }
         function closeAnnouncementModal() { document.getElementById('announcementModal').style.display = 'none'; }
 
+        // --- Toast Notification ---
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            const icon = toast.querySelector('i');
+            if (type === 'error') {
+                icon.className = 'fas fa-exclamation-circle';
+                icon.style.color = 'var(--danger)';
+            } else {
+                icon.className = 'fas fa-check-circle';
+                icon.style.color = 'var(--primary)';
+            }
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
         // --- Event Listeners ---
         document.addEventListener('DOMContentLoaded', function() {
             // Dashboard initial load
@@ -1891,8 +1922,8 @@
 
                         if (res.ok && resp.success) {
                             showToast('Tenant provisioned successfully!');
-                            this.reset();
                             closeTenantModal();
+                            window.loadClientsData && window.loadClientsData();
                             window.loadDashboardData && window.loadDashboardData();
                         } else {
                             showToast(resp.error || 'Provisioning failed', 'error');
@@ -1906,24 +1937,24 @@
                 };
             }
 
-            // Admin Edit AJAX
+            // Edit Admin Form
             const editAdminForm = document.getElementById('editAdminForm');
             if (editAdminForm) {
                 editAdminForm.onsubmit = async function(e) {
                     e.preventDefault();
-                    const id = document.getElementById('editAdminId').value;
-                    const username = document.getElementById('editAdminUsername').value;
-                    const password = document.getElementById('editAdminPassword').value;
-                    
-                    const btn = this.querySelector('button[type="submit"]');
-                    btn.disabled = true;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-                    
+                    const btn = this.querySelector('[type=submit]');
+                    btn.disabled = true; btn.innerText = 'Saving...';
+                    const payload = {
+                        admin_id: document.getElementById('editAdminId').value,
+                        username: document.getElementById('editAdminUsername').value,
+                        password: document.getElementById('editAdminPassword').value
+                    };
                     try {
-                        const res = await fetch(`/admin/api/super/admins/${id}`, {
+                        const res = await fetch('/admin/api/super/admin-users/' + payload.admin_id, {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ username, password })
+                            headers: {'Content-Type':'application/json'},
+                            credentials: 'include',
+                            body: JSON.stringify(payload)
                         });
                         const resp = await res.json();
                         if (res.ok && resp.success) {
@@ -1942,8 +1973,10 @@
                 };
             }
             
-            // Load available template files for blueprints section
-            window.loadAvailableTemplates && window.loadAvailableTemplates();
+            
+            // Note: Blueprint template loading is now handled by loadBlueprints() function
+            // which populates blueprintSelectAssign directly from the API
+            // The old loadAvailableTemplates() code is kept for backwards compatibility but not called here
         });
 
         // --- Data Fetchers ---
@@ -2050,6 +2083,25 @@
         window.loadBillingData = async function() {
             try {
                 const res = await fetch('/admin/api/super/billing');
+                
+                if (res.status === 401) {
+                    const tbody = document.getElementById('billingTableBody');
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--danger);"><i class="fas fa-lock"></i> <strong>Super Admin Access Required</strong><br><small>This feature requires super admin privileges.</small></td></tr>';
+                    console.warn('[BILLING] Super admin authentication required');
+                    return;
+                }
+                
+                if (res.status === 403) {
+                    const tbody = document.getElementById('billingTableBody');
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--danger);"><i class="fas fa-ban"></i> <strong>Access Denied</strong><br><small>Your account doesn\'t have permission to view billing.</small></td></tr>';
+                    console.warn('[BILLING] Access denied - not a super admin');
+                    return;
+                }
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                
                 const data = await res.json();
                 const tbody = document.getElementById('billingTableBody');
                 tbody.innerHTML = '';
@@ -2070,7 +2122,11 @@
                         tbody.appendChild(tr);
                     });
                 } else { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;">No billing records.</td></tr>'; }
-            } catch(e) {}
+            } catch(e) { 
+                console.error('[BILLING] Error loading billing data:', e);
+                const tbody = document.getElementById('billingTableBody');
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Error loading billing data</td></tr>';
+            }
         };
 
         window.loadLeadsData = async function() {
@@ -2740,10 +2796,30 @@
         // Blueprints logic
         let selectedBlueprint = null;
         window.loadTemplateFiles = async function() {
-            const res = await fetch('/admin/api/super/template_files');
+            console.log('[DEBUG] loadTemplateFiles called');
+            const res = await fetch('/admin/api/super/template_files', {
+                credentials: 'include'
+            });
+            console.log('[DEBUG] Response status:', res.status);
+            
+            if (!res.ok) {
+                console.error('[ERROR] Failed to fetch templates:', res.status, res.statusText);
+                const list = document.getElementById('templateFileList');
+                list.innerHTML = `<p style="padding:2rem;color:var(--danger);">Error loading templates (${res.status})</p>`;
+                return;
+            }
+            
             const data = await res.json();
+            console.log('[DEBUG] Template data:', data);
+            
             const list = document.getElementById('templateFileList');
-            if (!data.files || data.files.length === 0) { list.innerHTML = '<p style="padding:2rem;color:var(--text-secondary)">No blueprints found</p>'; return; }
+            if (!data.files || data.files.length === 0) { 
+                console.warn('[WARN] No templates found');
+                list.innerHTML = '<p style="padding:2rem;color:var(--text-secondary)">No blueprints found</p>'; 
+                return; 
+            }
+            
+            console.log('[DEBUG] Rendering', data.files.length, 'templates');
             list.innerHTML = data.files.map(file => `
                 <div class="blueprint-item" onclick="selectBlueprint('${file.filename}', this)" style="padding:1rem; border-bottom:1px solid var(--border); cursor:pointer;">
                     <div style="font-weight:600;"><i class="fas fa-file-code" style="color:var(--primary); margin-right:6px"></i> ${file.template_name}</div>
@@ -2781,7 +2857,7 @@
             tbody.innerHTML = data.intents.map(i => `<tr><td style="padding:0.9rem;"><strong>${i.intent_name}</strong></td></tr>`).join('');
         };
 
-        // --- Blueprint Intents (Super Admin) ---
+        // --- Template Files (Super Admin) ---
         window.loadBlueprints = async function() {
             console.log('[DEBUG] loadBlueprints called');
             const tbody = document.getElementById('blueprintTableBody');
@@ -2792,56 +2868,69 @@
                 return;
             }
             
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Loading blueprints...</td></tr>';
-            select.innerHTML = '<option value="">-- Choose Blueprint --</option>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">Loading template files...</td></tr>';
+            select.innerHTML = '<option value="">-- Choose Template File --</option>';
             
             try {
-                console.log('[DEBUG] Fetching blueprints...');
+                console.log('[DEBUG] Fetching template files...');
                 const res = await fetch('/admin/api/super/blueprints');
-                console.log('[DEBUG] Blueprints response:', res.status, res.ok);
+                console.log('[DEBUG] Template files response:', res.status, res.ok);
                 
                 if (res.ok) {
                     const data = await res.json();
-                    console.log('[DEBUG] Blueprints data:', data);
+                    console.log('[DEBUG] Template files data:', data);
                     tbody.innerHTML = '';
                     
                     if (data.blueprints && data.blueprints.length > 0) {
+                        // Group by template_file to show unique files only
+                        const files = {};
                         data.blueprints.forEach(bp => {
+                            const fileName = bp.template_file || bp.name || 'unknown';
+                            if (!files[fileName]) {
+                                files[fileName] = { name: fileName, count: 0 };
+                            }
+                            files[fileName].count++;
+                        });
+                        
+                        // Populate table and dropdown with file names only
+                        Object.values(files).forEach(file => {
                             // Add to table
                             const tr = document.createElement('tr');
-                            const phrases = (bp.phrases || []).slice(0, 2).join(', ');
                             tr.innerHTML = `
-                                <td><strong>${bp.name || ''}</strong></td>
-                                <td>${bp.category || ''}</td>
-                                <td><span style="font-size:0.85rem; color:var(--text-secondary);">${phrases}${bp.phrases && bp.phrases.length > 2 ? '...' : ''}</span></td>
+                                <td><strong>${file.name}</strong></td>
+                                <td>${file.count} intents</td>
+                                <td><span style="font-size:0.85rem; color:var(--text-secondary);">Template file</span></td>
                                 <td style="text-align: right;">
-                                    <button class="btn-icon" title="Edit" onclick="editBlueprint('${bp.id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-icon" style="color: var(--danger);" title="Delete" onclick="deleteBlueprint('${bp.id}')"><i class="fas fa-trash"></i></button>
+                                    <button class="btn-icon" title="View" onclick="viewTemplateFile('${file.name}')"><i class="fas fa-eye"></i></button>
                                 </td>
                             `;
                             tbody.appendChild(tr);
                             
                             // Add to assignment dropdown
                             const opt = document.createElement('option');
-                            opt.value = bp.id;
-                            opt.textContent = bp.name;
+                            opt.value = file.name;
+                            opt.textContent = file.name;
                             select.appendChild(opt);
                         });
-                        console.log('[DEBUG] Successfully loaded', data.blueprints.length, 'blueprints');
+                        console.log('[DEBUG] Successfully loaded', Object.keys(files).length, 'template files');
                     } else {
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-secondary);">No blueprint intents found.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-secondary);">No template files found.</td></tr>';
                     }
                 } else {
                     console.error('[ERROR] API Response not ok:', res.status);
-                    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Failed to load blueprints (Status: ' + res.status + ')</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Failed to load template files (Status: ' + res.status + ')</td></tr>';
                 }
             } catch (e) {
                 console.error('[ERROR] loadBlueprints exception:', e);
-                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Failed to load blueprints: ' + e.message + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Failed to load template files: ' + e.message + '</td></tr>';
             }
             
             // Load clients for assignment
             await loadClientsForAssignment();
+        };
+
+        window.viewTemplateFile = function(fileName) {
+            showToast('Template: ' + fileName, 'info');
         };
 
         window.loadClientsForAssignment = async function() {
@@ -3031,38 +3120,129 @@
             
             if (!clientId) return;
             
-            // Show template selection
+            // Show template selection - blueprint dropdown is already populated by loadBlueprints()
             templateCard.style.display = 'block';
             
+            // Load assigned intents for this client
+            await window.loadAssignedIntentsForClient(clientId);
+        };
+
+        // Load assigned intents for the selected client
+        window.loadAssignedIntentsForClient = async function(clientId) {
+            const tbody = document.getElementById('blueprintTableBody');
+            const headerTitle = document.getElementById('assignedIntentsHeader');
+            const reloadBtn = document.getElementById('reloadAssignedBtn');
+            
+            if (!tbody) return;
+            
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;"><i class="fas fa-spinner fa-spin"></i> Loading assigned files...</td></tr>';
+            
             try {
-                // Load available templates
-                const res = await fetch('/admin/api/super/blueprint-files');
-                if (res.ok) {
-                    const data = await res.json();
-                    const select = document.getElementById('templateFileSelectForAssign');
-                    select.innerHTML = '<option value="">-- Choose a Template File --</option>';
-                    
-                    if (data.files && data.files.length > 0) {
-                        data.files.forEach(file => {
-                            const opt = document.createElement('option');
-                            opt.value = file.filename;
-                            opt.textContent = file.filename;
-                            select.appendChild(opt);
-                        });
-                    }
+                // Get client name for header
+                const clientSelect = document.getElementById('clientSelectForBlueprint');
+                const selectedOption = clientSelect.options[clientSelect.selectedIndex];
+                const clientName = selectedOption.text;
+                
+                // Update header
+                if (headerTitle) {
+                    headerTitle.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success);"></i> Assigned Template Files for <strong>${clientName}</strong>`;
                 }
-            } catch (err) {
-                console.error('[ERROR] Failed to load templates:', err);
+                
+                // Show reload button
+                if (reloadBtn) {
+                    reloadBtn.style.display = 'inline-block';
+                }
+                
+                const res = await fetch(`/admin/api/client/intents?site_id=${clientId}`);
+                
+                if (!res.ok) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--danger);">Failed to load intents</td></tr>';
+                    return;
+                }
+                
+                const data = await res.json();
+                const intents = data.intents || [];
+                
+                if (intents.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-secondary);">No template files assigned yet. Assign a blueprint above.</td></tr>';
+                    return;
+                }
+                
+                // Group intents by template file
+                const fileMap = {};
+                intents.forEach(intent => {
+                    const fileName = intent.template_file || intent.source_file || 'Unknown';
+                    if (!fileMap[fileName]) {
+                        fileMap[fileName] = {
+                            fileName: fileName,
+                            intents: [],
+                            assignedDate: intent.created_at || new Date().toLocaleDateString()
+                        };
+                    }
+                    fileMap[fileName].intents.push(intent);
+                });
+                
+                tbody.innerHTML = '';
+                Object.values(fileMap).forEach(file => {
+                    const tr = document.createElement('tr');
+                    const intentCount = file.intents.length;
+                    const assignedDate = file.assignedDate ? new Date(file.assignedDate).toLocaleDateString() : 'Unknown';
+                    
+                    tr.innerHTML = `
+                        <td><strong>${file.fileName}</strong></td>
+                        <td style="text-align: center;">${intentCount}</td>
+                        <td><small>${assignedDate}</small></td>
+                        <td style="text-align: right;">
+                            <button class="btn-icon" title="View Details" onclick="viewFileDetails('${file.fileName}', ${clientId})"><i class="fas fa-eye"></i></button>
+                            <button class="btn-icon" style="color: var(--danger);" title="Remove" onclick="removeFileFromClient('${file.fileName}', '${clientName}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error('[ERROR] loadAssignedIntentsForClient:', e);
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--danger);">Error: ' + e.message + '</td></tr>';
             }
+        };
+
+        // Reload assigned intents for current client
+        window.reloadAssignedIntentsForClient = async function() {
+            const clientId = document.getElementById('clientSelectForBlueprint').value;
+            if (clientId) {
+                await window.loadAssignedIntentsForClient(clientId);
+            }
+        };
+
+        // View intent details
+        window.viewIntentDetails = function(intentId) {
+            showToast('Intent ID: ' + intentId, 'info');
+        };
+
+        // View file details (shows all intents in that file)
+        window.viewFileDetails = function(fileName, clientId) {
+            showToast(`File: ${fileName}`, 'info');
+        };
+
+        // Remove file from client
+        window.removeFileFromClient = async function(fileName, clientName) {
+            if (!confirm(`Remove ${fileName} from ${clientName}?`)) return;
+            showToast(`Removing ${fileName}...`, 'info');
+            // API call would go here to remove the file from client
         };
 
         // Blueprint template selection handler
         window.onBlueprintTemplateSelected = async function() {
-            const templateFile = document.getElementById('templateFileSelectForAssign').value;
+            const blueprintId = document.getElementById('blueprintSelectAssign').value;
             const assignBtn = document.getElementById('assignBlueprintBtn');
             
-            // Enable assign button
-            assignBtn.disabled = !templateFile;
+            // Enable assign button when a blueprint is selected
+            assignBtn.disabled = !blueprintId;
+            
+            // If a blueprint is selected, show file info
+            if (blueprintId) {
+                const fileInfoCard = document.getElementById('fileInfoCard');
+                fileInfoCard.style.display = 'block';
+            }
         };
 
         // Toggle intents visibility
@@ -3273,99 +3453,83 @@
 
         window.assignBlueprintToClient = async function() {
             const clientId = document.getElementById('clientSelectForBlueprint').value;
-            const templateFileName = document.getElementById('templateFileSelectForAssign').value;
+            const fileName = document.getElementById('blueprintSelectAssign').value;
             const fileInfoCard = document.getElementById('fileInfoCard');
-            const assignedIntentsCard = document.getElementById('assignedIntentsCard');
-            const tbody = document.getElementById('assignedIntentsTableBody');
             
-            if (!clientId || !templateFileName) {
+            if (!clientId || !fileName) {
                 showToast('Please select both client and template file', 'error');
                 return;
             }
 
             try {
-                // Load template file to get intents
-                const res = await fetch(`/admin/api/super/blueprint-files/${templateFileName}`);
+                // Show file info card
+                fileInfoCard.style.display = 'block';
+                document.getElementById('fileNameDisplay').textContent = fileName;
+                document.getElementById('assignedDateDisplay').textContent = new Date().toLocaleDateString();
+                document.getElementById('assignedFileNameDisplay').textContent = fileName;
                 
+                // Get all blueprint intents from the selected template file
+                const res = await fetch('/admin/api/super/blueprints');
                 if (!res.ok) {
-                    showToast('Failed to load template file', 'error');
+                    showToast('Failed to load template file intents', 'error');
                     return;
                 }
                 
                 const data = await res.json();
-                const intents = data.intents || [];
+                const blueprints = data.blueprints || [];
                 
-                if (intents.length === 0) {
-                    showToast('No intents in template file', 'error');
+                // Filter intents that belong to this template file
+                const intentsToAssign = blueprints.filter(bp => (bp.template_file || bp.name) === fileName);
+                
+                if (intentsToAssign.length === 0) {
+                    document.getElementById('intentCountDisplay').textContent = '0 intents';
+                    showToast('No intents found in template file', 'info');
                     return;
                 }
                 
-                // Assign all intents
+                document.getElementById('intentCountDisplay').textContent = intentsToAssign.length + ' intents';
+                
+                // Assign each intent to the client
                 let successCount = 0;
                 let failedCount = 0;
                 
-                for (const intent of intents) {
+                for (const blueprint of intentsToAssign) {
                     try {
-                        const postRes = await fetch(`/admin/api/super/sites/${clientId}/assign-intent`, {
+                        const assignRes = await fetch(`/admin/api/super/sites/${clientId}/assign-intent`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                intent_name: intent.name || intent.intent_name,
-                                intent_type: intent.type || 'INFO',
-                                sector: intent.sector || 'general',
-                                phrases: intent.phrases || [],
-                                response: intent.response || '',
-                                template_file: templateFileName
+                            body: JSON.stringify({
+                                intent_name: blueprint.name || blueprint.intent_name,
+                                intent_type: blueprint.intent_type || blueprint.type || 'INFO',
+                                sector: blueprint.category || blueprint.sector || 'general',
+                                phrases: blueprint.phrases || [],
+                                response: blueprint.response || '',
+                                template_file: fileName
                             })
                         });
 
-                        if (postRes.ok) {
+                        if (assignRes.ok) {
                             successCount++;
                         } else {
                             failedCount++;
+                            console.error('Failed to assign intent:', blueprint.name);
                         }
                     } catch (err) {
                         failedCount++;
+                        console.error('Assignment error for', blueprint.name, ':', err);
                     }
                 }
                 
-                // Show file info card
-                fileInfoCard.style.display = 'block';
-                document.getElementById('fileNameDisplay').textContent = templateFileName;
-                document.getElementById('intentCountDisplay').textContent = successCount + ' / ' + intents.length;
-                document.getElementById('assignedDateDisplay').textContent = new Date().toLocaleDateString();
-                document.getElementById('assignedFileNameDisplay').textContent = templateFileName;
+                // Reload the assigned intents list at the bottom
+                await window.loadAssignedIntentsForClient(clientId);
                 
-                // Populate intents table
-                tbody.innerHTML = '';
-                intents.forEach((intent, idx) => {
-                    const intentName = intent.name || intent.intent_name;
-                    const createdDate = new Date().toLocaleDateString();
-                    const tr = document.createElement('tr');
-                    const fileDisplay = idx === 0 ? `<strong>${templateFileName}</strong>` : '';
-                    
-                    tr.innerHTML = `
-                        <td>${fileDisplay}</td>
-                        <td><strong>${intentName}</strong></td>
-                        <td>${intent.type || 'N/A'}</td>
-                        <td><small>${createdDate}</small></td>
-                        <td style="text-align: right;">
-                            <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="deleteAssignedIntent(${clientId}, '${intentName}')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-                
-                // Show success message
-                if (successCount === intents.length) {
-                    showToast(`✓ All ${successCount} intents assigned successfully!`);
+                if (successCount > 0) {
+                    showToast(`✓ Assigned ${successCount} intents from ${fileName}!`, 'success');
                 } else {
-                    showToast(`✓ ${successCount} intents assigned, ${failedCount} failed`, 'warning');
+                    showToast(`Failed to assign intents from ${fileName}`, 'error');
                 }
             } catch (err) {
-                showToast('Error assigning template: ' + err.message, 'error');
+                showToast('Error assigning file: ' + err.message, 'error');
                 console.error('[ERROR] assignBlueprintToClient:', err);
             }
         };
@@ -3503,7 +3667,7 @@
             
             // Load templates if switching to blueprints tab
             if (tabName === 'blueprints') {
-                window.loadAvailableTemplates && window.loadAvailableTemplates();
+                window.loadBlueprints && window.loadBlueprints();
             }
             
             // Load templates if switching to templates tab
@@ -3708,7 +3872,19 @@
             tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
             
             try {
-                const res = await fetch('/admin/api/unknown/list');
+                let url = '/admin/api/unknown/unmapped?limit=50';
+                const selectedSite = document.getElementById('unknownSiteFilter')?.value;
+                if (selectedSite) {
+                    url += `&site_id=${encodeURIComponent(selectedSite)}`;
+                    console.log('[UNKNOWN] Fetching unknowns for site:', selectedSite);
+                } else {
+                    console.log('[UNKNOWN] Fetching unknowns for current user site (no filter selected)');
+                }
+                
+                const res = await fetch(url, {
+                    credentials: 'include'
+                });
+                console.log('[UNKNOWN] API Response status:', res.status);
                 
                 if (!res.ok) {
                     throw new Error(`HTTP ${res.status}`);
@@ -3716,6 +3892,7 @@
                 
                 const data = await res.json();
                 const unknownQueries = data.unknowns || [];
+                console.log('[UNKNOWN] Loaded', unknownQueries.length, 'unknown queries');
                 
                 if (unknownQueries.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--success);"><i class="fas fa-check-circle"></i> No unknown queries! All user messages are mapped.</td></tr>';
@@ -3741,23 +3918,25 @@
                 // Update stat cards
                 document.getElementById('totalUnknownCount').textContent = totalCount;
                 document.getElementById('uniquePatternCount').textContent = uniqueCount;
-                document.getElementById('mostFrequentQuery').textContent = mostFrequent.query?.substring(0, 40) || '(N/A)';
+                document.getElementById('mostFrequentQuery').textContent = mostFrequent.message?.substring(0, 40) || '(N/A)';
                 document.getElementById('llmFallbackRate').textContent = '~' + Math.round((totalCount / (totalCount + 50)) * 100) + '%';
                 
                 // Render table rows
                 tbody.innerHTML = '';
                 unknownQueries.forEach((q, idx) => {
                     const lastSeen = q.last_seen ? new Date(q.last_seen).toLocaleString() : 'Unknown';
-                    const suggestedIntent = q.suggested_intent || '(No suggestion)';
+                    const suggestedIntent = q.similarity_suggestions && q.similarity_suggestions.length > 0 
+                        ? q.similarity_suggestions[0].intent_name 
+                        : '(No suggestion)';
                     
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td><strong>${escapeHtml(q.query)}</strong></td>
+                        <td><strong>${escapeHtml(q.message)}</strong></td>
                         <td style="text-align: center; font-weight: 600; color: var(--danger);">${q.count || 0}</td>
                         <td><small>${lastSeen}</small></td>
                         <td><small style="background: var(--primary-light); padding: 0.25rem 0.5rem; border-radius: 4px;">${suggestedIntent}</small></td>
                         <td style="text-align: right;">
-                            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="openUnknownMapModal('${escapeHtml(q.query)}', ${q.count})">
+                            <button class="btn btn-primary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;" onclick="openUnknownMapModal('${escapeHtml(q.message)}', ${q.count})">
                                 <i class="fas fa-link"></i> Map
                             </button>
                         </td>
@@ -3769,6 +3948,50 @@
             } catch (err) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);"><i class="fas fa-exclamation-circle"></i> Failed to load queries: ' + err.message + '</td></tr>';
                 console.error('[ERROR] loadUnknownQueries:', err);
+            }
+        };
+
+        window.loadSitesForUnknownFilter = async function() {
+            const select = document.getElementById('unknownSiteFilter');
+            if (!select) return;
+            
+            try {
+                const res = await fetch('/admin/api/super/sites');
+                
+                if (res.status === 401) {
+                    console.warn('[UNKNOWN FILTER] Super admin authentication required - loading all unknowns for current site');
+                    select.innerHTML = '<option value="">-- Current Site --</option>';
+                    // Will use session site_id fallback
+                    return;
+                }
+                
+                if (res.status === 403) {
+                    console.warn('[UNKNOWN FILTER] Access denied - not a super admin');
+                    select.innerHTML = '<option value="">-- Current Site (limited view) --</option>';
+                    return;
+                }
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    const sites = data.sites || [];
+                    
+                    select.innerHTML = '<option value="">-- All Sites --</option>';
+                    sites.forEach(site => {
+                        const opt = document.createElement('option');
+                        opt.value = site.id;
+                        opt.textContent = site.name;
+                        select.appendChild(opt);
+                    });
+                    console.log('[UNKNOWN FILTER] Loaded ' + sites.length + ' sites');
+                } else {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+            } catch (e) {
+                console.error('[ERROR] loadSitesForUnknownFilter:', e);
+                const select = document.getElementById('unknownSiteFilter');
+                if (select) {
+                    select.innerHTML = '<option value="">-- Error loading sites --</option>';
+                }
             }
         };
 
@@ -3943,6 +4166,7 @@
                 originalSwitchTab(tabName, element);
             }
             if (tabName === 'unknown-intelligence') {
+                window.loadSitesForUnknownFilter && window.loadSitesForUnknownFilter();
                 loadUnknownQueries();
             }
             if (tabName === 'health') {

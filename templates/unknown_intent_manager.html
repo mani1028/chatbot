@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unknown Intent Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --secondary: #64748b;
+            --bg-light: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-secondary: #64748b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-main);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: var(--bg-light);
+            border-bottom: 1px solid var(--border);
+            padding: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: 1.25rem;
+            margin: 0;
+        }
+
+        .refresh-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .panel-content {
+            padding: 0;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .unknown-item {
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .unknown-item:hover {
+            background: var(--bg-light);
+        }
+
+        .unknown-item.selected {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary);
+            padding-left: calc(1rem - 4px);
+        }
+
+        .unknown-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .unknown-message {
+            font-weight: 500;
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .count-badge {
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .unknown-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .fallback-type {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-light);
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .detail-view {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-empty {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .detail-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .detail-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .detail-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .detail-section {
+            margin-bottom: 2rem;
+        }
+
+        .detail-section-title {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+
+        .message-box {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            word-break: break-word;
+            font-style: italic;
+            color: #555;
+        }
+
+        .llm-response {
+            background: #f0fdf4;
+            border-left: 4px solid var(--success);
+            padding: 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #1b5e20;
+        }
+
+        .suggestions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .suggestion-item {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggestion-item:hover {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .suggestion-info {
+            flex: 1;
+        }
+
+        .suggestion-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .suggestion-score {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .suggestion-button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .suggestion-button:hover {
+            background: #1d4ed8;
+        }
+
+        .detail-footer {
+            border-top: 1px solid var(--border);
+            padding: 1.5rem;
+            background: var(--bg-light);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .map-button {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .map-button:hover {
+            background: #059669;
+        }
+
+        .map-button:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .cancel-button {
+            background: var(--border);
+            color: var(--text-main);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .cancel-button:hover {
+            background: #cbd5e1;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease-out;
+            z-index: 1000;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+            color: #1b5e20;
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+            color: #7f1d1d;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .resolved-badge {
+            background: var(--success);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔍 Unknown Intent Manager</h1>
+            <p>Review unmapped user queries and train your knowledge base</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalCount">—</div>
+                <div class="stat-label">Total Unknown</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="unmappedCount">—</div>
+                <div class="stat-label">Unmapped</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="coverageRate">—</div>
+                <div class="stat-label">Coverage %</div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- List Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>📋 Unmapped Queries</h2>
+                    <button class="refresh-btn" onclick="loadUnmappedUnknowns()">Refresh</button>
+                </div>
+                <div class="panel-content" id="unknownsList">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        Loading queries...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail Panel -->
+            <div class="panel" id="detailPanel">
+                <div class="detail-empty" id="detailEmpty">
+                    ← Select a query to review
+                </div>
+                <div class="detail-content" id="detailContent" style="display: none;">
+                    <div class="detail-header" id="detailHeader"></div>
+                    <div class="detail-body" id="detailBody"></div>
+                    <div class="detail-footer" id="detailFooter"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for intent selection -->
+    <div class="modal-overlay" id="intentsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 style="margin: 0;">Select Target Intent</h3>
+            </div>
+            <div class="modal-body" id="intentsModalBody">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    Loading intents...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let unknowns = [];
+        let selectedLog = null;
+        let selectedIntentId = null;
+        let autoTrain = true;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUnmappedUnknowns();
+            loadStats();
+        });
+
+        // Load unmapped unknowns
+        async function loadUnmappedUnknowns() {
+            try {
+                const res = await fetch('/admin/api/unknown/unmapped?limit=50');
+                const data = await res.json();
+                
+                if (!data.success) {
+                    showToast('Error loading queries', 'error');
+                    return;
+                }
+                
+                unknowns = data.unknowns || [];
+                renderUnknownsList();
+            } catch (err) {
+                console.error('Error loading unknowns:', err);
+                showToast('Failed to load queries', 'error');
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const res = await fetch('/admin/api/unknown/stats');
+                const data = await res.json();
+                
+                if (!data.success) return;
+                
+                const stats = data.stats || {};
+                document.getElementById('totalCount').textContent = stats.total_fallbacks || 0;
+                document.getElementById('unmappedCount').textContent = stats.unmapped_count || 0;
+                document.getElementById('coverageRate').textContent = 
+                    ((stats.coverage || 0) * 100).toFixed(0) + '%';
+            } catch (err) {
+                console.error('Error loading stats:', err);
+            }
+        }
+
+        // Render unknowns list
+        function renderUnknownsList() {
+            const listEl = document.getElementById('unknownsList');
+            
+            if (!unknowns.length) {
+                listEl.innerHTML = '<div class="detail-empty">✅ All queries mapped!</div>';
+                return;
+            }
+            
+            listEl.innerHTML = unknowns.map(u => `
+                <div class="unknown-item ${selectedLog?.id === u.id ? 'selected' : ''}" 
+                     onclick="selectUnknown(${JSON.stringify(u).replace(/"/g, '&quot;')})">
+                    <div class="unknown-item-header">
+                        <div class="unknown-message">${escapeHtml(u.message)}</div>
+                        <div class="count-badge">${u.count}x</div>
+                    </div>
+                    <div class="unknown-meta">
+                        <span class="fallback-type">${u.fallback_type || 'llm'}</span>
+                        <span>${new Date(u.first_seen).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Select unknown to review
+        async function selectUnknown(unknown) {
+            selectedLog = unknown;
+            selectedIntentId = null;
+            renderUnknownsList();
+            
+            try {
+                const res = await fetch(`/admin/api/unknown/log/${unknown.id}`);
+                const data = await res.json();
+                
+                if (!data.success) {
+                    showToast('Error loading details', 'error');
+                    return;
+                }
+                
+                const log = data.log;
+                renderDetailView(log);
+            } catch (err) {
+                console.error('Error loading detail:', err);
+                showToast('Failed to load details', 'error');
+            }
+        }
+
+        // Render detail view
+        function renderDetailView(log) {
+            const panel = document.getElementById('detailPanel');
+            const empty = document.getElementById('detailEmpty');
+            const content = document.getElementById('detailContent');
+            
+            empty.style.display = 'none';
+            content.style.display = 'flex';
+            
+            // Header
+            document.getElementById('detailHeader').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="margin: 0 0 0.5rem 0;">User Message</h3>
+                        <div class="message-box">"${escapeHtml(log.message)}"</div>
+                    </div>
+                    ${log.resolved ? '<div class="resolved-badge">✓ Mapped</div>' : ''}
+                </div>
+            `;
+            
+            // Body
+            let bodyHTML = `
+                <div class="detail-section">
+                    <div class="detail-section-title">Context</div>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                        <div>Triggered: ${new Date(log.created_at).toLocaleString()}</div>
+                        <div>Type: ${log.fallback_type || 'llm'}</div>
+                        <div>Frequency: ${selectedLog.count} times</div>
+                    </div>
+                </div>
+            `;
+            
+            if (log.llm_response) {
+                bodyHTML += `
+                    <div class="detail-section">
+                        <div class="detail-section-title">AI Fallback Response</div>
+                        <div class="llm-response">"${escapeHtml(log.llm_response)}"</div>
+                    </div>
+                `;
+            }
+            
+            if (log.similarity_suggestions && log.similarity_suggestions.length) {
+                bodyHTML += `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Suggested Intents</div>
+                        <div class="suggestions-list">
+                            ${log.similarity_suggestions.map(s => `
+                                <div class="suggestion-item" onclick="selectIntentSuggestion(${s.intent_id})">
+                                    <div class="suggestion-info">
+                                        <div class="suggestion-name">${escapeHtml(s.intent_name)}</div>
+                                        <div class="suggestion-score">
+                                            Match: ${(s.match_score * 100).toFixed(0)}%
+                                        </div>
+                                    </div>
+                                    <button class="suggestion-button">Map</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('detailBody').innerHTML = bodyHTML;
+            
+            // Footer
+            if (!log.resolved) {
+                document.getElementById('detailFooter').innerHTML = `
+                    <div style="width: 100%; display: flex; flex-direction: column; gap: 1rem;">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="autoTrainCheck" ${autoTrain ? 'checked' : ''} 
+                                   onchange="autoTrain = this.checked">
+                            <span>Auto-train phrase</span>
+                        </label>
+                        <div style="display: flex; gap: 1rem;">
+                            <button class="map-button" onclick="showIntentsModal(${log.id})">
+                                Map to Intent
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('detailFooter').innerHTML = `
+                    <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                        ✓ Mapped to intent on ${new Date(log.mapped_at).toLocaleString()}
+                        ${log.phrase_auto_trained ? '<br>✓ Phrase was auto-trained' : ''}
+                    </div>
+                `;
+            }
+        }
+
+        // Select suggested intent
+        function selectIntentSuggestion(intentId) {
+            selectedIntentId = intentId;
+            mapUnknownToIntent(selectedLog.id, intentId, autoTrain);
+        }
+
+        // Show intents modal
+        async function showIntentsModal(logId) {
+            try {
+                const modal = document.getElementById('intentsModal');
+                const body = document.getElementById('intentsModalBody');
+                
+                // Load available intents
+                const res = await fetch('/admin/api/intents');
+                const data = await res.json();
+                
+                if (!data.success) {
+                    showToast('Error loading intents', 'error');
+                    return;
+                }
+                
+                const intents = data.intents || [];
+                body.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 400px; overflow-y: auto;">
+                        ${intents.map(intent => `
+                            <div class="suggestion-item" 
+                                 onclick="mapUnknownToIntent(${logId}, ${intent.id}, ${autoTrain}); closeModal()">
+                                <div class="suggestion-info">
+                                    <div class="suggestion-name">${escapeHtml(intent.intent_name)}</div>
+                                    <div class="suggestion-score">${intent.phrases.length} phrases</div>
+                                </div>
+                                <button class="suggestion-button">Select</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                modal.classList.add('active');
+            } catch (err) {
+                console.error('Error loading intents:', err);
+                showToast('Failed to load intents', 'error');
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('intentsModal').classList.remove('active');
+        }
+
+        // Map unknown to intent
+        async function mapUnknownToIntent(logId, intentId, autoTrain) {
+            try {
+                const res = await fetch('/admin/api/unknown/map', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        unknown_log_id: logId,
+                        intent_id: intentId,
+                        auto_train_phrases: autoTrain
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (!data.success) {
+                    showToast('Error: ' + data.message, 'error');
+                    return;
+                }
+                
+                showToast(data.message, 'success');
+                
+                // Refresh list
+                await loadUnmappedUnknowns();
+                await loadStats();
+                
+                // Clear detail
+                selectedLog = null;
+                document.getElementById('detailEmpty').style.display = 'block';
+                document.getElementById('detailContent').style.display = 'none';
+            } catch (err) {
+                console.error('Error mapping:', err);
+                showToast('Failed to map unknown', 'error');
+            }
+        }
+
+        // Utility: Show toast
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Utility: Escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+</body>
+</html>

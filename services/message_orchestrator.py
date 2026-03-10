@@ -28,6 +28,7 @@ from services.generic_workflow_engine import get_workflow_engine
 from services.intent_service import detect_intent_only, llm_fallback
 from services.multi_tenant_control import get_site_control
 from services.conversation_analytics import ConversationScorer
+from services.timing_profiler import TimingProfiler
 from config import classify_confidence, FRUSTRATION_ESCALATION_THRESHOLD, ensure_thread_integrity
 from database import db
 import logging
@@ -113,6 +114,10 @@ class MessageOrchestrator:
             }
         """
         try:
+            # Initialize timing profiler
+            profiler = TimingProfiler()
+            profiler.request_id = str(uuid.uuid4())[:8]
+            
             # Initialize metrics tracking for Phase 1 analytics
             self._request_start_time = time.time()
             self._request_message_id = str(uuid.uuid4())
@@ -124,19 +129,27 @@ class MessageOrchestrator:
             self._request_llm_end_time = None
             
             # STAGE 1: Load thread
+            profiler.start_stage("load_thread")
             thread = self._load_or_create_thread(site_id, session_id)
+            profiler.end_stage("load_thread")
             
             # STAGE 2: Append user message to thread
+            profiler.start_stage("append_message")
             self._append_user_message(thread, message)
             thread.execution_trace.append("user_message_appended")
+            profiler.end_stage("append_message")
             
             # STAGE 3: Run rule engine (hard stop check)
+            profiler.start_stage("rule_engine")
             rule_result = self._run_rules(thread)
+            profiler.end_stage("rule_engine")
+            
             if rule_result.hard_stop:
                 thread.execution_trace.append(f"rule_engine_hard_stop:{rule_result.action}")
                 thread.escalation_triggered = True
                 thread.recommendation = rule_result.action
                 thread.escalation_reason = rule_result.reason
+                profiler.log_summary()
                 return self._finalize(thread, override_reply=rule_result.reply)
             
             thread.execution_trace.append("rule_engine_passed")
@@ -187,13 +200,36 @@ class MessageOrchestrator:
             
             # Only run detection if confirmation didn't already set result
             if intent_result is None:
+                profiler.start_stage("intent_detection")
                 intent_result = self._detect_intent(thread, message)
+                profiler.end_stage("intent_detection")
+                
                 thread.execution_trace.append(f"intent_detected:{intent_result.name or 'unknown'}")
                 
                 # Store detected intent for response building
                 if intent_result.name:
                     thread.last_detected_intent = intent_result.name
                     thread.last_intent_confidence = intent_result.confidence
+                    
+                    # FETCH INTENT RESPONSE FROM DATABASE
+                    profiler.start_stage("intent_response_lookup")
+                    from models.intent import Intent
+                    from sqlalchemy import or_
+                    intent_obj = Intent.query.filter(
+                        or_(Intent.site_id == 0, Intent.site_id == thread.site_id),
+                        Intent.intent_name == intent_result.name
+                    ).first()
+                    profiler.end_stage("intent_response_lookup")
+                    
+                    if intent_obj and intent_obj.response:
+                        profiler.start_stage("template_substitution")
+                        thread.pending_reply = intent_obj.response
+                        # Substitute template variables with site configuration
+                        from services.response_formatter import substitute_template_variables
+                        thread.pending_reply = substitute_template_variables(thread.pending_reply, thread.site_id)
+                        profiler.end_stage("template_substitution")
+                        thread.execution_trace.append(f"intent_response_loaded:{intent_result.name}")
+
             
             # Store intent result for metrics logging
             self._request_intent_result = intent_result
@@ -588,7 +624,9 @@ class MessageOrchestrator:
             user_messages = [m for m in thread.short_term_messages 
                            if m.get("role") == "user"]
             if not thread.last_detected_intent and user_messages:
-                thread.unknown_intent_count += 1
+                # Handle None values from old database records
+                current_count = thread.unknown_intent_count or 0
+                thread.unknown_intent_count = current_count + 1
             
         except Exception as e:
             logger.warning(f"Analytics error: {e}")

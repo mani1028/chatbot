@@ -5,7 +5,7 @@ from models.plan import Plan, Subscription
 from services.chat_service import process_message
 from database import db, limiter
 from datetime import datetime
-from models import LeadCapture
+from models import LeadCapture, ContactRequest
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from models.chat_log import ChatLog
@@ -254,3 +254,74 @@ def get_chat_history():
 
     # Ensure the response is always an array
     return jsonify(history if history else []), 200
+
+
+# Contact agent endpoint to submit contact requests
+@chat_bp.route('/contact-agent', methods=['POST'])
+@limiter.limit("20 per hour")
+def submit_contact_request():
+    """
+    Submit a contact request to reach out to an agent.
+    
+    Request JSON:
+    {
+        "site_key": "public_key_here",
+        "session_id": "session_id",
+        "user_name": "John Doe",
+        "user_email": "john@example.com",
+        "message": "I need to speak with an agent",
+        "priority": "normal" (low, normal, high, urgent)
+    }
+    """
+    data = request.get_json()
+    
+    # Validate required fields
+    user_name = data.get('user_name', '').strip()
+    user_email = data.get('user_email', '').strip()
+    message = data.get('message', '').strip()
+    priority = data.get('priority', 'normal').lower()
+    public_key = data.get('site_key')
+    session_id = data.get('session_id')
+    
+    if not all([user_name, user_email, message, public_key]):
+        return jsonify({'error': 'Missing required fields: user_name, user_email, message, site_key'}), 400
+    
+    # Validate priority
+    if priority not in ['low', 'normal', 'high', 'urgent']:
+        priority = 'normal'
+    
+    # Validate email format
+    import re
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, user_email):
+        return jsonify({'error': 'Invalid email format'}), 400
+    
+    # Get site
+    site = Site.query.filter_by(public_key=public_key).first()
+    if not site:
+        return jsonify({'error': 'Invalid Site Key'}), 403
+    
+    # Create contact request
+    contact_request = ContactRequest(
+        site_id=site.id,
+        session_id=session_id,
+        user_name=user_name,
+        user_email=user_email,
+        message=message,
+        priority=priority,
+        status='new'
+    )
+    
+    try:
+        db.session.add(contact_request)
+        db.session.commit()
+        return jsonify({
+            'ok': True,
+            'message': 'Your request has been submitted. An agent will contact you shortly.',
+            'request_id': contact_request.id
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        import logging
+        logging.error(f"Failed to create contact request: {e}")
+        return jsonify({'error': 'Failed to submit request'}), 500

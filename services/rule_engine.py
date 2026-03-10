@@ -173,7 +173,9 @@ class UnknownIntentRule(Rule):
         self.max_unknowns = 3
     
     def matches(self, thread: ConversationThread, user_message: str) -> bool:
-        return thread.unknown_intent_count >= self.max_unknowns
+        # Handle None values from old database records
+        unknown_count = thread.unknown_intent_count or 0
+        return unknown_count >= self.max_unknowns
     
     def execute(self, thread: ConversationThread, user_message: str) -> Dict[str, Any]:
         return {
@@ -213,16 +215,24 @@ class RuleEngine:
         
         Returns: {action, bot_reply, ...} or None if no rules match
         """
+        import time
         
         for rule in self.rules:
             try:
+                rule_start = time.time()
                 if rule.matches(thread, user_message):
-                    logger.info(f"Rule matched: {rule.name}")
+                    rule_elapsed = (time.time() - rule_start) * 1000
+                    logger.info(f"Rule matched: {rule.name} ({rule_elapsed:.2f}ms)")
                     result = rule.execute(thread, user_message)
                     result['matched_rule'] = rule.name
                     return result
+                else:
+                    rule_elapsed = (time.time() - rule_start) * 1000
+                    if rule_elapsed > 50:  # Log slow checks (>50ms)
+                        logger.debug(f"Slow rule check: {rule.name} = {rule_elapsed:.2f}ms")
             except Exception as e:
-                logger.error(f"Rule error: {rule.name} - {e}")
+                rule_elapsed = (time.time() - rule_start) * 1000
+                logger.error(f"Rule error: {rule.name} ({rule_elapsed:.2f}ms) - {e}")
                 continue
         
         return None

@@ -130,7 +130,7 @@ def process_message(site_id: int, user_message: str, session_id: str = None, pag
     
     try:
         orchestrator_result = orchestrator.process_message(
-            site_id=str(site_id),
+            site_id=site_id,  # Should be int, not str
             session_id=session_id or str(uuid.uuid4()),
             message=user_message
         )

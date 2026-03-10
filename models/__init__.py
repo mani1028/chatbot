@@ -13,6 +13,7 @@ from .intent import Intent, IntentPhrase, Workflow
 from .chat_log import ChatLog
 from .unanswered_question import UnansweredQuestion
 from .lead_capture import LeadCapture
+from .contact_request import ContactRequest
 from .client_config import ClientConfig
 from .branding_settings import BrandingSettings
 from .bot import Bot
@@ -33,6 +34,8 @@ from .webhook import WebhookConfig, WebhookLog
 # Phase 1: Fallback Reduction
 from .unknown_intent_log import UnknownIntentLog
 from .phase1_metrics import Phase1Metrics
+from .intent_confidence_weight import IntentConfidenceWeight
+from .confidence_throttle import ConfidenceThrottle
 
 # 2. Define what is accessible when someone does "from models import *"
 __all__ = [
@@ -48,6 +51,7 @@ __all__ = [
     'ChatLog',
     'UnansweredQuestion',
     'LeadCapture',
+    'ContactRequest',
     'BookingRequest',
     'ClientConfig',
     'BrandingSettings',
@@ -70,5 +74,7 @@ __all__ = [
     # Phase 1: Fallback Reduction
     'UnknownIntentLog',
     'Phase1Metrics',
+    'IntentConfidenceWeight',
+    'ConfidenceThrottle',
 ]
 

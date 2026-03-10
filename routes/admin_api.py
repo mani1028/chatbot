@@ -12,7 +12,7 @@ from database import db
 from config import CONFIDENCE_THRESHOLD
 from models import (
     Admin, Site, Plan, ClientConfig, BrandingSettings, Intent, IntentPhrase,
-    ChatLog, UnansweredQuestion, Usage, Billing, Bot, Announcement, Integration
+    ChatLog, UnansweredQuestion, Usage, Billing, Bot, Announcement, Integration, ContactRequest
 )
 from models.client import Client
 from models.end_user import EndUser
@@ -795,47 +795,68 @@ def client_branding():
 
 @admin_api.route("/client/conversations", methods=["GET"])
 def client_conversations():
+    """Optimized conversations endpoint with pagination & limit to latest only."""
     site_id = request.args.get("site_id") or session.get("site_id")
-    logs = ChatLog.query.filter_by(site_id=site_id).order_by(ChatLog.created_at.desc()).limit(50).all()
+    limit = min(int(request.args.get("limit", 50)), 100)  # Cap limit at 100
+    
+    # Only fetch the columns we need, ordered descending for latest first
+    logs = ChatLog.query.filter_by(site_id=site_id)\
+        .order_by(ChatLog.created_at.desc())\
+        .limit(limit)\
+        .all()
+    
     return jsonify({"conversations": [l.to_dict() for l in logs]})
 
 @admin_api.route("/client/analytics", methods=["GET"])
 def client_analytics():
+    """Optimized analytics endpoint: single query with aggregations."""
     site_id = request.args.get("site_id") or session.get("site_id")
     if not site_id:
         return jsonify({"error": "No site_id provided"}), 400
     
-    total_messages = ChatLog.query.filter_by(site_id=site_id).count()
-    success_count = ChatLog.query.filter(ChatLog.site_id==site_id, ChatLog.confidence >= 0.8).count()
+    # OPTIMIZATION: Combine count & success metrics in ONE query
+    stats = db.session.query(
+        func.count(ChatLog.id).label('total'),
+        func.sum(func.cast(ChatLog.confidence >= 0.8, db.Integer)).label('success')
+    ).filter(ChatLog.site_id == site_id).first()
+    
+    total_messages = stats.total or 0
+    success_count = stats.success or 0
     success_rate = round((success_count / total_messages * 100) if total_messages else 0, 1)
 
-    trending = db.session.query(ChatLog.user_message, func.count(ChatLog.user_message))\
-        .filter(ChatLog.site_id==site_id, ChatLog.user_message != '')\
+    # Get trending questions (site-specific)
+    trending = db.session.query(ChatLog.user_message, func.count(ChatLog.user_message).label('cnt'))\
+        .filter(ChatLog.site_id == site_id, ChatLog.user_message != '')\
         .group_by(ChatLog.user_message)\
         .order_by(func.count(ChatLog.user_message).desc())\
         .limit(5).all()
     
+    # Get failures (global, but could filter by site if needed)
     failures = UnansweredQuestion.query.order_by(UnansweredQuestion.times_asked.desc()).limit(5).all()
 
     return jsonify({
         "ok": True,
         "total_messages": total_messages,
         "success_rate": success_rate,
-        "trending_questions": [{'question': q, 'count': c} for q, c in trending],
+        "trending_questions": [{'question': q, 'count': cnt} for q, cnt in trending],
         "failure_points": [{'question': f.question, 'count': f.times_asked} for f in failures]
     })
 
 @admin_api.route("/client/leads", methods=["GET"])
 def client_leads():
-    """Get captured leads for the current site with name, email, and phone."""
+    """Get captured leads for the current site with name, email, and phone (optimized with limit)."""
     from models.lead_capture import LeadCapture
     site_id = request.args.get("site_id") or session.get("site_id")
+    limit = min(int(request.args.get("limit", 100)), 500)  # Cap at 500
     
     if not site_id:
         return jsonify({"leads": []})
     
-    # Query LeadCapture records instead of ChatLog
-    leads = LeadCapture.query.filter_by(site_id=int(site_id)).order_by(LeadCapture.captured_at.desc()).all()
+    # OPTIMIZATION: Add limit and only fetch latest records
+    leads = LeadCapture.query.filter_by(site_id=int(site_id))\
+        .order_by(LeadCapture.captured_at.desc())\
+        .limit(limit)\
+        .all()
     
     result = []
     for lead in leads:
@@ -848,6 +869,140 @@ def client_leads():
         })
     
     return jsonify({"leads": result})
+
+# Contact Request Endpoints
+@admin_api.route("/client/contact-requests", methods=["GET"])
+def client_contact_requests():
+    """Get all contact requests for the current site."""
+    from models.contact_request import ContactRequest
+    site_id = request.args.get("site_id") or session.get("site_id")
+    
+    if not site_id:
+        return jsonify({"contact_requests": []})
+    
+    # Get filter parameters
+    status_filter = request.args.get("status")  # Filter by status (new, viewed, etc.)
+    priority_filter = request.args.get("priority")  # Filter by priority
+    
+    query = ContactRequest.query.filter_by(site_id=int(site_id))
+    
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    if priority_filter:
+        query = query.filter_by(priority=priority_filter)
+    
+    # Order by created_at descending (newest first)
+    contact_requests = query.order_by(ContactRequest.created_at.desc()).all()
+    
+    result = []
+    for cr in contact_requests:
+        result.append(cr.to_dict())
+    
+    return jsonify({"contact_requests": result})
+
+@admin_api.route("/client/contact-requests/<int:request_id>", methods=["GET", "PUT"])
+def contact_request_detail(request_id):
+    """Get or update a specific contact request."""
+    from models.contact_request import ContactRequest
+    site_id = request.args.get("site_id") or session.get("site_id")
+    
+    if not site_id:
+        return jsonify({"error": "No site ID"}), 400
+    
+    contact_request = ContactRequest.query.filter_by(
+        id=request_id,
+        site_id=int(site_id)
+    ).first()
+    
+    if not contact_request:
+        return jsonify({"error": "Contact request not found"}), 404
+    
+    if request.method == "GET":
+        return jsonify(contact_request.to_dict())
+    
+    # PUT request - update the contact request
+    data = request.get_json() or {}
+    
+    # Allow updating status, admin_notes, and assigned_to
+    if 'status' in data:
+        contact_request.status = data['status']
+    if 'admin_notes' in data:
+        contact_request.admin_notes = data['admin_notes']
+    if 'assigned_to' in data:
+        contact_request.assigned_to = data['assigned_to']
+    
+    contact_request.updated_at = datetime.utcnow()
+    
+    try:
+        db.session.commit()
+        return jsonify(contact_request.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@admin_api.route("/client/contact-requests/stats", methods=["GET"])
+def contact_request_stats():
+    """Get statistics about contact requests."""
+    from models.contact_request import ContactRequest
+    from sqlalchemy import func
+    site_id = request.args.get("site_id") or session.get("site_id")
+    
+    if not site_id:
+        return jsonify({"stats": {}})
+    
+    site_id = int(site_id)
+    
+    # Count by status
+    status_counts = db.session.query(
+        ContactRequest.status,
+        func.count(ContactRequest.id)
+    ).filter_by(site_id=site_id).group_by(ContactRequest.status).all()
+    
+    # Count by priority
+    priority_counts = db.session.query(
+        ContactRequest.priority,
+        func.count(ContactRequest.id)
+    ).filter_by(site_id=site_id).group_by(ContactRequest.priority).all()
+    
+    total = ContactRequest.query.filter_by(site_id=site_id).count()
+    
+    return jsonify({
+        "stats": {
+            "total": total,
+            "by_status": {status: count for status, count in status_counts},
+            "by_priority": {priority: count for priority, count in priority_counts}
+        }
+    })
+
+@admin_api.route("/client/contact-requests-dashboard", methods=["GET"])
+def contact_requests_dashboard():
+    """Serve the contact requests admin dashboard page."""
+    return render_template('contact_requests_admin.html')
+
+@admin_api.route("/client/contact-requests/<int:request_id>", methods=["DELETE"])
+def delete_contact_request(request_id):
+    """Delete a contact request."""
+    from models.contact_request import ContactRequest
+    site_id = request.args.get("site_id") or session.get("site_id")
+    
+    if not site_id:
+        return jsonify({"error": "No site ID"}), 400
+    
+    contact_request = ContactRequest.query.filter_by(
+        id=request_id,
+        site_id=int(site_id)
+    ).first()
+    
+    if not contact_request:
+        return jsonify({"error": "Contact request not found"}), 404
+    
+    try:
+        db.session.delete(contact_request)
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 @admin_api.route("/client/config", methods=["GET", "POST"])
 def client_config():
@@ -927,11 +1082,18 @@ def client_intents():
                 db.session.add(IntentPhrase(intent_id=new_intent.id, phrase=p))
         db.session.commit()
         return jsonify({"success": True})
-        
-    intents = Intent.query.filter_by(site_id=site_id).all()
+    
+    # OPTIMIZATION: Use selectinload to avoid N+1 queries when accessing intent.phrases
+    from sqlalchemy.orm import selectinload
+    intents = Intent.query.filter_by(site_id=site_id)\
+        .options(selectinload(Intent.phrases))\
+        .all()
+    
     def intent_to_dict_full(i):
         d = i.to_dict() if hasattr(i, 'to_dict') else {}
         d['intent_type'] = getattr(i, 'intent_type', None)
+        d['template_file'] = getattr(i, 'template_file', None)
+        d['created_at'] = i.created_at.isoformat() if hasattr(i, 'created_at') and i.created_at else None
         d['config_required'] = getattr(i, 'config_required', [])
         return d
     return jsonify({"intents": [intent_to_dict_full(i) for i in intents]})
@@ -954,18 +1116,27 @@ def list_template_files():
                     with open(filepath, 'r', encoding='utf-8') as file_obj:
                         data = json.load(file_obj)
                         intents = data.get("intents", [])
-                        intent_preview = [{"name": i.get("intent_name"), "type": i.get("intent_type", "INFO")} for i in intents]
+                        # Handle both old and new intent formats
+                        intent_preview = []
+                        for i in intents:
+                            intent_preview.append({
+                                "name": i.get("intent_name") or i.get("tag", "unknown"),
+                                "type": i.get("intent_type", "INFO")
+                            })
                         files_data.append({
                             "filename": f,
-                            "template_name": data.get("template_name", f),
-                            "description": data.get("description", "No description provided."),
+                            "template_name": data.get("template_name", f.replace('.json', '').replace('_', ' ').title()),
+                            "description": data.get("description", f"Template with {len(intents)} intents"),
                             "intent_count": len(intents),
                             "intents": intent_preview
                         })
-                except Exception:
+                except Exception as e:
                     files_data.append({
-                        "filename": f, "template_name": f, "description": "Invalid JSON format",
-                        "intent_count": 0, "intents": []
+                        "filename": f, 
+                        "template_name": f.replace('.json', '').replace('_', ' ').title(), 
+                        "description": "Invalid JSON format",
+                        "intent_count": 0, 
+                        "intents": []
                     })
         files_data = sorted(files_data, key=lambda x: x['filename'])
         return jsonify({"files": files_data})
@@ -1050,6 +1221,20 @@ def client_features():
     if not site_id:
         return jsonify({"error": "Missing site_id"}), 400
     return jsonify(get_site_features(int(site_id)))
+
+
+@admin_api.route("/site-features", methods=["GET"])
+def site_features_public():
+    """Public endpoint: Get site features by public_key (for widget)."""
+    site_key = request.args.get("site_key")
+    if not site_key:
+        return jsonify({"error": "Missing site_key parameter"}), 400
+    
+    site = Site.query.filter_by(public_key=site_key).first()
+    if not site:
+        return jsonify({"error": "Invalid site_key"}), 404
+    
+    return jsonify(get_site_features(site.id))
 
 
 @admin_api.route("/super/plans/<int:plan_id>/features", methods=["PUT"])
@@ -1828,20 +2013,21 @@ def import_intent_template(filename):
 # --- CLIENT: CHANNELS ---
 @admin_api.route("/client/channels", methods=["GET"])
 def get_client_channels():
-    """Get all channels for the current site"""
+    """Get all channels (integrations) for the current site"""
     site_id = session.get("site_id")
     if not site_id:
         return jsonify({"error": "Not authenticated"}), 401
     
-    # Get channels (integrations) for this site
-    integrations = Integration.query.filter_by(site_id=site_id).all()
+    # Get channels (integrations) - current Integration model is global
+    # For now, return available integration types
+    integrations = Integration.query.all()
     channels = []
     for integration in integrations:
         channels.append({
             "id": integration.id,
             "name": integration.name,
-            "type": integration.integration_type,
-            "status": "active" if integration.is_active else "inactive"
+            "type": integration.type,
+            "enabled": integration.enabled
         })
     
     return jsonify({"channels": channels})
@@ -1906,162 +2092,6 @@ def get_client_usage():
     })
 
 
-# ===== PHASE 1: FALLBACK REDUCTION - UNKNOWN INTENT MAPPING (SEMANTIC API) =====
-
-@admin_api.route('/unknown/map', methods=['POST'])
-def map_unknown_to_intent():
-    """
-    Map unknown queries to an intent (semantic API).
-    
-    Accepts human-readable strings (not IDs).
-    Handles ALL occurrences of the query.
-    Adds phrase to IntentPhrase table (native learning).
-    
-    Request: {
-        "query": "pricing insurance",      # The unmapped user query
-        "intent_name": "PRICING_INFO"      # Target intent name
-    }
-    
-    Response: {
-        "success": true,
-        "message": "Mapped X occurrences...",
-        "count_mapped": int,
-        "intent_id": int
-    }
-    """
-    site_id = session.get("site_id")
-    if not site_id:
-        return jsonify({"error": "Not authenticated"}), 401
-    
-    data = request.get_json() or {}
-    query = data.get('query', '').strip()
-    intent_name = data.get('intent_name', '').strip()
-    
-    if not query or not intent_name:
-        return jsonify({"error": "Missing query or intent_name"}), 400
-    
-    try:
-        from models import UnknownIntentLog
-        
-        # Find intent by name (flexible to support any intent)
-        intent = Intent.query.filter_by(
-            intent_name=intent_name,
-            site_id=site_id
-        ).first()
-        
-        if not intent:
-            return jsonify({"error": f"Intent '{intent_name}' not found for your tenant"}), 404
-        
-        # Find ALL unknown logs matching this query for this tenant
-        unknowns = UnknownIntentLog.query.filter(
-            UnknownIntentLog.message == query,
-            UnknownIntentLog.site_id == site_id,
-            UnknownIntentLog.resolved == False
-        ).all()
-        
-        if not unknowns:
-            return jsonify({
-                "success": False,
-                "message": f"No unmapped queries found for: '{query}'",
-                "count_mapped": 0
-            }), 404
-        
-        # Add phrase to IntentPhrase table (native learning for intent_engine)
-        existing_phrase = IntentPhrase.query.filter_by(
-            intent_id=intent.id,
-            phrase=query
-        ).first()
-        
-        if not existing_phrase:
-            phrase = IntentPhrase(
-                intent_id=intent.id,
-                phrase=query
-            )
-            db.session.add(phrase)
-        
-        # Mark ALL occurrences as resolved
-        for unknown in unknowns:
-            unknown.resolved = True
-        
-        db.session.commit()
-        
-        count_mapped = len(unknowns)
-        
-        return jsonify({
-            "success": True,
-            "message": f"✓ Mapped {count_mapped} occurrences of '{query}' to {intent_name}. Phrase added to training set.",
-            "count_mapped": count_mapped,
-            "intent_id": intent.id,
-            "intent_name": intent.intent_name,
-            "query": query
-        }), 200
-    
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
-
-@admin_api.route('/unknown/list', methods=['GET'])
-def list_unknowns():
-    """
-    List unmapped unknown queries for this site.
-    
-    Response:
-    {
-        "success": true,
-        "unknowns": [
-            {
-                "query": "what is pricing",
-                "count": 5,
-                "last_seen": "2026-03-03T12:34:56",
-                "suggested_intent": "PRICING_INFO"
-            }
-        ]
-    }
-    """
-    site_id = session.get("site_id")
-    if not site_id:
-        return jsonify({"error": "Not authenticated"}), 401
-    
-    try:
-        from models import UnknownIntentLog
-        
-        # Get unmapped unknowns, grouped by message (top 30)
-        # Query: message, count, latest timestamp
-        unknowns = db.session.query(
-            UnknownIntentLog.message,
-            func.count(UnknownIntentLog.id).label('count'),
-            func.max(UnknownIntentLog.created_at).label('last_seen')
-        ).filter(
-            UnknownIntentLog.site_id == site_id,
-            UnknownIntentLog.resolved == False
-        ).group_by(
-            UnknownIntentLog.message
-        ).order_by(
-            func.count(UnknownIntentLog.id).desc()
-        ).limit(30).all()
-        
-        result = []
-        for u_message, u_count, u_last_seen in unknowns:
-            # Optional: suggest intent (could enhance this later with similarity scoring)
-            suggested_intent = None
-            if u_message:
-                # Try to find similar existing intents
-                # For now, leave as None (UI will show as "(No suggestion)")
-                pass
-            
-            result.append({
-                "query": u_message,
-                "count": u_count,
-                "last_seen": u_last_seen.isoformat() if u_last_seen else None,
-                "suggested_intent": suggested_intent
-            })
-        
-        return jsonify({
-            "success": True,
-            "unknowns": result,
-            "total": len(result)
-        })
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+# ===== PHASE 1: FALLBACK REDUCTION - UNKNOWN INTENT MAPPING =====
+# Routes for unknown intent management are now in routes/unknown_intent_admin.py
+# Accessed at: /admin/api/unknown/*
