@@ -29,7 +29,15 @@ from services.intent_service import detect_intent_only, llm_fallback
 from services.multi_tenant_control import get_site_control
 from services.conversation_analytics import ConversationScorer
 from services.timing_profiler import TimingProfiler
-from config import classify_confidence, FRUSTRATION_ESCALATION_THRESHOLD, ensure_thread_integrity
+from services.vector_search import query_knowledge_base
+from services.fallback_optimizer import get_optimizer
+from config import (
+    classify_confidence,
+    FRUSTRATION_ESCALATION_THRESHOLD,
+    HIGH_CONFIDENCE_THRESHOLD,
+    MEDIUM_CONFIDENCE_THRESHOLD,
+    ensure_thread_integrity,
+)
 from database import db
 import logging
 
@@ -178,24 +186,23 @@ class MessageOrchestrator:
             intent_result = None
             
             if thread.pending_clarification:
-                # User responded to clarification question
-                # Tolerant matching: "yes", "yeah", "y", "yes please", etc.
-                if message.lower().startswith(('yes', 'yeah', 'y')):
-                    # User confirmed the intent
+                if self._is_affirmative(message):
                     confirmed_intent = thread.pending_clarification
                     thread.pending_clarification = None
                     thread.last_detected_intent = confirmed_intent
                     thread.last_intent_confidence = 1.0
                     
-                    # Create result directly - SKIP detection entirely
                     intent_result = IntentResult(
                         name=confirmed_intent,
                         confidence=1.0
                     )
+                    self._apply_intent_response(thread, confirmed_intent, record_weight=True)
                     thread.execution_trace.append(f"clarification_confirmed:{confirmed_intent}")
                 else:
-                    # User said no/unclear, clear pending and continue with detection
+                    # User said no/unclear — record correction then continue with detection
+                    denied = thread.pending_clarification
                     thread.pending_clarification = None
+                    self._record_clarification_correction(thread, denied)
                     thread.execution_trace.append("clarification_denied")
             
             # Only run detection if confirmation didn't already set result
@@ -206,48 +213,31 @@ class MessageOrchestrator:
                 
                 thread.execution_trace.append(f"intent_detected:{intent_result.name or 'unknown'}")
                 
-                # Store detected intent for response building
-                if intent_result.name:
+                if intent_result.name and intent_result.name != 'UNKNOWN':
+                    # Apply success-based confidence weighting
+                    intent_result = self._apply_confidence_weighting(thread, intent_result)
                     thread.last_detected_intent = intent_result.name
                     thread.last_intent_confidence = intent_result.confidence
-                    
-                    # FETCH INTENT RESPONSE FROM DATABASE
-                    profiler.start_stage("intent_response_lookup")
-                    from models.intent import Intent
-                    from sqlalchemy import or_
-                    intent_obj = Intent.query.filter(
-                        or_(Intent.site_id == 0, Intent.site_id == thread.site_id),
-                        Intent.intent_name == intent_result.name
-                    ).first()
-                    profiler.end_stage("intent_response_lookup")
-                    
-                    if intent_obj and intent_obj.response:
-                        profiler.start_stage("template_substitution")
-                        thread.pending_reply = intent_obj.response
-                        # Substitute template variables with site configuration
-                        from services.response_formatter import substitute_template_variables
-                        thread.pending_reply = substitute_template_variables(thread.pending_reply, thread.site_id)
-                        profiler.end_stage("template_substitution")
-                        thread.execution_trace.append(f"intent_response_loaded:{intent_result.name}")
+                    self._apply_intent_response(thread, intent_result.name, record_weight=True)
 
             
             # Store intent result for metrics logging
             self._request_intent_result = intent_result
             
-            # CLARIFICATION BAND (Phase 1) - Only triggers on NEW intent, not confirmations
+            # CLARIFICATION BAND — aligned with classify_confidence MEDIUM range
             if (
-                intent_result.name 
-                and 0.55 <= intent_result.confidence < 0.8
+                intent_result.name
+                and intent_result.name != 'UNKNOWN'
+                and MEDIUM_CONFIDENCE_THRESHOLD <= intent_result.confidence < HIGH_CONFIDENCE_THRESHOLD
                 and not thread.pending_clarification
                 and not thread.workflow_type
             ):
-                # Enter clarification band instead of calling LLM
+                # Prefer optimizer clarifying questions when available
+                clarifying = self._build_clarifying_question(thread, intent_result, message)
                 thread.pending_clarification = intent_result.name
-                clean_name = intent_result.name.replace('_', ' ').title()
-                thread.pending_reply = f"Did you mean '{clean_name}'?"
+                thread.pending_reply = clarifying
                 thread.execution_trace.append("clarification_band_triggered")
                 
-                # Add bot reply and finalize (skip LLM)
                 self._run_analytics(thread)
                 return self._finalize(thread)
             
@@ -255,19 +245,25 @@ class MessageOrchestrator:
             self._apply_feature_gates(thread, intent_result)
             thread.execution_trace.append("feature_gates_applied")
             
-            # STAGE 8: LLM fallback (if needed)
+            # STAGE 8: KB retrieval → throttle → LLM fallback
             if self._should_call_llm(thread, intent_result):
-                # Log unknown intent for admin mapping (Phase 1)
-                self._log_unknown_intent(thread, message)
-                
-                # Track LLM timing for metrics
-                self._request_llm_start_time = time.time()
-                llm_result = self._run_llm(thread, message)
-                self._request_llm_end_time = time.time()
-                self._request_used_llm = True
-                
-                thread.execution_trace.append("llm_invoked")
-                self._merge_llm_result(thread, llm_result)
+                if self._try_knowledge_base(thread, message):
+                    thread.execution_trace.append("knowledge_base_hit")
+                else:
+                    throttled = self._maybe_throttle_llm(thread, message, intent_result)
+                    if throttled:
+                        thread.execution_trace.append("llm_throttled")
+                    else:
+                        self._log_unknown_intent(thread, message, fallback_type='llm')
+                        
+                        self._request_llm_start_time = time.time()
+                        llm_result = self._run_llm(thread, message)
+                        self._request_llm_end_time = time.time()
+                        self._request_used_llm = True
+                        
+                        thread.execution_trace.append("llm_invoked")
+                        self._merge_llm_result(thread, llm_result)
+                        self._attach_llm_response_to_unknown_log(thread, llm_result.text)
             else:
                 thread.execution_trace.append("llm_skipped")
             
@@ -397,15 +393,29 @@ class MessageOrchestrator:
             analyzer = ContextAnalyzer()
             context = analyzer.analyze_full_context(thread)
             
-            thread.frustration_score = context.get("frustration", 0.0)
-            thread.confusion_score = context.get("confusion", 0.0)
+            # ContextAnalyzer returns frustration_level / confusion_level
+            thread.frustration_score = context.get(
+                "frustration_level",
+                context.get("frustration", 0.0)
+            ) or 0.0
+            thread.confusion_score = context.get(
+                "confusion_level",
+                context.get("confusion", 0.0)
+            ) or 0.0
             thread.intent_drift = context.get("intent_drift")
             thread.recommendation = context.get("recommendation", "continue")
             
-            # Mark for escalation if frustrated
-            if thread.frustration_score > FRUSTRATION_ESCALATION_THRESHOLD:
+            escalate = context.get("should_escalate")
+            if isinstance(escalate, (tuple, list)):
+                should_esc = bool(escalate[0]) if escalate else False
+                reason = escalate[1] if len(escalate) > 1 else "context_escalation"
+            else:
+                should_esc = bool(escalate)
+                reason = "context_escalation"
+            
+            if should_esc or thread.frustration_score > FRUSTRATION_ESCALATION_THRESHOLD:
                 thread.escalation_triggered = True
-                thread.escalation_reason = "high_frustration"
+                thread.escalation_reason = reason if should_esc else "high_frustration"
                 
         except Exception as e:
             logger.warning(f"Context analysis error: {e}")
@@ -466,23 +476,24 @@ class MessageOrchestrator:
         LLM is reserved for Stage 8 (orchestrator owns all external calls).
         """
         try:
-            # Convert thread short_term_messages to history format expected by intent_service
-            # intent_service expects: [{'user_message': '...', ...}]
-            # thread has: [{'role': 'user'/'assistant', 'content': '...', 'timestamp': '...'}]
             history = None
             if thread.short_term_messages:
                 history = []
                 for msg in thread.short_term_messages:
                     if msg.get('role') == 'user':
-                        history.append({'user_message': msg.get('content', '')})
+                        history.append({
+                            'user_message': msg.get('content', ''),
+                            'detected_intent': thread.last_detected_intent,
+                        })
             
-            # CRITICAL: Use detect_intent_only (no embedded LLM)
-            # Let orchestrator own all LLM invocation
             result = detect_intent_only(message, thread.site_id, history)
             
-            # Extract intent data from pipeline result
             intent_name = result.get('intent_name')
             confidence = result.get('confidence', 0.0)
+            
+            # Treat UNKNOWN as no-intent for downstream gating
+            if intent_name in (None, 'UNKNOWN', 'ERROR'):
+                return IntentResult(name=intent_name if intent_name == 'UNKNOWN' else None, confidence=confidence)
             
             return IntentResult(
                 name=intent_name,
@@ -493,6 +504,173 @@ class MessageOrchestrator:
         except Exception as e:
             logger.warning(f"Intent detection error: {e}")
             return IntentResult(name=None, confidence=0.0)
+
+    @staticmethod
+    def _is_affirmative(message: str) -> bool:
+        """True for clear yes-confirmations; avoids matching 'yesterday' via startswith('y')."""
+        if not message:
+            return False
+        normalized = message.lower().strip().rstrip('.!,?')
+        affirmatives = {
+            'yes', 'yeah', 'yep', 'yup', 'y', 'sure', 'correct',
+            'right', 'ok', 'okay', 'affirmative', 'please',
+        }
+        if normalized in affirmatives:
+            return True
+        tokens = normalized.split()
+        return bool(tokens) and tokens[0] in affirmatives
+
+    def _lookup_intent(self, thread: ConversationThread, intent_name: str):
+        from models.intent import Intent
+        from sqlalchemy import or_
+        if not intent_name:
+            return None
+        return Intent.query.filter(
+            or_(Intent.site_id == 0, Intent.site_id == thread.site_id),
+            Intent.intent_name == intent_name
+        ).first()
+
+    def _apply_intent_response(self, thread: ConversationThread, intent_name: str,
+                               record_weight: bool = False) -> None:
+        """Load templated intent response from DB into thread.pending_reply."""
+        from services.response_formatter import substitute_template_variables
+        
+        intent_obj = self._lookup_intent(thread, intent_name)
+        if not intent_obj:
+            return
+        
+        if intent_obj.response:
+            reply = substitute_template_variables(intent_obj.response, thread.site_id)
+            thread.pending_reply = reply
+            thread.execution_trace.append(f"intent_response_loaded:{intent_name}")
+        
+        itype = (intent_obj.intent_type or '').upper()
+        if itype in ('HUMAN', 'LEAD'):
+            thread.escalation_triggered = True
+            thread.escalation_reason = f"intent_type_{itype.lower()}"
+        
+        if record_weight:
+            try:
+                from models import IntentConfidenceWeight
+                w = IntentConfidenceWeight.get_or_create(
+                    thread.site_id, intent_obj.id, commit=False
+                )
+                w.record_detection()
+            except Exception as e:
+                logger.debug(f"Confidence weight record skipped: {e}")
+
+    def _apply_confidence_weighting(self, thread: ConversationThread,
+                                    intent_result: IntentResult) -> IntentResult:
+        """Adjust confidence using historical success multipliers."""
+        try:
+            intent_obj = self._lookup_intent(thread, intent_result.name)
+            if not intent_obj:
+                return intent_result
+            from models import IntentConfidenceWeight
+            weight = IntentConfidenceWeight.get_or_create(
+                thread.site_id, intent_obj.id, commit=False
+            )
+            effective = min(1.0, max(0.0, intent_result.confidence * (weight.confidence_multiplier or 1.0)))
+            intent_result.confidence = effective
+            thread.last_intent_confidence = effective
+        except Exception as e:
+            logger.debug(f"Confidence weighting skipped: {e}")
+        return intent_result
+
+    def _build_clarifying_question(self, thread: ConversationThread,
+                                   intent_result: IntentResult, message: str) -> str:
+        clean_name = (intent_result.name or '').replace('_', ' ').title()
+        default_q = f"Did you mean '{clean_name}'?"
+        try:
+            intent_obj = self._lookup_intent(thread, intent_result.name)
+            if not intent_obj:
+                return default_q
+            optimizer = get_optimizer()
+            custom = optimizer.generate_clarifying_questions(
+                intent_obj, message, thread.site_id
+            )
+            return custom or default_q
+        except Exception:
+            return default_q
+
+    def _record_clarification_correction(self, thread: ConversationThread,
+                                         intent_name: str) -> None:
+        try:
+            intent_obj = self._lookup_intent(thread, intent_name)
+            if not intent_obj:
+                return
+            from models import IntentConfidenceWeight
+            w = IntentConfidenceWeight.get_or_create(
+                thread.site_id, intent_obj.id, commit=False
+            )
+            w.record_detection()
+            w.record_user_correction()
+        except Exception as e:
+            logger.debug(f"Clarification correction record skipped: {e}")
+
+    def _try_knowledge_base(self, thread: ConversationThread, message: str) -> bool:
+        """Attempt RAG hit before LLM. Returns True if reply was set."""
+        try:
+            kb_results = query_knowledge_base(thread.site_id, message, top_k=1)
+            if not kb_results:
+                return False
+            top_score, top_file = kb_results[0]
+            if top_score < 0.45:
+                return False
+            filename = getattr(top_file, 'filename', 'knowledge base')
+            thread.pending_reply = (
+                f"I found this in your knowledge base ({filename}). "
+                f"If that doesn't answer your question, please rephrase."
+            )
+            thread.last_detected_intent = 'KNOWLEDGE_BASE'
+            thread.last_intent_confidence = float(top_score)
+            return True
+        except Exception as e:
+            logger.debug(f"KB lookup skipped: {e}")
+            return False
+
+    def _maybe_throttle_llm(self, thread: ConversationThread, message: str,
+                            intent_result: IntentResult) -> bool:
+        """If session is in fallback storm, return safe template instead of LLM."""
+        try:
+            optimizer = get_optimizer()
+            should_throttle, reason = optimizer.should_throttle_fallback(
+                thread.site_id,
+                thread.session_id,
+                intent_result.confidence if intent_result else 0.0,
+            )
+            if not should_throttle:
+                return False
+            thread.pending_reply = (
+                "I'm having trouble understanding. "
+                "Could you rephrase or be more specific?"
+            )
+            self._log_unknown_intent(thread, message, fallback_type='throttle')
+            from models import ConfidenceThrottle
+            ConfidenceThrottle.record_fallback(
+                thread.site_id, thread.session_id, commit=False
+            )
+            logger.info(f"LLM throttled for session {thread.session_id}: {reason}")
+            return True
+        except Exception as e:
+            logger.debug(f"Throttle check skipped: {e}")
+            return False
+
+    def _attach_llm_response_to_unknown_log(self, thread: ConversationThread,
+                                            llm_text: str) -> None:
+        """Attach LLM text to the most recent uncommitted unknown log for this site/message."""
+        try:
+            from models import UnknownIntentLog, ConfidenceThrottle
+            # Prefer in-session pending objects
+            for obj in list(db.session.new):
+                if isinstance(obj, UnknownIntentLog) and obj.site_id == thread.site_id:
+                    obj.llm_response = llm_text
+                    break
+            ConfidenceThrottle.record_fallback(
+                thread.site_id, thread.session_id, commit=False
+            )
+        except Exception as e:
+            logger.debug(f"Attach LLM response skipped: {e}")
 
     # ============================================================================
     # STAGE 7: FEATURE GATING
@@ -521,38 +699,47 @@ class MessageOrchestrator:
 
     def _should_call_llm(self, thread: ConversationThread, 
                          intent_result: IntentResult) -> bool:
-        """Pure decision function for LLM invocation
+        """Decide whether Stage 8 should invoke LLM / KB / throttle path.
         
-        GATE 1 ENFORCEMENT: Only orchestrator decides whether to call LLM.
-        GATE 2 ENFORCEMENT: Uses single classify_confidence() authority.        
-        GATE 3 ENFORCEMENT: Workflow blocks LLM invocation.
+        Call when there is no pending reply yet (unknown / low confidence /
+        known intent missing DB response). Never call when a reply is ready
+        or a workflow owns the turn.
         """
-        # Workflow blocks LLM (Gate 3)
         if thread.has_active_workflow():
             return False
         
-        # Escalation blocks LLM
-        if thread.escalation_triggered:
+        if thread.pending_reply:
             return False
         
-        # Hard block blocks LLM
         if getattr(thread, 'block_reason', None):
             return False
         
-        # Use single confidence authority function (Gate 2)
-        confidence_class = classify_confidence(intent_result.confidence)
+        confidence = intent_result.confidence if intent_result else 0.0
+        confidence_class = classify_confidence(confidence)
+        no_intent = (
+            not intent_result
+            or not intent_result.name
+            or intent_result.name == 'UNKNOWN'
+        )
         
-        # Call LLM only if LOW confidence or no intent detected
-        should_call = (confidence_class == "LOW" or not intent_result.name)
+        if thread.escalation_triggered and not no_intent:
+            thread.pending_reply = (
+                "I'm connecting you with a team member who can help."
+            )
+            should_call = False
+        else:
+            # No reply loaded yet → generative / KB path
+            should_call = True
         
-        print(f"[LLM DECISION DEBUG]")
-        print(f"  Has active workflow: {thread.has_active_workflow()}")
-        print(f"  Is escalated: {thread.escalation_triggered}")
-        print(f"  Is blocked: {bool(getattr(thread, 'block_reason', None))}")
-        print(f"  Confidence classification: {confidence_class}")
-        print(f"    - intent_name: {intent_result.name}")
-        print(f"    - confidence_score: {intent_result.confidence}")
-        print(f"  CALL_LLM: {should_call}")
+        logger.debug(
+            "LLM decision workflow=%s escalated=%s class=%s intent=%s conf=%.3f call=%s",
+            thread.has_active_workflow(),
+            thread.escalation_triggered,
+            confidence_class,
+            getattr(intent_result, 'name', None),
+            confidence or 0.0,
+            should_call,
+        )
         
         return should_call
 
@@ -588,21 +775,23 @@ class MessageOrchestrator:
         if llm_result.intent_name:
             thread.last_detected_intent = llm_result.intent_name
 
-    def _log_unknown_intent(self, thread: ConversationThread, message: str):
+    def _log_unknown_intent(self, thread: ConversationThread, message: str,
+                            fallback_type: str = 'llm'):
         """Log unknown intent for admin mapping (Phase 1 minimal).
         
         Non-blocking. If logging fails, orchestrator continues.
+        Does not commit — Stage 10 (_finalize) owns the atomic commit.
         """
         try:
             from models import UnknownIntentLog
             
             log = UnknownIntentLog(
                 site_id=thread.site_id,
-                message=message
+                message=message,
+                fallback_type=fallback_type or 'llm',
+                resolved=False,
             )
             db.session.add(log)
-            # Don't commit here - let Stage 10 (_finalize) do atomic commit
-            # This ensures log is persisted atomically with thread
         except Exception as e:
             logger.warning(f"Failed to log unknown intent: {e}")
             # Non-critical: don't break orchestrator

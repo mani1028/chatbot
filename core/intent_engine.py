@@ -132,12 +132,8 @@ class IntentEngine:
         # Load intents for specific site and global intents (site_id = 0)
         intents = Intent.query.filter(or_(Intent.site_id == 0, Intent.site_id == site_id)).all()
 
-        # Handle medium confidence responses
-        if history and history[-1].get('intent_name') == 'clarification':
-            if message.lower() in ['yes', 'yeah', 'yep']:
-                return self._fallback_response(0.0)
-            elif message.lower() in ['no', 'nope']:
-                return self._fallback_response(0.0)
+        # Clarification confirmations are owned by MessageOrchestrator
+        # (pending_clarification). Do not short-circuit scoring here.
 
         best = {
             'intent': None,

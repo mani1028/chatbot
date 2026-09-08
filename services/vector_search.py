@@ -79,15 +79,31 @@ def embed_text(text):
         logger.error(f"Failed to embed text: {e}")
         return None
 
-def load_embedding(file_id):
-    """Load embedding for a file. Placeholder implementation."""
-    # TODO: Implement actual embedding retrieval from storage
-    # For now, return None
-    return None
-
 chroma_client = chromadb.Client(Settings(
     persist_directory="./chromadb_store"
 ))
+
+def load_embedding(file_id):
+    """Load embedding for a file from ChromaDB metadata lookup across site collections."""
+    try:
+        collections = chroma_client.list_collections()
+        for collection in collections:
+            # Prefer site_*_kb collections used by index_site_files
+            if not collection.name.endswith('_kb'):
+                continue
+            try:
+                result = collection.get(
+                    where={"file_id": file_id},
+                    include=["embeddings"]
+                )
+                embeddings = (result or {}).get("embeddings") or []
+                if embeddings:
+                    return embeddings[0]
+            except Exception:
+                continue
+    except Exception as e:
+        logger.warning(f"load_embedding failed for file_id={file_id}: {e}")
+    return None
 
 def extract_text_from_pdf(file_path):
     try:
@@ -144,22 +160,46 @@ def index_site_files(site_id):
                 )
 
 def query_knowledge_base(site_id, query, top_k=3):
-    files = SiteFile.query.filter_by(site_id=site_id).all()
+    """Semantic KB search via ChromaDB collection populated by index_site_files()."""
     query_emb = embed_text(query)
-    results = []
     if query_emb is None:
         logger.warning(f"Cannot query knowledge base for site {site_id}: embeddings unavailable")
         return []
-    
-    st_util = _get_st_util()
-    if st_util is None:
-        logger.warning(f"Cannot query knowledge base for site {site_id}: st_util unavailable")
+
+    collection_name = f"site_{site_id}_kb"
+    try:
+        collection = chroma_client.get_or_create_collection(collection_name)
+        emb_list = query_emb.tolist() if hasattr(query_emb, "tolist") else list(query_emb)
+        raw = collection.query(
+            query_embeddings=[emb_list],
+            n_results=top_k,
+            include=["documents", "metadatas", "distances"]
+        )
+    except Exception as e:
+        logger.warning(f"ChromaDB query failed for site {site_id}: {e}")
         return []
-    
-    for f in files:
-        emb = load_embedding(f.id)
-        if emb is not None:
-            score = float(st_util.cos_sim(query_emb, emb))
-            results.append((score, f))
+
+    results = []
+    ids_meta = (raw or {}).get("metadatas") or [[]]
+    distances = (raw or {}).get("distances") or [[]]
+    documents = (raw or {}).get("documents") or [[]]
+    if not ids_meta or not ids_meta[0]:
+        return []
+
+    for meta, distance, doc in zip(ids_meta[0], distances[0], documents[0]):
+        file_id = (meta or {}).get("file_id")
+        site_file = SiteFile.query.get(file_id) if file_id is not None else None
+        # Chroma distances are typically L2; convert to a similarity-like score in [0,1]
+        score = 1.0 / (1.0 + float(distance)) if distance is not None else 0.0
+        if site_file is None:
+            # Keep searchable even if SiteFile row is missing
+            class _DocProxy:
+                def __init__(self, filename, text):
+                    self.filename = filename
+                    self.text = text
+            site_file = _DocProxy(filename=f"file_{file_id}", text=doc)
+            site_file.id = file_id
+        results.append((score, site_file))
+
     results.sort(reverse=True, key=lambda x: x[0])
     return results[:top_k]

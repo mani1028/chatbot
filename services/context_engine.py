@@ -219,9 +219,14 @@ class ContextAnalyzer:
         }
         """
         
+        frustration = round(ContextAnalyzer.detect_frustration(thread), 2)
+        confusion = round(ContextAnalyzer.detect_confusion(thread), 2)
         return {
-            'frustration_level': round(ContextAnalyzer.detect_frustration(thread), 2),
-            'confusion_level': round(ContextAnalyzer.detect_confusion(thread), 2),
+            'frustration_level': frustration,
+            'confusion_level': confusion,
+            # Aliases for older callers
+            'frustration': frustration,
+            'confusion': confusion,
             'should_escalate': ContextAnalyzer.should_escalate_to_human(thread),
             'intent_drift': ContextAnalyzer.detect_intent_drift(thread),
             'state': {

@@ -43,21 +43,20 @@ class ConfidenceThrottle(db.Model):
             return False
         
         throttle = cls.query.filter_by(site_id=site_id, session_id=session_id).first()
-        if not throttle:
+        if not throttle or not throttle.last_fallback_at:
             return False
         
         time_since_last = datetime.utcnow() - throttle.last_fallback_at
         if time_since_last < timedelta(seconds=throttle_seconds):
             return True
         
-        # Window expired, reset
+        # Window expired, reset (caller / orchestrator owns commit)
         throttle.fallback_count = 0
         throttle.window_start = datetime.utcnow()
-        db.session.commit()
         return False
 
     @classmethod
-    def record_fallback(cls, site_id: int, session_id: str) -> None:
+    def record_fallback(cls, site_id: int, session_id: str, commit: bool = True) -> None:
         """Record that a fallback occurred in this session."""
         if not session_id:
             return
@@ -67,13 +66,15 @@ class ConfidenceThrottle(db.Model):
             throttle = cls(site_id=site_id, session_id=session_id)
             db.session.add(throttle)
         
-        throttle.fallback_count += 1
+        throttle.fallback_count = (throttle.fallback_count or 0) + 1
         throttle.last_fallback_at = datetime.utcnow()
         throttle.updated_at = datetime.utcnow()
         
+        if not commit:
+            return
         try:
             db.session.commit()
-        except Exception as e:
+        except Exception:
             db.session.rollback()
 
     def __repr__(self):

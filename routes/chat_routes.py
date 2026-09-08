@@ -1,13 +1,8 @@
 from flask import Blueprint, request, jsonify
 from models.site import Site
-from models.usage import Usage
-from models.plan import Plan, Subscription
 from services.chat_service import process_message
 from database import db, limiter
-from datetime import datetime
 from models import LeadCapture, ContactRequest
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from models.chat_log import ChatLog
 
 # Define Blueprint (ONLY ONCE)
@@ -96,16 +91,7 @@ def send_message_test():
     from models.client_config import ClientConfig
     config_map = {c.key: c.value for c in ClientConfig.query.filter_by(site_id=site.id).all()}
 
-    usage_limit = int(config_map.get('max_monthly_chats', site.plan.max_monthly_chats if site.plan else 1000))
-    now = datetime.utcnow()
-    month_str = now.strftime('%Y-%m')
-    usage = Usage.query.filter_by(site_id=site.id, month=month_str).first()
-    if not usage:
-        usage = Usage(site_id=site.id, month=month_str, messages=1)
-        db.session.add(usage)
-    else:
-        usage.messages += 1
-    db.session.commit()
+    # Usage is incremented once inside chat_service.process_message
 
     # ⚠️ TEST ENDPOINT: Skip domain validation for internal testing
     # This allows load testing without full production validation
@@ -163,16 +149,7 @@ def send_message():
     from models.client_config import ClientConfig
     config_map = {c.key: c.value for c in ClientConfig.query.filter_by(site_id=site.id).all()}
 
-    usage_limit = int(config_map.get('max_monthly_chats', site.plan.max_monthly_chats if site.plan else 1000))
-    now = datetime.utcnow()
-    month_str = now.strftime('%Y-%m')
-    usage = Usage.query.filter_by(site_id=site.id, month=month_str).first()
-    if not usage:
-        usage = Usage(site_id=site.id, month=month_str, messages=1)
-        db.session.add(usage)
-    else:
-        usage.messages += 1
-    db.session.commit()
+    # Usage is incremented once inside chat_service.process_message (with suspend logic)
 
     # Use the helper function to extract the domain correctly
     request_domain = get_request_domain()

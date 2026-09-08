@@ -214,7 +214,7 @@ class FallbackOptimizer:
         Returns:
             Adjusted confidence (0.0-1.0)
         """
-        weight = IntentConfidenceWeight.get_or_create(site_id, intent.id)
+        weight = IntentConfidenceWeight.get_or_create(site_id, intent.id, commit=False)
         effective = base_confidence * weight.confidence_multiplier
         return min(1.0, max(0.0, effective))
 

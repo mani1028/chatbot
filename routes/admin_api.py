@@ -2095,3 +2095,42 @@ def get_client_usage():
 # ===== PHASE 1: FALLBACK REDUCTION - UNKNOWN INTENT MAPPING =====
 # Routes for unknown intent management are now in routes/unknown_intent_admin.py
 # Accessed at: /admin/api/unknown/*
+
+# ===== INTENT FEEDBACK (confidence self-tuning) =====
+@admin_api.route('/feedback/success', methods=['POST'])
+@client_required
+def record_success_feedback():
+    """Record that an intent was successfully resolved."""
+    from services.fallback_optimizer import get_optimizer
+    data = request.get_json() or {}
+    intent_id = data.get('intent_id')
+    site_id = data.get('site_id') or session.get('site_id')
+    if intent_id and site_id:
+        get_optimizer().record_intent_success(int(intent_id), int(site_id))
+    return jsonify({'success': True})
+
+
+@admin_api.route('/feedback/escalation', methods=['POST'])
+@client_required
+def record_escalation_feedback():
+    """Record that an intent led to escalation."""
+    from services.fallback_optimizer import get_optimizer
+    data = request.get_json() or {}
+    intent_id = data.get('intent_id')
+    site_id = data.get('site_id') or session.get('site_id')
+    if intent_id and site_id:
+        get_optimizer().record_intent_escalation(int(intent_id), int(site_id))
+    return jsonify({'success': True})
+
+
+@admin_api.route('/feedback/correction', methods=['POST'])
+@client_required
+def record_correction_feedback():
+    """Record that user corrected an intent (said 'no' to clarification)."""
+    from services.fallback_optimizer import get_optimizer
+    data = request.get_json() or {}
+    intent_id = data.get('intent_id')
+    site_id = data.get('site_id') or session.get('site_id')
+    if intent_id and site_id:
+        get_optimizer().record_user_correction(int(intent_id), int(site_id))
+    return jsonify({'success': True})
