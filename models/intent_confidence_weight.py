@@ -97,13 +97,14 @@ class IntentConfidenceWeight(db.Model):
         self.recalculate_weight()
 
     @classmethod
-    def get_or_create(cls, site_id: int, intent_id: int):
+    def get_or_create(cls, site_id: int, intent_id: int, commit: bool = True):
         """Get or create weight tracker for intent."""
         w = cls.query.filter_by(site_id=site_id, intent_id=intent_id).first()
         if not w:
             w = cls(site_id=site_id, intent_id=intent_id)
             db.session.add(w)
-            db.session.commit()
+            if commit:
+                db.session.commit()
         return w
 
     def to_dict(self):

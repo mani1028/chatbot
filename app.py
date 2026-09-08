@@ -14,6 +14,9 @@ from config import (
     WIDGET_EMBED_URL
 )
 
+# Model preloading for cold-start optimization
+from services.model_preloader import preload_models_async
+
 # Shared Extensions
 db = SQLAlchemy()
 from database import db, limiter, init_db
@@ -23,6 +26,7 @@ from models import Admin, BrandingSettings, Site, ClientConfig
 from routes.chat_routes import chat_bp
 from routes.admin_api import admin_api
 from routes.super_admin_api import super_admin_api
+from routes.unknown_intent_admin import unknown_intent_bp
 
 def create_app():
     app = Flask(__name__)
@@ -44,10 +48,15 @@ def create_app():
     app.register_blueprint(chat_bp)
     app.register_blueprint(admin_api, url_prefix="/admin/api")
     app.register_blueprint(super_admin_api, url_prefix='/admin/api/super')
+    app.register_blueprint(unknown_intent_bp, url_prefix='/admin/api/unknown')  # Routes: /admin/api/unknown/*
 
     return app
 
 app = create_app()
+
+# Start model preloading in background (non-blocking)
+# This allows the app to start while SentenceTransformer downloads/loads
+preload_models_async(app)
 
 # SocketIO Setup
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="gevent")
@@ -64,6 +73,21 @@ with app.app_context():
         admin.set_password("admin123")
         db.session.add(admin)
         db.session.commit()
+    
+    # Precompute intent embeddings on startup (non-blocking background)
+    # DISABLED: Background threads don't have access to Flask app context
+    # The cache will be populated lazily on first request
+    # def precompute_embeddings():
+    #     try:
+    #         from services.embedding_cache import precompute_all_intent_embeddings
+    #         precompute_all_intent_embeddings(app)
+    #     except Exception as e:
+    #         import logging
+    #         logging.warning(f"Failed to precompute embeddings: {e}")
+    # 
+    # import threading
+    # embed_thread = threading.Thread(target=precompute_embeddings, daemon=True)
+    # embed_thread.start()
 
 def login_required(f):
     @wraps(f)
@@ -72,6 +96,27 @@ def login_required(f):
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
+
+@app.route("/api/warmup")
+def warmup():
+    """Warmup endpoint for model preloading status. Call before widget init."""
+    from services.model_preloader import is_model_ready, get_preload_error
+    
+    ready = is_model_ready()
+    error = get_preload_error()
+    
+    if ready and not error:
+        return jsonify({"status": "ready", "message": "Model preload complete"}), 200
+    elif ready and error:
+        return jsonify({
+            "status": "ready_with_error",
+            "message": f"Model preload failed: {str(error)}"
+        }), 200
+    else:
+        return jsonify({
+            "status": "loading",
+            "message": "Model still preloading..."
+        }), 202
 
 @app.route("/")
 def index():
@@ -135,6 +180,21 @@ def get_widget_settings():
     data["preserve_chat_history"] = preserve_chat_history
     return jsonify(data)
 
+@app.route("/api/site-features")
+def get_site_features_public():
+    """Public endpoint: Get site features by public_key (for widget)."""
+    site_key = request.args.get("site_key")
+    if not site_key:
+        return jsonify({"error": "Missing site_key parameter"}), 400
+    
+    site = Site.query.filter_by(public_key=site_key).first()
+    if not site:
+        return jsonify({"error": "Invalid site_key"}), 404
+    
+    # Import here to avoid circular imports
+    from services.feature_gate import get_site_features
+    return jsonify(get_site_features(site.id))
+
 @app.route("/widget/init.html")
 def widget_init():
     site_id = request.args.get("site_id", 1, type=int)
@@ -142,6 +202,11 @@ def widget_init():
     site = db.session.get(Site, site_id)
     api_url = request.args.get("api", "http://localhost:5000")
     return render_template("widget.html", api_url=api_url, branding=branding, site=site)
+
+@app.route("/test/widget")
+def test_widget():
+    """Test page for widget integration and API endpoints."""
+    return render_template("test_widget.html")
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():

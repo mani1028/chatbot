@@ -33,8 +33,10 @@ class Intent(db.Model):
             'intent_type': self.intent_type,
             'confidence': self.confidence,
             'response': self.response,
-            'phrases': [p.phrase for p in self.phrases]
-            ,'config_required': self.config_required
+            'template_file': self.template_file,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'phrases': [p.phrase for p in self.phrases],
+            'config_required': self.config_required
         }
 
     def __repr__(self):

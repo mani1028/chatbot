@@ -45,7 +45,11 @@ def _adapt_orchestrator_response(orchestrator_result: dict) -> ChatResponse:
     
     # Determine intent_type based on workflow or escalation
     intent_type = "INFO"  # Default
-    handoff = context.get("should_escalate", False)
+    escalate = context.get("should_escalate", False)
+    if isinstance(escalate, (tuple, list)):
+        handoff = bool(escalate[0]) if escalate else False
+    else:
+        handoff = bool(escalate)
     
     # Detect if this is a lead capture scenario
     lead_capture = False
@@ -130,7 +134,7 @@ def process_message(site_id: int, user_message: str, session_id: str = None, pag
     
     try:
         orchestrator_result = orchestrator.process_message(
-            site_id=str(site_id),
+            site_id=site_id,  # Should be int, not str
             session_id=session_id or str(uuid.uuid4()),
             message=user_message
         )
@@ -158,22 +162,10 @@ def process_message(site_id: int, user_message: str, session_id: str = None, pag
     # Orchestrator provides: intent_name, intent_confidence, context_analysis
     response = _adapt_orchestrator_response(orchestrator_result)
     
-    # DEBUG: Show what orchestrator returned vs what adapter produced
-    print("=" * 60)
-    print("=== ORCHESTRATOR RAW ===")
-    print(f"  intent_name: {orchestrator_result.get('intent_name')}")
-    print(f"  intent_confidence: {orchestrator_result.get('intent_confidence')}")
-    print(f"  reply: {orchestrator_result.get('reply')[:50]}...")
-    print(f"  workflow_state: {orchestrator_result.get('workflow_state')}")
-    print(f"  should_escalate: {orchestrator_result.get('context_analysis', {}).get('should_escalate')}")
-    print("=== LEGACY RESPONSE ===")
-    print(f"  intent_name: {response.intent_name}")
-    print(f"  intent_type: {response.intent_type}")
-    print(f"  confidence: {response.confidence}")
-    print(f"  handoff: {response.handoff}")
-    print(f"  lead_capture: {response.lead_capture}")
-    print(f"  reply: {response.reply[:50]}...")
-    print("=" * 60)
+    logging.debug(
+        "Adapted response intent=%s conf=%s handoff=%s",
+        response.intent_name, response.confidence, response.handoff
+    )
     
     # ── Fire Webhooks (if enabled) ──────────────────────────────────
     if check_feature(site_id, FEATURE_WEBHOOKS):
@@ -191,10 +183,7 @@ def process_message(site_id: int, user_message: str, session_id: str = None, pag
                 'intent': response.intent_name
             })
 
-    # ── Log Chat (backward compatibility) ────────────────────────────
-    _log_chat(site_id, session_id, user_message, 
-              response.intent_name, response.confidence, response.reply)
-
+    # ChatLog is written by MessageOrchestrator._finalize — avoid duplicate rows
     return response
 
 

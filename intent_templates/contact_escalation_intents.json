@@ -1,0 +1,78 @@
+{
+  "sector": "global",
+  "template_name": "Contact & Escalation Intents",
+  "description": "Intents for contact forms, escalations, and agent requests. Enables users to submit contact information for follow-up.",
+  "intents": [
+    {
+      "name": "contact_agent",
+      "type": "CONTACT",
+      "confidence_threshold": 0.80,
+      "phrases": [
+        "i want to contact an agent",
+        "contact agent",
+        "reach out to agent",
+        "contact support",
+        "i need to speak with someone",
+        "schedule a callback",
+        "request callback",
+        "get in touch with team",
+        "contact our team",
+        "i'd like to speak with an agent",
+        "connect me to support",
+        "i want to leave my contact info",
+        "can you have someone call me",
+        "i want to talk to handoff specialist"
+      ],
+      "response": "I'd be happy to help you connect with our team. To better assist you, could you please provide your name, email address, and let me know what you'd like to discuss? I'll make sure someone from our team reaches out to you shortly.",
+      "params": {
+        "trigger_form": true,
+        "form_fields": ["name", "email", "message", "priority"],
+        "submit_to": "contact_agent",
+        "follow_up_message": "Thank you for reaching out! We've received your request and someone from our team will contact you shortly."
+      }
+    },
+    {
+      "name": "urgent_escalation",
+      "type": "ESCALATION",
+      "confidence_threshold": 0.75,
+      "phrases": [
+        "this is urgent",
+        "i need immediate help",
+        "this is critical",
+        "emergency support",
+        "urgent matter",
+        "asap",
+        "right now",
+        "immediately",
+        "it's an emergency"
+      ],
+      "response": "I understand this is urgent. I'm connecting you with our priority support team right now. Could you briefly describe the issue so we can help you faster?",
+      "params": {
+        "priority": "urgent",
+        "escalate_immediately": true,
+        "assigned_queue": "priority"
+      }
+    },
+    {
+      "name": "feedback_submission",
+      "type": "FEEDBACK",
+      "confidence_threshold": 0.80,
+      "phrases": [
+        "i have feedback",
+        "send feedback",
+        "give feedback",
+        "report feedback",
+        "complaint",
+        "suggestion",
+        "i want to report an issue",
+        "bug report",
+        "feature request"
+      ],
+      "response": "We appreciate your feedback! It helps us improve. Could you tell us more about what's on your mind? This will help our team better understand your needs.",
+      "params": {
+        "capture_feedback": true,
+        "feedback_type": "general"
+      }
+    }
+  ]
+}

@@ -4,59 +4,324 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - AI Chatbot</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .login-logo {
+            height: 50px;
+            width: 50px;
+            margin-bottom: 15px;
+            opacity: 0.95;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .login-header p {
+            font-size: 13px;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .login-body {
+            padding: 40px 30px;
+        }
+
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: #d32f2f;
+            font-size: 14px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .error-message i {
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-of-type {
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            color: #667eea;
+            font-size: 16px;
+            pointer-events: none;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input[type="text"]::placeholder,
+        input[type="password"]::placeholder {
+            color: #999;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            text-transform: uppercase;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-footer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e8e8e8;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .login-footer small {
+            display: block;
+        }
+
+        .login-footer b {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .divider {
+            color: #ccc;
+            font-size: 11px;
+            margin: 0 4px;
+        }
+
+        @media (max-width: 480px) {
+            .login-header {
+                padding: 30px 20px;
+            }
+
+            .login-header h1 {
+                font-size: 24px;
+            }
+
+            .login-body {
+                padding: 30px 20px;
+            }
+
+            .login-footer {
+                padding: 15px 20px;
+            }
+        }
+
+        /* Loading state */
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .submit-btn:disabled:hover {
+            transform: none;
+        }
+    </style>
 </head>
-<body class="admin-page">
-    <div class="login-bg">
-        <div class="login-glass">
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Header with Gradient -->
             <div class="login-header">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="AI Chatbot Logo" class="login-logo">
-                <h1 style="color:var(--primary-color);font-weight:700;letter-spacing:-1px;">Admin Login</h1>
-                <p class="subtitle" style="color:var(--secondary-color);font-size:1.08rem;">AI Website Assistant & Lead Automation Platform</p>
+                <svg class="login-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a10 10 0 0 1 10 10v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2a6 6 0 0 0-12 0v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2A10 10 0 0 1 12 2z"></path>
+                </svg>
+                <h1>Admin Login</h1>
+                <p>AI Website Assistant & Lead Automation</p>
             </div>
 
-            {% if error %}
-            <div class="error-message">
-                <i class="fas fa-exclamation-circle"></i> {{ error }}
+            <!-- Login Form -->
+            <div class="login-body">
+                {% if error %}
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>{{ error }}</span>
+                </div>
+                {% endif %}
+
+                <form method="POST" id="loginForm">
+                    <div class="form-group">
+                        <label for="username">
+                            <i class="fas fa-user"></i> Username
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user input-icon"></i>
+                            <input 
+                                type="text" 
+                                id="username" 
+                                name="username" 
+                                placeholder="Enter your username"
+                                autocomplete="username"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i> Sign In
+                    </button>
+                </form>
             </div>
-            {% endif %}
 
-            <form method="POST" class="login-form">
-                <div class="form-group">
-                    <label for="username" style="color:var(--primary-color);font-weight:600;"><i class="fas fa-user"></i> Username</label>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        name="username" 
-                        required
-                        placeholder="Enter your username"
-                        autocomplete="username"
-                        style="border-radius:var(--radius-md);border:1px solid var(--primary-color);background:var(--bg-light);font-size:1.05rem;"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="password" style="color:var(--primary-color);font-weight:600;"><i class="fas fa-lock"></i> Password</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        required
-                        placeholder="Enter your password"
-                        autocomplete="current-password"
-                        style="border-radius:var(--radius-md);border:1px solid var(--primary-color);background:var(--bg-light);font-size:1.05rem;"
-                    >
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-block" style="margin-top:1.5rem;font-size:1.1rem;background:var(--primary-color);color:#fff;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);">Login</button>
-            </form>
-
+            <!-- Footer -->
             <div class="login-footer">
-                <small style="color:var(--text-muted);">Default credentials: <b>admin / admin123</b></small>
-                <br>
-                <small style="color:var(--text-muted);">Powered by AI Lead & Support Automation Tool</small>
+                <small><strong>Demo Account:</strong> admin <span class="divider">/</span> admin123</small>
+                <small style="margin-top: 8px; opacity: 0.8;">Secured Platform • All data encrypted</small>
             </div>
         </div>
     </div>
+
+    <script>
+        // Prevent double submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const btn = this.querySelector('.submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+        });
+
+        // Focus first input on load
+        document.getElementById('username').focus();
+    </script>
 </body>
 </html>

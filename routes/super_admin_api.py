@@ -362,7 +362,7 @@ def auto_suggestion_metrics():
     # Count phrases that appear multiple times (suggesting they could be grouped)
     phrase_counts = {}
     for log in unknown_logs:
-        phrase = (log.user_input or '').lower().strip()
+        phrase = (log.message or '').lower().strip()
         if phrase:
             phrase_counts[phrase] = phrase_counts.get(phrase, 0) + 1
     

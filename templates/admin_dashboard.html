@@ -128,6 +128,9 @@
             <a class="nav-item" onclick="switchTab('simulator', this)">
                 <i class="fas fa-vr-cardboard"></i> Simulator
             </a>
+            <a class="nav-item" onclick="switchTab('unknown-intents', this)">
+                <i class="fas fa-search"></i> Unknown Questions
+            </a>
 
             {% if is_super %}
             <!-- Super Admin Items -->
@@ -894,6 +897,49 @@
                 <iframe id="sim-frame" src="{{ url_for('widget_init') }}?api={{ widget_url }}&site_id={{ site_id }}" width="100%" height="100%" frameborder="0"></iframe>
             </div>
         </div>
+
+        <!-- Unknown Intents Tab -->
+        <div id="unknown-intents" class="tab-content">
+            <div class="header-actions">
+                <div>
+                    <h1 style="font-size: 1.5rem;">Unknown Questions</h1>
+                    <p style="color: var(--text-muted);">Map common user queries to intents for better responses.</p>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div class="card">
+                    <div class="card-body">
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Total Fallbacks</div>
+                        <div style="font-size: 2rem; font-weight: 700;" id="totalCount">-</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Coverage Rate</div>
+                        <div style="font-size: 2rem; font-weight: 700;" id="coverageRate">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+                <!-- Unknown Intents List -->
+                <div class="card">
+                    <div class="card-body" style="padding: 0;">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border); font-weight: 600;">Unknown Queries</div>
+                        <div id="unknownsList" style="max-height: 600px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- Details View -->
+                <div class="card">
+                    <div class="card-body" style="padding: 0;">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border); font-weight: 600;">Map Query</div>
+                        <div id="detailView" style="padding: 1.5rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <div class="modal-overlay" id="intentModal">
@@ -1030,11 +1076,154 @@
             if (tabId === 'intent-assignments') loadIntentAssignments();
             if (tabId === 'admin-users') loadAdmins();
             if (tabId === 'platform-settings') loadPlatformSettings();
+            if (tabId === 'unknown-intents') loadUnknownIntents();
             if(tabId === 'simulator') {
                 const iframe = document.getElementById('sim-frame');
                 if(iframe) iframe.src = iframe.src;
             }
         }
+
+        // Unknown Intent Manager
+        async function loadUnknownIntents() {
+            try {
+                // Load unmapped unknowns
+                const res = await fetch('/admin/api/unknown/unmapped?limit=50', {
+                    credentials: 'include'
+                });
+                
+                if (!res.ok) {
+                    console.error(`Failed to fetch unknowns: ${res.status}`);
+                    document.getElementById('unknownsList').innerHTML = `<div style="padding: 1rem; color: var(--danger);">Error loading queries (${res.status})</div>`;
+                    return;
+                }
+                
+                const data = await res.json();
+                
+                if (!data) {
+                    document.getElementById('unknownsList').innerHTML = '<div style="padding: 1rem; color: var(--text-muted);">Failed to load queries</div>';
+                    return;
+                }
+                
+                // Load stats
+                const statsRes = await fetch('/admin/api/unknown/stats', {
+                    credentials: 'include'
+                });
+                
+                if (statsRes.ok) {
+                    const statsData = await statsRes.json();
+                    if (statsData.stats) {
+                        document.getElementById('totalCount').textContent = statsData.stats.total_fallbacks || 0;
+                        document.getElementById('coverageRate').textContent = 
+                            ((statsData.stats.coverage || 0) * 100).toFixed(0) + '%';
+                    }
+                }
+                
+                // Render unknowns list
+                const unknowns = data.unknowns || [];
+                const listEl = document.getElementById('unknownsList');
+                
+                if (!unknowns.length) {
+                    listEl.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-muted);">✅ All queries mapped!</div>';
+                    return;
+                }
+                
+                listEl.innerHTML = unknowns.map(u => `
+                    <div style="padding: 1rem; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;" 
+                         onclick="selectUnknownIntent(${JSON.stringify(u).replace(/"/g, '&quot;')})" 
+                         onmouseover="this.style.background='var(--bg-body)'" 
+                         onmouseout="this.style.background='white'">
+                        <div style="font-weight: 500; margin-bottom: 0.25rem;">${escapeHtml(u.message)}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">${u.count} matches</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Error loading unknowns:', err);
+                document.getElementById('unknownsList').innerHTML = '<div style="padding: 1rem; color: var(--danger);">Error loading data</div>';
+            }
+        }
+
+        // Select and map unknown query
+        async function selectUnknownIntent(unknown) {
+            const detailEl = document.getElementById('detailView');
+            detailEl.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Query</div>
+                    <div style="font-weight: 500;">${escapeHtml(unknown.message)}</div>
+                </div>
+                <div id="mapForm" style="margin-bottom: 1.5rem;">
+                    <div style="padding: 1rem; color: var(--text-muted);">Loading available intents...</div>
+                </div>
+            `;
+
+            try {
+                // Load available intents
+                const res = await fetch('/admin/api/client/intents', {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                const intents = data.intents || [];
+
+                let formHtml = `
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem;">Select Intent</label>
+                        <select id="intentSelect" class="form-control" style="width: 100%;">
+                            <option value="">-- Select Intent --</option>
+                `;
+                
+                intents.forEach(i => {
+                    formHtml += `<option value="${i.id}">${escapeHtml(i.intent_name)}</option>`;
+                });
+
+                formHtml += `
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="mapUnknownQuery(${unknown.id})" style="width: 100%;">
+                        <i class="fas fa-check"></i> Map Query
+                    </button>
+                `;
+
+                document.getElementById('mapForm').innerHTML = formHtml;
+            } catch (err) {
+                console.error('Error loading intents:', err);
+                document.getElementById('mapForm').innerHTML = '<div style="color: var(--danger);">Error loading intents</div>';
+            }
+        }
+
+        // Map unknown query to intent
+        async function mapUnknownQuery(logId) {
+            const intentId = document.getElementById('intentSelect')?.value;
+            if (!intentId) {
+                alert('Please select an intent');
+                return;
+            }
+
+            try {
+                const res = await fetch('/admin/api/unknown/map', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ unknown_log_id: logId, intent_id: intentId })
+                });
+
+                if (res.ok) {
+                    alert('✓ Query mapped successfully!');
+                    loadUnknownIntents();
+                    document.getElementById('detailView').innerHTML = '';
+                } else {
+                    alert('Error mapping query');
+                }
+            } catch (err) {
+                console.error('Error mapping query:', err);
+                alert('Failed to map query');
+            }
+        }
+
+        // Helper to escape HTML
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
         // --- Dynamic Business Rules (Config) ---
         async function loadDynamicConfig() {
             const container = document.getElementById('dynamicConfigContainer');

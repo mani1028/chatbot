@@ -1,4 +1,0 @@
-# fallback_messages.txt
-I'm not sure how to answer that. Could you rephrase your question?
-I don't have enough information to answer that. Please contact our support team.
-That's a great question! Let me connect you with a team member who can help.

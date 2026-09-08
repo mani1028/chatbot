@@ -221,7 +221,7 @@ class ConversationAnalytics:
         # Time to completion (for completed workflows)
         completion_times = []
         for t in completed:
-            if t.completed_at:
+            if t.completed_at and t.created_at:
                 duration = (t.completed_at - t.created_at).total_seconds() / 60
                 completion_times.append(duration)
         
@@ -239,7 +239,7 @@ class ConversationAnalytics:
             'avg_score': sum(ConversationScorer.score_thread(t) for t in threads) / len(threads) if threads else 0.0,
             'avg_time_minutes': sum(completion_times) / len(completion_times) if completion_times else None,
             
-            'unknown_intent_avg': sum(t.unknown_intent_count for t in threads) / len(threads) if threads else 0
+            'unknown_intent_avg': sum((t.unknown_intent_count or 0) for t in threads) / len(threads) if threads else 0
         }
         
         # By workflow type
