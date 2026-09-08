@@ -112,6 +112,15 @@
             <a class="nav-item" onclick="switchTab('leads', this)">
                 <i class="fas fa-user-plus"></i> Leads
             </a>
+            <a class="nav-item" onclick="switchTab('contact-requests', this)">
+                <i class="fas fa-headset"></i> Contact Requests
+            </a>
+            <a class="nav-item" onclick="switchTab('forms', this)">
+                <i class="fas fa-wpforms"></i> Forms
+            </a>
+            <a class="nav-item" onclick="switchTab('webhooks', this)">
+                <i class="fas fa-plug"></i> Webhooks
+            </a>
             <a class="nav-item" onclick="switchTab('analytics', this)">
                 <i class="fas fa-chart-bar"></i> Analytics
             </a>
@@ -370,6 +379,48 @@
                             </table>
                         </div>
                     </div>
+                </div>
+
+                <!-- Contact Requests Tab -->
+                <div id="contact-requests" class="tab-content">
+                    <div class="header-actions">
+                        <div>
+                            <h1>Contact Requests</h1>
+                            <p style="color: var(--text-muted);">Human agent contact form submissions.</p>
+                        </div>
+                        <a class="btn btn-primary" href="/admin/api/client/contact-requests-dashboard" target="_blank"><i class="fas fa-external-link-alt"></i> Open Full Dashboard</a>
+                    </div>
+                    <div class="card"><div class="card-body" id="contactRequestsInline">Loading...</div></div>
+                </div>
+
+                <!-- Forms Tab -->
+                <div id="forms" class="tab-content">
+                    <div class="header-actions">
+                        <div>
+                            <h1>Forms</h1>
+                            <p style="color: var(--text-muted);">Multi-step data collection forms for your bot.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openFormModal()"><i class="fas fa-plus"></i> Add Form</button>
+                    </div>
+                    <div class="card"><div class="card-body" style="overflow-x:auto;">
+                        <table><thead><tr><th>Name</th><th>Steps</th><th>Active</th><th>Actions</th></tr></thead>
+                        <tbody id="formsTableBody"></tbody></table>
+                    </div></div>
+                </div>
+
+                <!-- Webhooks Tab -->
+                <div id="webhooks" class="tab-content">
+                    <div class="header-actions">
+                        <div>
+                            <h1>Webhooks</h1>
+                            <p style="color: var(--text-muted);">Send bot events to external systems.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openWebhookModal()"><i class="fas fa-plus"></i> Add Webhook</button>
+                    </div>
+                    <div class="card"><div class="card-body" style="overflow-x:auto;">
+                        <table><thead><tr><th>Name</th><th>Event</th><th>URL</th><th>Enabled</th><th>Actions</th></tr></thead>
+                        <tbody id="webhooksTableBody"></tbody></table>
+                    </div></div>
                 </div>
 
                 <!-- AI Settings Tab -->
@@ -639,7 +690,7 @@
                                                     <td>${lead.lead_phone || 'N/A'}</td>
                                                     <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${lead.user_message || ''}"><small>${messagePreview}${(lead.user_message || '').length > 50 ? '...' : ''}</small></td>
                                                     <td style="text-align: center;">
-                                                        <button class="btn btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="alert('Full conversation history feature coming soon!\\n\\nLead: ${lead.lead_name}\\nEmail: ${lead.lead_email}')">View Chat</button>
+                                                        <button class="btn btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; background: var(--primary); color: white; border: none; border-radius: 4px; cursor: pointer;" onclick="viewLeadChat(${JSON.stringify(lead.session_id || '')}, ${JSON.stringify(lead.lead_name || '')})">View Chat</button>
                                                     </td>
                                                 `;
                                                 tbody.appendChild(tr);
@@ -1069,6 +1120,9 @@
             if (tabId === 'conversations') loadConversations();
             if (tabId === 'analytics') loadAnalytics();
             if (tabId === 'leads') loadLeads();
+            if (tabId === 'contact-requests') loadContactRequestsInline();
+            if (tabId === 'forms') loadForms();
+            if (tabId === 'webhooks') loadWebhooks();
             if (tabId === 'ai-settings') loadAISettings();
             if (tabId === 'channels') loadChannels();
             if (tabId === 'usage') loadUsage();
@@ -1304,7 +1358,6 @@
                 }
             } catch(e) { console.error("Error loading stats", e); }
         }
-
 
         // --- Intents Logic ---
         let allIntents = [];
@@ -1596,16 +1649,42 @@
         }
 
         function openChannelModal() {
-            showToast('Channel creation panel coming soon!');
+            const name = prompt('Channel name (e.g. Website Widget):');
+            if (!name) return;
+            const type = prompt('Channel type (web, whatsapp, slack, email):', 'web');
+            if (!type) return;
+            fetch('/admin/api/client/channels', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({name, type})
+            }).then(r => r.json()).then(data => {
+                if (data.success || data.id) { showToast('Channel created'); loadChannels(); }
+                else showToast(data.error || 'Failed to create channel', 'error');
+            }).catch(() => showToast('Failed to create channel', 'error'));
         }
 
         function editChannel(id) {
-            showToast('Channel editing coming soon!');
+            const name = prompt('New channel name:');
+            if (!name) return;
+            fetch(`/admin/api/client/channels/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({name})
+            }).then(r => r.json()).then(data => {
+                if (data.success) { showToast('Channel updated'); loadChannels(); }
+                else showToast(data.error || 'Update failed', 'error');
+            }).catch(() => showToast('Update failed', 'error'));
         }
 
         function deleteChannel(id) {
             if (!confirm('Are you sure you want to delete this channel?')) return;
-            showToast('Channel deletion coming soon!');
+            fetch(`/admin/api/client/channels/${id}`, { method: 'DELETE', credentials: 'include' })
+                .then(r => r.json()).then(data => {
+                    if (data.success) { showToast('Channel deleted'); loadChannels(); }
+                    else showToast(data.error || 'Delete failed', 'error');
+                }).catch(() => showToast('Delete failed', 'error'));
         }
 
         // --- Usage ---
@@ -1835,12 +1914,214 @@
         }
 
         function openAdminUserModal() {
-            showToast('Admin user creation coming soon!');
+            const username = prompt('New admin username:');
+            if (!username) return;
+            const password = prompt('Temporary password:');
+            if (!password) return;
+            const siteId = prompt('Site ID (blank for none):', String(getSiteId() || ''));
+            fetch('/admin/api/super/admins', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({
+                    username,
+                    password,
+                    site_id: siteId ? parseInt(siteId, 10) : null,
+                    is_super: false
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success || data.id) { showToast('Admin created'); loadAdmins(); }
+                else showToast(data.error || 'Failed to create admin', 'error');
+            }).catch(() => showToast('Failed to create admin', 'error'));
         }
 
         function deleteAdmin(id) {
             if (!confirm('Are you sure you want to delete this admin?')) return;
-            showToast('Admin deletion coming soon!');
+            fetch(`/admin/api/super/admins/${id}`, { method: 'DELETE', credentials: 'include' })
+                .then(r => r.json()).then(data => {
+                    if (data.success) { showToast('Admin deleted'); loadAdmins(); }
+                    else showToast(data.error || 'Delete failed', 'error');
+                }).catch(() => showToast('Delete failed', 'error'));
+        }
+
+        async function viewLeadChat(sessionId, leadName) {
+            if (!sessionId) {
+                showToast('No session linked to this lead', 'error');
+                return;
+            }
+            switchTab('conversations', document.querySelector('.nav-item[onclick*="conversations"]'));
+            const tbody = document.getElementById('convoTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem;">Loading chat for ' + (leadName || sessionId) + '...</td></tr>';
+            try {
+                const url = new URL('/admin/api/client/conversations', window.location.origin);
+                const siteId = getSiteId();
+                if (siteId) url.searchParams.append('site_id', siteId);
+                url.searchParams.append('limit', '100');
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+                const rows = (data.conversations || []).filter(l => l.session_id === sessionId);
+                tbody.innerHTML = '';
+                if (!rows.length) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No messages found for session ${sessionId}.</td></tr>`;
+                    return;
+                }
+                rows.forEach(log => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${log.created_at ? new Date(log.created_at).toLocaleString() : ''}</td>
+                        <td>${log.user_message || ''}</td>
+                        <td>${log.bot_response || ''}</td>
+                        <td>${log.detected_intent || ''}</td>
+                        <td>${log.confidence !== undefined && log.confidence !== null ? Number(log.confidence).toFixed(2) : ''}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                showToast(`Showing ${rows.length} message(s) for ${leadName || sessionId}`);
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="5" style="color:var(--danger);">Failed to load chat.</td></tr>';
+            }
+        }
+
+        async function loadContactRequestsInline() {
+            const el = document.getElementById('contactRequestsInline');
+            if (!el) return;
+            el.innerHTML = 'Loading...';
+            try {
+                const siteId = getSiteId();
+                const url = new URL('/admin/api/client/contact-requests', window.location.origin);
+                if (siteId) url.searchParams.append('site_id', siteId);
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+                const rows = data.requests || data.contact_requests || [];
+                if (!rows.length) {
+                    el.innerHTML = '<p style="color:var(--text-muted);">No contact requests yet. <a href="/admin/api/client/contact-requests-dashboard" target="_blank">Open full dashboard</a></p>';
+                    return;
+                }
+                el.innerHTML = `<table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Priority</th><th>Created</th></tr></thead><tbody>${
+                    rows.slice(0, 25).map(r => `<tr><td>${r.name || r.user_name || ''}</td><td>${r.email || r.user_email || ''}</td><td>${r.status || ''}</td><td>${r.priority || ''}</td><td>${r.created_at || ''}</td></tr>`).join('')
+                }</tbody></table>`;
+            } catch (e) {
+                el.innerHTML = '<p style="color:var(--danger);">Failed to load contact requests.</p>';
+            }
+        }
+
+        async function loadForms() {
+            const tbody = document.getElementById('formsTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+            try {
+                const siteId = getSiteId();
+                const url = new URL('/admin/api/client/forms', window.location.origin);
+                if (siteId) url.searchParams.append('site_id', siteId);
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+                const forms = data.forms || [];
+                if (!forms.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">No forms yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = forms.map(f => `
+                    <tr>
+                        <td>${f.name || ''}</td>
+                        <td>${(f.steps || f.step_count || (f.steps_json ? JSON.parse(f.steps_json||'[]').length : 0))}</td>
+                        <td>${f.is_active ? 'Yes' : 'No'}</td>
+                        <td>
+                            <button class="btn-icon" onclick="deleteForm(${f.id})" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:var(--danger);">Failed to load forms.</td></tr>';
+            }
+        }
+
+        function openFormModal() {
+            const name = prompt('Form name:');
+            if (!name) return;
+            const siteId = getSiteId();
+            fetch('/admin/api/client/forms?site_id=' + siteId, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({
+                    name,
+                    steps: [
+                        {field: 'name', type: 'text', prompt: "What's your name?", required: true},
+                        {field: 'email', type: 'email', prompt: "What's your email?", required: true}
+                    ],
+                    save_as_lead: true,
+                    is_active: true
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success || data.form) { showToast('Form created'); loadForms(); }
+                else showToast(data.error || 'Failed to create form', 'error');
+            }).catch(() => showToast('Failed to create form', 'error'));
+        }
+
+        function deleteForm(id) {
+            if (!confirm('Delete this form?')) return;
+            const siteId = getSiteId();
+            fetch(`/admin/api/client/forms/${id}?site_id=${siteId}`, { method: 'DELETE', credentials: 'include' })
+                .then(r => r.json()).then(data => {
+                    if (data.success) { showToast('Form deleted'); loadForms(); }
+                    else showToast(data.error || 'Delete failed', 'error');
+                });
+        }
+
+        async function loadWebhooks() {
+            const tbody = document.getElementById('webhooksTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+            try {
+                const siteId = getSiteId();
+                const url = new URL('/admin/api/client/webhooks', window.location.origin);
+                if (siteId) url.searchParams.append('site_id', siteId);
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+                const hooks = data.webhooks || [];
+                if (!hooks.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No webhooks yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = hooks.map(w => `
+                    <tr>
+                        <td>${w.name || ''}</td>
+                        <td>${w.event_type || ''}</td>
+                        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;">${w.url || ''}</td>
+                        <td>${w.enabled ? 'Yes' : 'No'}</td>
+                        <td><button class="btn-icon" style="color:var(--danger);" onclick="deleteWebhook(${w.id})"><i class="fas fa-trash"></i></button></td>
+                    </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="5" style="color:var(--danger);">Failed to load webhooks.</td></tr>';
+            }
+        }
+
+        function openWebhookModal() {
+            const name = prompt('Webhook name:');
+            if (!name) return;
+            const event_type = prompt('Event type (handoff, lead_capture, form_complete, escalation):', 'lead_capture');
+            if (!event_type) return;
+            const url = prompt('Webhook URL:');
+            if (!url) return;
+            const siteId = getSiteId();
+            fetch('/admin/api/client/webhooks?site_id=' + siteId, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({ name, event_type, url, method: 'POST', enabled: true })
+            }).then(r => r.json()).then(data => {
+                if (data.success || data.webhook) { showToast('Webhook created'); loadWebhooks(); }
+                else showToast(data.error || 'Failed to create webhook', 'error');
+            }).catch(() => showToast('Failed to create webhook', 'error'));
+        }
+
+        function deleteWebhook(id) {
+            if (!confirm('Delete this webhook?')) return;
+            const siteId = getSiteId();
+            fetch(`/admin/api/client/webhooks/${id}?site_id=${siteId}`, { method: 'DELETE', credentials: 'include' })
+                .then(r => r.json()).then(data => {
+                    if (data.success) { showToast('Webhook deleted'); loadWebhooks(); }
+                    else showToast(data.error || 'Delete failed', 'error');
+                });
         }
 
         // --- Intent Assignments (Super Admin) ---

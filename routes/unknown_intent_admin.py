@@ -10,7 +10,6 @@ from services.fallback_optimizer import get_optimizer
 
 unknown_intent_bp = Blueprint('unknown_intents', __name__)
 
-
 def admin_required(f):
     """Decorator to require admin authentication via session or X-Admin-ID header."""
     @wraps(f)
@@ -33,7 +32,6 @@ def admin_required(f):
         request.admin = admin
         return f(*args, **kwargs)
     return decorated_function
-
 
 @unknown_intent_bp.route('/unmapped', methods=['GET'])
 @admin_required
@@ -147,7 +145,6 @@ def get_unmapped_unknowns():
         'unknowns': enhanced
     })
 
-
 @unknown_intent_bp.route('/map', methods=['POST'])
 @admin_required
 def map_unknown_to_intent():
@@ -189,7 +186,6 @@ def map_unknown_to_intent():
         'message': message
     }), (200 if success else 400)
 
-
 @unknown_intent_bp.route('/stats', methods=['GET'])
 @admin_required
 def get_fallback_stats():
@@ -217,7 +213,6 @@ def get_fallback_stats():
         'success': True,
         'stats': stats
     })
-
 
 @unknown_intent_bp.route('/intent-metrics', methods=['GET'])
 @admin_required
@@ -249,7 +244,6 @@ def get_intent_metrics():
         'success': True,
         'metrics': metrics
     })
-
 
 @unknown_intent_bp.route('/log/<int:log_id>', methods=['GET'])
 @admin_required
@@ -334,7 +328,6 @@ def get_unknown_log(log_id):
         }
     })
 
-
 @unknown_intent_bp.route('/batch-map', methods=['POST'])
 @admin_required
 def batch_map_unknowns():
@@ -393,7 +386,6 @@ def batch_map_unknowns():
         'total': len(results)
     })
 
-
 # ===== UI ROUTES (non-API) =====
 
 @unknown_intent_bp.route('/manager', methods=['GET'])
@@ -403,8 +395,8 @@ def unknown_intent_manager():
     Serve the Unknown Intent Manager UI page.
     Allows admins to review, map, and auto-train unknown intents.
     """
+    
     return render_template('unknown_intent_manager.html')
-
 
 # ===== ADDITIONAL ENDPOINTS =====
 

@@ -125,6 +125,37 @@ def list_all_admins():
         })
     return jsonify({"admins": admin_list})
 
+@admin_api.route("/super/admins", methods=["POST"])
+@super_admin_required
+def create_admin_user():
+    """Create a client or super admin user."""
+    data = request.get_json() or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    site_id = data.get("site_id")
+    is_super = bool(data.get("is_super", False))
+    if not username or not password:
+        return jsonify({"error": "username and password required"}), 400
+    if Admin.query.filter_by(username=username).first():
+        return jsonify({"error": "Username already exists"}), 400
+    admin = Admin(username=username, site_id=site_id, is_super=is_super)
+    admin.set_password(password)
+    db.session.add(admin)
+    db.session.commit()
+    return jsonify({"success": True, "id": admin.id}), 201
+
+@admin_api.route("/super/admins/<int:admin_id>", methods=["DELETE"])
+@super_admin_required
+def delete_admin_user(admin_id):
+    admin = db.session.get(Admin, admin_id)
+    if not admin:
+        return jsonify({"error": "Admin not found"}), 404
+    if admin.id == session.get("admin_id"):
+        return jsonify({"error": "Cannot delete your own account"}), 400
+    db.session.delete(admin)
+    db.session.commit()
+    return jsonify({"success": True})
+
 @admin_api.route("/super/admins/<int:admin_id>", methods=["PUT"])
 @super_admin_required
 def update_admin(admin_id):
@@ -799,20 +830,33 @@ def client_conversations():
     site_id = request.args.get("site_id") or session.get("site_id")
     limit = min(int(request.args.get("limit", 50)), 100)  # Cap limit at 100
     
+    
+
     # Only fetch the columns we need, ordered descending for latest first
-    logs = ChatLog.query.filter_by(site_id=site_id)\
+    try:
+        site_id_int = int(site_id) if site_id is not None else None
+    except (TypeError, ValueError):
+        site_id_int = site_id
+    logs = ChatLog.query.filter_by(site_id=site_id_int)\
         .order_by(ChatLog.created_at.desc())\
         .limit(limit)\
         .all()
     
+    
+
     return jsonify({"conversations": [l.to_dict() for l in logs]})
 
 @admin_api.route("/client/analytics", methods=["GET"])
 def client_analytics():
     """Optimized analytics endpoint: single query with aggregations."""
     site_id = request.args.get("site_id") or session.get("site_id")
+    
     if not site_id:
         return jsonify({"error": "No site_id provided"}), 400
+    try:
+        site_id = int(site_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid site_id"}), 400
     
     # OPTIMIZATION: Combine count & success metrics in ONE query
     stats = db.session.query(
@@ -833,6 +877,8 @@ def client_analytics():
     
     # Get failures (global, but could filter by site if needed)
     failures = UnansweredQuestion.query.order_by(UnansweredQuestion.times_asked.desc()).limit(5).all()
+
+    
 
     return jsonify({
         "ok": True,
@@ -861,11 +907,13 @@ def client_leads():
     result = []
     for lead in leads:
         result.append({
+            'id': lead.id,
             'created_at': lead.captured_at.isoformat() if lead.captured_at else None,
             'lead_name': lead.user_name,
             'lead_email': lead.user_email,
             'lead_phone': lead.user_phone,
-            'user_message': lead.question_context
+            'user_message': lead.question_context,
+            'session_id': lead.session_id,
         })
     
     return jsonify({"leads": result})
@@ -977,6 +1025,7 @@ def contact_request_stats():
 @admin_api.route("/client/contact-requests-dashboard", methods=["GET"])
 def contact_requests_dashboard():
     """Serve the contact requests admin dashboard page."""
+    
     return render_template('contact_requests_admin.html')
 
 @admin_api.route("/client/contact-requests/<int:request_id>", methods=["DELETE"])
@@ -1143,7 +1192,6 @@ def list_template_files():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @admin_api.route("/client/intents/<int:intent_id>", methods=["PUT", "DELETE"])
 def manage_client_intent(intent_id):
     site_id = request.args.get("site_id") or session.get("site_id")
@@ -1173,7 +1221,6 @@ def manage_client_intent(intent_id):
         db.session.commit()
         return jsonify({"success": True})
 
-
 # ===================================================
 # STAGE 2: ANALYTICS DASHBOARD
 # ===================================================
@@ -1192,7 +1239,6 @@ def super_full_analytics():
         return jsonify({"error": "No sites found"}), 404
     return jsonify(get_full_analytics(sites[0].id, days))
 
-
 @admin_api.route("/client/analytics/full", methods=["GET"])
 def client_full_analytics():
     """Full analytics dashboard for a client's site."""
@@ -1209,7 +1255,6 @@ def client_full_analytics():
     days = request.args.get("days", 30, type=int)
     return jsonify(get_full_analytics(site_id, days))
 
-
 # ===================================================
 # STAGE 2: FEATURE GATES
 # ===================================================
@@ -1221,7 +1266,6 @@ def client_features():
     if not site_id:
         return jsonify({"error": "Missing site_id"}), 400
     return jsonify(get_site_features(int(site_id)))
-
 
 @admin_api.route("/site-features", methods=["GET"])
 def site_features_public():
@@ -1235,7 +1279,6 @@ def site_features_public():
         return jsonify({"error": "Invalid site_key"}), 404
     
     return jsonify(get_site_features(site.id))
-
 
 @admin_api.route("/super/plans/<int:plan_id>/features", methods=["PUT"])
 @super_admin_required
@@ -1260,7 +1303,6 @@ def update_plan_features(plan_id):
     log_action(session.get('admin_id'), None, f'Updated plan features: {plan.name}')
     return jsonify({"success": True, "plan": plan.to_dict()})
 
-
 # ===================================================
 # STAGE 2: MULTI-STEP FORMS
 # ===================================================
@@ -1269,6 +1311,7 @@ def update_plan_features(plan_id):
 def client_forms():
     """List or create form definitions for a site."""
     site_id = request.args.get("site_id") or session.get("site_id")
+    
     if not site_id:
         return jsonify({"error": "Missing site_id"}), 400
     site_id = int(site_id)
@@ -1301,7 +1344,6 @@ def client_forms():
     forms = FormDefinition.query.filter_by(site_id=site_id).all()
     return jsonify({"forms": [f.to_dict() for f in forms]})
 
-
 @admin_api.route("/client/forms/<int:form_id>", methods=["GET", "PUT", "DELETE"])
 def manage_client_form(form_id):
     """Get, update, or delete a form definition."""
@@ -1333,7 +1375,6 @@ def manage_client_form(form_id):
         db.session.commit()
         return jsonify({"success": True, "form": form.to_dict()})
 
-
 @admin_api.route("/client/forms/<int:form_id>/submissions", methods=["GET"])
 def form_submissions(form_id):
     """List submissions for a form."""
@@ -1345,7 +1386,6 @@ def form_submissions(form_id):
     subs = FormSubmission.query.filter_by(form_id=form_id).order_by(FormSubmission.created_at.desc()).limit(50).all()
     return jsonify({"submissions": [s.to_dict() for s in subs]})
 
-
 # ===================================================
 # STAGE 2: WEBHOOK MANAGEMENT
 # ===================================================
@@ -1354,6 +1394,7 @@ def form_submissions(form_id):
 def client_webhooks():
     """List or create webhooks for a site."""
     site_id = request.args.get("site_id") or session.get("site_id")
+    
     if not site_id:
         return jsonify({"error": "Missing site_id"}), 400
     site_id = int(site_id)
@@ -1388,7 +1429,6 @@ def client_webhooks():
     webhooks = WebhookConfig.query.filter_by(site_id=site_id).all()
     return jsonify({"webhooks": [w.to_dict() for w in webhooks]})
 
-
 @admin_api.route("/client/webhooks/<int:webhook_id>", methods=["GET", "PUT", "DELETE"])
 def manage_client_webhook(webhook_id):
     """Get, update, or delete a webhook."""
@@ -1421,7 +1461,6 @@ def manage_client_webhook(webhook_id):
         db.session.commit()
         return jsonify({"success": True, "webhook": webhook.to_dict()})
 
-
 @admin_api.route("/client/webhooks/<int:webhook_id>/logs", methods=["GET"])
 def webhook_logs(webhook_id):
     """View delivery logs for a webhook."""
@@ -1433,7 +1472,6 @@ def webhook_logs(webhook_id):
     logs = WebhookLog.query.filter_by(webhook_id=webhook_id).order_by(WebhookLog.created_at.desc()).limit(50).all()
     return jsonify({"logs": [l.to_dict() for l in logs]})
 
-
 @admin_api.route("/client/webhooks/stats", methods=["GET"])
 def client_webhook_stats():
     """Get webhook delivery stats for a site."""
@@ -1441,7 +1479,6 @@ def client_webhook_stats():
     if not site_id:
         return jsonify({"error": "Missing site_id"}), 400
     return jsonify(get_webhook_stats(int(site_id)))
-
 
 # ===================================================
 # STAGE 2: CONVERSATION STATE (admin visibility)
@@ -1458,7 +1495,6 @@ def client_active_sessions():
         .order_by(ConversationState.updated_at.desc()).limit(50).all()
     return jsonify({"sessions": [s.to_dict() for s in states]})
 
-
 @admin_api.route("/client/sessions/<session_id>", methods=["GET"])
 def client_session_detail(session_id):
     """Get conversation state for a specific session."""
@@ -1469,7 +1505,6 @@ def client_session_detail(session_id):
     if not state:
         return jsonify({"error": "Session not found"}), 404
     return jsonify({"session": state.to_dict()})
-
 
 # ===================================================
 # SUPER ADMIN: INTENT ASSIGNMENT MANAGEMENT
@@ -1513,7 +1548,6 @@ def get_blueprint_intents():
         ]
     })
 
-
 @admin_api.route("/super/blueprints/<int:blueprint_id>", methods=["GET"])
 @super_admin_required
 def get_blueprint_detail(blueprint_id):
@@ -1534,7 +1568,6 @@ def get_blueprint_detail(blueprint_id):
         }
     }), 200
 
-
 @admin_api.route("/super/sites/<int:site_id>/intents", methods=["GET"])
 @super_admin_required
 def super_get_site_intents(site_id):
@@ -1551,7 +1584,6 @@ def super_get_site_intents(site_id):
         for intent in intents
     ]
     return jsonify({"intents": intents_list})
-
 
 @admin_api.route("/super/sites/<int:site_id>/assign-intent", methods=["POST"])
 @super_admin_required
@@ -1630,7 +1662,6 @@ def super_assign_intent_to_site(site_id):
         db.session.rollback()
         return jsonify({"error": f"Failed to assign intent: {str(e)}"}), 500
 
-
 @admin_api.route("/super/sites/<int:site_id>/intents/<intent_name>", methods=["DELETE"])
 @super_admin_required
 def super_remove_intent_from_site(site_id, intent_name):
@@ -1657,7 +1688,6 @@ def super_remove_intent_from_site(site_id, intent_name):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": f"Failed to remove intent: {str(e)}"}), 500
-
 
 # ===================================================
 # BLUEPRINT CRUD OPERATIONS (Create/Edit/Delete)
@@ -1733,7 +1763,6 @@ def create_blueprint():
         db.session.rollback()
         return jsonify({"error": f"Failed to create blueprint: {str(e)}"}), 500
 
-
 @admin_api.route("/super/blueprints/<int:blueprint_id>", methods=["PUT"])
 @super_admin_required
 def update_blueprint(blueprint_id):
@@ -1804,7 +1833,6 @@ def update_blueprint(blueprint_id):
         db.session.rollback()
         return jsonify({"error": f"Failed to update blueprint: {str(e)}"}), 500
 
-
 @admin_api.route("/super/blueprints/<int:blueprint_id>", methods=["DELETE"])
 @super_admin_required
 def delete_blueprint(blueprint_id):
@@ -1835,7 +1863,6 @@ def delete_blueprint(blueprint_id):
         db.session.rollback()
         return jsonify({"error": f"Failed to delete blueprint: {str(e)}"}), 500
 
-
 # ---------------------------------------------------
 # INTENT TEMPLATES MANAGEMENT
 # ---------------------------------------------------
@@ -1852,14 +1879,12 @@ def admin_required(func):
         return func(*args, **kwargs)
     return wrapper
 
-
 # UNIFIED PATH LOGIC: Ensures all routes look at the exact same physical folder
 def get_templates_dir():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     templates_dir = os.path.join(base_dir, "intent_templates")
     os.makedirs(templates_dir, exist_ok=True)
     return templates_dir
-
 
 @admin_api.route("/intent-templates", methods=["GET"])
 @admin_required
@@ -1894,7 +1919,6 @@ def get_intent_templates():
         return jsonify({"templates": templates}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @admin_api.route("/intent-templates", methods=["POST"])
 @admin_required
@@ -1950,7 +1974,6 @@ def upload_intent_template():
     except Exception as e:
         return jsonify({"error": f"Upload failed: {str(e)}"}), 500
 
-
 @admin_api.route("/intent-templates/<filename>", methods=["GET"])
 @admin_required
 def download_intent_template(filename):
@@ -1962,7 +1985,6 @@ def download_intent_template(filename):
     if not os.path.exists(file_path):
         return jsonify({"error": "File not found"}), 404
     return send_from_directory(templates_dir, filename, as_attachment=True)
-
 
 @admin_api.route("/intent-templates/<filename>", methods=["DELETE"])
 @admin_required
@@ -1979,7 +2001,6 @@ def delete_intent_template(filename):
         return jsonify({"success": True, "message": f"Template '{filename}' deleted successfully"}), 200
     except Exception as e:
         return jsonify({"error": f"Failed to delete: {str(e)}"}), 500
-
 
 @admin_api.route("/intent-templates/<filename>/import", methods=["POST"])
 @admin_required
@@ -2009,7 +2030,6 @@ def import_intent_template(filename):
     except Exception as e:
         return jsonify({"error": f"Import failed: {str(e)}"}), 500
 
-
 # --- CLIENT: CHANNELS ---
 @admin_api.route("/client/channels", methods=["GET"])
 def get_client_channels():
@@ -2018,8 +2038,6 @@ def get_client_channels():
     if not site_id:
         return jsonify({"error": "Not authenticated"}), 401
     
-    # Get channels (integrations) - current Integration model is global
-    # For now, return available integration types
     integrations = Integration.query.all()
     channels = []
     for integration in integrations:
@@ -2032,7 +2050,6 @@ def get_client_channels():
     
     return jsonify({"channels": channels})
 
-
 @admin_api.route("/client/channels", methods=["POST"])
 def create_client_channel():
     """Create a new channel for the site"""
@@ -2040,7 +2057,7 @@ def create_client_channel():
     if not site_id:
         return jsonify({"error": "Not authenticated"}), 401
     
-    data = request.get_json()
+    data = request.get_json() or {}
     name = data.get("name")
     channel_type = data.get("type")
     
@@ -2048,16 +2065,38 @@ def create_client_channel():
         return jsonify({"error": "Name and type are required"}), 400
     
     new_channel = Integration(
-        site_id=site_id,
         name=name,
-        integration_type=channel_type,
-        is_active=True
+        type=channel_type,
+        enabled=True,
+        config=data.get("config") or f'{{"site_id": {int(site_id)}}}'
     )
     db.session.add(new_channel)
     db.session.commit()
     
-    return jsonify({"success": True, "id": new_channel.id}), 201
+    return jsonify({"success": True, "id": new_channel.id, "channel": new_channel.to_dict()}), 201
 
+@admin_api.route("/client/channels/<int:channel_id>", methods=["PUT", "DELETE"])
+def manage_client_channel(channel_id):
+    """Update or delete a channel/integration."""
+    site_id = session.get("site_id")
+    if not site_id:
+        return jsonify({"error": "Not authenticated"}), 401
+    channel = db.session.get(Integration, channel_id)
+    if not channel:
+        return jsonify({"error": "Channel not found"}), 404
+    if request.method == "DELETE":
+        db.session.delete(channel)
+        db.session.commit()
+        return jsonify({"success": True})
+    data = request.get_json() or {}
+    if "name" in data:
+        channel.name = data["name"]
+    if "type" in data:
+        channel.type = data["type"]
+    if "enabled" in data:
+        channel.enabled = bool(data["enabled"])
+    db.session.commit()
+    return jsonify({"success": True, "channel": channel.to_dict()})
 
 # --- CLIENT: USAGE ---
 @admin_api.route("/client/usage", methods=["GET"])
@@ -2091,7 +2130,6 @@ def get_client_usage():
         }
     })
 
-
 # ===== PHASE 1: FALLBACK REDUCTION - UNKNOWN INTENT MAPPING =====
 # Routes for unknown intent management are now in routes/unknown_intent_admin.py
 # Accessed at: /admin/api/unknown/*
@@ -2109,7 +2147,6 @@ def record_success_feedback():
         get_optimizer().record_intent_success(int(intent_id), int(site_id))
     return jsonify({'success': True})
 
-
 @admin_api.route('/feedback/escalation', methods=['POST'])
 @client_required
 def record_escalation_feedback():
@@ -2121,7 +2158,6 @@ def record_escalation_feedback():
     if intent_id and site_id:
         get_optimizer().record_intent_escalation(int(intent_id), int(site_id))
     return jsonify({'success': True})
-
 
 @admin_api.route('/feedback/correction', methods=['POST'])
 @client_required

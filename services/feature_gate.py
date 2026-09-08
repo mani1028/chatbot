@@ -34,8 +34,14 @@ def check_feature(site_id: int, feature: str) -> bool:
     """
     plan = get_site_plan(site_id)
     if not plan:
-        # No plan = free tier, only basic features
-        return feature in (FEATURE_WORKFLOWS,)  # Only workflows on free tier
+        # No plan = free tier starter features (usable MVP defaults)
+        return feature in (
+            FEATURE_WORKFLOWS,
+            FEATURE_FORMS,
+            FEATURE_WEBHOOKS,
+            FEATURE_ANALYTICS,
+            FEATURE_BRANDING,
+        )
 
     return getattr(plan, feature, False)
 
@@ -51,8 +57,8 @@ def check_limit(site_id: int, limit_name: str, current_count: int) -> bool:
         defaults = {
             'max_intents': 10,
             'max_monthly_chats': 100,
-            'max_forms': 1,
-            'max_webhooks': 0,
+            'max_forms': 3,
+            'max_webhooks': 2,
         }
         limit = defaults.get(limit_name, 0)
         return current_count < limit
@@ -72,15 +78,15 @@ def get_site_features(site_id: int) -> dict:
             'plan_name': 'Free',
             'ai_enabled': False,
             'workflows_enabled': True,
-            'forms_enabled': False,
-            'analytics_enabled': False,
-            'webhooks_enabled': False,
-            'custom_branding': False,
+            'forms_enabled': True,
+            'analytics_enabled': True,
+            'webhooks_enabled': True,
+            'custom_branding': True,
             'priority_support': False,
             'max_intents': 10,
             'max_monthly_chats': 100,
-            'max_forms': 1,
-            'max_webhooks': 0,
+            'max_forms': 3,
+            'max_webhooks': 2,
         }
 
     features = plan.get_features()

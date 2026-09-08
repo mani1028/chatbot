@@ -73,7 +73,6 @@ def _adapt_orchestrator_response(orchestrator_result: dict) -> ChatResponse:
         collected_data=collected_data
     )
 
-
 def process_message(site_id: int, user_message: str, session_id: str = None, page_url: str = None) -> ChatResponse:
     """
     Process user message through orchestrator with backward-compatible response.
@@ -113,6 +112,24 @@ def process_message(site_id: int, user_message: str, session_id: str = None, pag
     logging.debug(f"Plan limit: {plan_limit}, Current month: {month_str}")
 
     usage = Usage.query.filter_by(site_id=site_id, month=month_str).first()
+    current_messages = usage.messages if usage else 0
+    
+
+    # Hard block BEFORE processing when already at/over plan limit
+    if current_messages >= plan_limit:
+        if site_obj.status != 'suspended':
+            site_obj.status = 'suspended'
+            db.session.commit()
+        
+        return ChatResponse(
+            intent_name='SUSPENDED',
+            intent_type='ERROR',
+            reply='This site has reached its monthly message limit. Please upgrade your plan.',
+            confidence=0.0,
+            handoff=False,
+            lead_capture=False
+        )
+
     if not usage:
         logging.info(f"No usage record found for site_id={site_id}, creating new one.")
         usage = Usage(site_id=site_id, month=month_str, messages=1)
@@ -126,6 +143,7 @@ def process_message(site_id: int, user_message: str, session_id: str = None, pag
         site_obj.status = 'suspended'
 
     db.session.commit()
+    
 
     # ── Call Orchestrator ───────────────────────────────────────────
     # This is the single execution kernel.
@@ -186,7 +204,6 @@ def process_message(site_id: int, user_message: str, session_id: str = None, pag
     # ChatLog is written by MessageOrchestrator._finalize — avoid duplicate rows
     return response
 
-
 def _log_chat(site_id, session_id, user_message, intent_name, confidence, reply):
     """Helper to log a chat interaction."""
     # Check the per-site setting for preserving chat history
@@ -217,7 +234,6 @@ def _log_chat(site_id, session_id, user_message, intent_name, confidence, reply)
     except Exception as e:
         logging.error(f"Error logging chat: {e}")
         db.session.rollback()
-
 
 def get_session_history(site_id: int, session_id: str, limit: int = 10):
     """Retrieve chat history for a session"""
